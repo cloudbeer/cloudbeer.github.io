@@ -5,6 +5,8 @@ date:   2022-11-30 21:49:06 +0800
 categories: container
 ---
 
+本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2.0) 的方法。
+
 ## CDK 和 Karpenter 分别是什么
 
 这个问题先不细说了吧，后面会发文章补。

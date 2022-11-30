@@ -7,9 +7,13 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: ""
 url: "https://cloudbeer.github.io"
 github_username: cloudbeer
+show_excerpts: true
 
 # Build settings
 theme: minima
+minima:
+  date_format: "%Y-%m-%d"
+  skin: dark
 plugins:
   - jekyll-feed
 # Exclude from processing.

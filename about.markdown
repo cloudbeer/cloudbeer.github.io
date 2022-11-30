@@ -1,6 +1,6 @@
 ---
 layout: page
-title: 啤酒云
+title: 关于
 permalink: /about/
 ---
 

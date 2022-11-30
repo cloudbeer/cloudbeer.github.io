@@ -1,0 +1,33 @@
+title: 啤酒云
+email: cloudbeer@gmail.com
+description: >- # this means to ignore newlines until "baseurl:"
+  文章欢迎转载，转载不用和我说。想说一下也行，但我不会经常看邮件。
+  本站所有信息均代表我自己，不代表任何公司。
+  技术问题请自行测试，作者不对任何
+baseurl: ""
+url: "https://cloudbeer.github.io"
+github_username: cloudbeer
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
+# Exclude from processing.
+# The following items will not be processed, by default.
+# Any item listed under the `exclude:` key here will be automatically added to
+# the internal "default list".
+#
+# Excluded items can be processed by explicitly listing the directories or
+# their entries' file path in the `include:` list.
+#
+# exclude:
+#   - .sass-cache/
+#   - .jekyll-cache/
+#   - gemfiles/
+#   - Gemfile
+#   - Gemfile.lock
+#   - node_modules/
+#   - vendor/bundle/
+#   - vendor/cache/
+#   - vendor/gems/
+#   - vendor/ruby/

@@ -142,7 +142,7 @@ kubectl scale deployment ng-v1 --replicas 1
 kubectl scale deployment ng-v2 --replicas 1
 ```
 
-部署状态下 service 为版本 v1：
+初始的 service 为版本 v1：
 
 ```shell
 cat <<EOF | kubectl apply -f -

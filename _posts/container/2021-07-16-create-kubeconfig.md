@@ -2,7 +2,7 @@
 layout: post
 title:  "生产有权限控制的 kubeconfig"
 date:   2021-07-16 09:53:06 +0800
-categories: tucao
+categories: container
 ---
 ​
 在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。

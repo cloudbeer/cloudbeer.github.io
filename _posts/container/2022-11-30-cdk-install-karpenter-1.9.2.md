@@ -5,7 +5,7 @@ date:   2022-11-30 21:49:06 +0800
 categories: container
 ---
 
-本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2.0) 的方法。
+本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。
 
 ## CDK 和 Karpenter 分别是什么
 
@@ -30,7 +30,7 @@ CDK 和 Karpenter 当下这个时间点正在以天为单位 **疯狂发版**，
 
 CDK 的版本为：**2.53.0**
 
-Karpenter 的版本为： **v0.19.2.0**
+Karpenter 的版本为： **v0.19.2**
 
 ## Show me the code
 
@@ -177,4 +177,4 @@ export class KarpenterAddon {
 坑主要集中在 Helm 图样的安装：
 
 1. CDK 的 HelmChart 对于 oci 库的支持处于起步阶段，经过多次试验以及阅读相关源码，才确认写法：`chart: 'oci://public.ecr.aws/karpenter/karpenter'`，`repository: 'oci://public.ecr.aws/karpenter/karpenter'`。
-2. Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是："settings.aws.clusterEndpoint"，而这里的写法必须是 JSON 格式。
+2. Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是："settings.aws.clusterEndpoint"，而这里的写法**必须是** JSON 格式。

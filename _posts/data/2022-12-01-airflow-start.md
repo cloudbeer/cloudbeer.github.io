@@ -138,15 +138,15 @@ with DAG(
     这是一个简单的 DAG。
     """ 
 
-    templated_command = dedent(
+
+    templated_command = dedent({% raw %}
         """
     {% for i in range(5) %}
         echo "{{ ds }}"
         echo "{{ macros.ds_add(ds, 7)}}"
     {% endfor %}
-    """
-    )
-
+        """
+    {% endraw %})
     t3 = BashOperator(
         task_id='templated',
         depends_on_past=False,

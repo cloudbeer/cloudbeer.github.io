@@ -39,7 +39,6 @@
     div.style.fontSize = parseInt(Math.random() * 50) + 'px';
     document.body.appendChild(div);
   };
-  //雪花自动降落
   function autoWipe(snowSpeed, snowShape) {
     var flake = document.getElementsByClassName('flake');
     var timer = setInterval(function () {
@@ -58,7 +57,6 @@
       }
     }, 100);
   };
-  //调用以上方法
   function final(bigSnowParam, snowShape) {
     for (var i = 0; i < bigSnowParam.snowNum; i++) {
       addChild(parseInt(Math.random() * window.innerHeight), snowShape);
@@ -73,28 +71,24 @@
     autoWipe(bigSnowParam.snowSpeed, snowShape);
   };
 
-
-  //大雪参考值
   var bigSnowParam = {
     snowNum: 242,
     snowSpeed: 6
   };
-  //中雪参考值
   var midSnowParam = {
     snowNum: 242,
     snowSpeed: 3
   };
-  //小雪参考值
   var littleSnowParam = {
-    snowNum: 242,
-    snowSpeed: 1
+    snowNum: 50,
+    snowSpeed: 2
   };
   //自定义雪参考值
   var selfSnowParam = {
     snowNum: '',//值为number
     snowSpeed: ''//值为number
   };
-  //雪花形状参考
+
   var snowShapeObj = {
     1: '❆',
     2: '❄',
@@ -108,8 +102,7 @@
     10: '✥',
     11: '✺'
   };
-  //调用
-  final(bigSnowParam, snowShapeObj[1]);
+  final(littleSnowParam, snowShapeObj[1]);
 </script>
 
 </html>

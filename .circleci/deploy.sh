@@ -13,7 +13,7 @@ git status
 # git checkout -f main
 # git pull origin main
  
-git add -fA
+git add .
 git commit --allow-empty -m "Page release ${CIRCLE_BUILD_NUM} from ${CIRCLE_BRANCH}"
 
 # git commit -m "Create new files $(git log source -1 --pretty=%B)"

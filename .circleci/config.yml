@@ -15,14 +15,15 @@ jobs:
             gem install bundler
       - restore_cache:
           keys:
-            - v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-            - v1-gem-cache-{{ arch }}-{{ .Branch }}-
-            - v1-gem-cache-{{ arch }}-
-      - run: bundle install --path=vendor/bundle && bundle clean
+            - rubygems-v1-{{ checksum "Gemfile.lock" }}
+            - rubygems-v1-fallback
+      - run:
+          name: Bundle Install
+          command: bundle check || bundle install
       - save_cache:
           paths:
             - vendor/bundle
-          key: v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+          key: rubygems-v1-{{ checksum "Gemfile.lock" }}
 
       - run: JEKYLL_ENV=production bundle exec jekyll build
       - deploy:

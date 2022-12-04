@@ -3,20 +3,21 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>啤酒云 | 分享，记录而已</title>
+<title>正式开张 | 啤酒云</title>
 <meta name="generator" content="Jekyll v4.3.1" />
-<meta property="og:title" content="啤酒云" />
+<meta property="og:title" content="正式开张" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="分享，记录而已" />
-<meta property="og:description" content="分享，记录而已" />
-<link rel="canonical" href="https://cloudbeer.github.io/404.html" />
-<meta property="og:url" content="https://cloudbeer.github.io/404.html" />
+<meta name="description" content="开张咯" />
+<meta property="og:description" content="开张咯" />
+<link rel="canonical" href="https://cloudbeer.github.io/2022/11/cloudbeer-first.html" />
+<meta property="og:url" content="https://cloudbeer.github.io/2022/11/cloudbeer-first.html" />
 <meta property="og:site_name" content="啤酒云" />
-<meta property="og:type" content="website" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-11-30T12:12:44+00:00" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="啤酒云" />
+<meta property="twitter:title" content="正式开张" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","description":"分享，记录而已","headline":"啤酒云","url":"https://cloudbeer.github.io/404.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-11-30T12:12:44+00:00","datePublished":"2022-11-30T12:12:44+00:00","description":"开张咯","headline":"正式开张","mainEntityOfPage":{"@type":"WebPage","@id":"https://cloudbeer.github.io/2022/11/cloudbeer-first.html"},"url":"https://cloudbeer.github.io/2022/11/cloudbeer-first.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
 if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
@@ -57,27 +58,94 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
     </nav></div>
 </header><main class="page-content" aria-label="Content">
     <div class="wrapper">
-      <style type="text/css" media="screen">
-  .container {
-    margin: 10px auto;
-    max-width: 600px;
-    text-align: center;
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
   }
-  h1 {
-    margin: 30px 0;
-    font-size: 4em;
-    line-height: 1;
-    letter-spacing: -1px;
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
   }
 </style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
-<div class="container">
-  <h1>404</h1>
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">正式开张</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-11-30T12:12:44+00:00" itemprop="datePublished">2022-11-30
+      </time></p>
+  </header>
 
-  <p><strong>Page not found :(</strong></p>
-  <p>The requested page could not be found.</p>
-</div>
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>开张咯</p>
 
+<h2 id="开张咯">开张咯</h2>
+
+<p>说点啥呢，我也不知道。</p>
+
+<h2 id="关于-jekyll">关于 jekyll</h2>
+
+<p>ruby 有点蛋疼，gem 又是个啥，bundle 呢？</p>
+
+<p>能用就好！</p>
+
+<p>本地启动动态加载是:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jekyll serve <span class="nt">--livereload</span>
+</code></pre></div></div>
+
+<p>我先推到 github 试试咯。</p>
+
+  </div><a class="u-url" href="/2022/11/cloudbeer-first.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
     </div>
   </main><footer class="site-footer h-card">
   <data class="u-url" href="/"></data>

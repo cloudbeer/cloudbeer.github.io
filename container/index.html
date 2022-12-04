@@ -3,20 +3,20 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>啤酒云 | 分享，记录而已</title>
+<title>容器 | 啤酒云</title>
 <meta name="generator" content="Jekyll v4.3.1" />
-<meta property="og:title" content="啤酒云" />
+<meta property="og:title" content="容器" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="分享，记录而已" />
 <meta property="og:description" content="分享，记录而已" />
-<link rel="canonical" href="https://cloudbeer.github.io/404.html" />
-<meta property="og:url" content="https://cloudbeer.github.io/404.html" />
+<link rel="canonical" href="https://cloudbeer.github.io/container/" />
+<meta property="og:url" content="https://cloudbeer.github.io/container/" />
 <meta property="og:site_name" content="啤酒云" />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="啤酒云" />
+<meta property="twitter:title" content="容器" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","description":"分享，记录而已","headline":"啤酒云","url":"https://cloudbeer.github.io/404.html"}</script>
+{"@context":"https://schema.org","@type":"WebPage","description":"分享，记录而已","headline":"容器","url":"https://cloudbeer.github.io/container/"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
 if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
@@ -57,27 +57,70 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
     </nav></div>
 </header><main class="page-content" aria-label="Content">
     <div class="wrapper">
-      <style type="text/css" media="screen">
-  .container {
-    margin: 10px auto;
-    max-width: 600px;
+      <style>
+  ul.pager {
     text-align: center;
+    list-style: none;
   }
-  h1 {
-    margin: 30px 0;
-    font-size: 4em;
-    line-height: 1;
-    letter-spacing: -1px;
+
+  ul.pager li {
+    display: inline;
+    border: 1px solid black;
+    padding: 10px;
+    margin: 5px;
+  }
+
+  .page-heading {
+    font-size: 16px;
+
   }
 </style>
 
-<div class="container">
-  <h1>404</h1>
-
-  <p><strong>Page not found :(</strong></p>
-  <p>The requested page could not be found.</p>
+<div class="home"><h1 class="page-heading">容器</h1><ul class="post-list"><li><span class="post-meta">2022-12-01</span>
+      <h3>
+        <a class="post-link" href="/2022/12/k8s-gray-blue-green.html">
+          在 K8S 中实现 灰度，蓝绿 发布
+        </a>
+      </h3>
+      <div><p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
 </div>
+    </li><li><span class="post-meta">2022-11-30</span>
+      <h3>
+        <a class="post-link" href="/2022/11/cdk-install-karpenter-1.9.2.html">
+          使用 CDK 安装 Karpenter 新版
+        </a>
+      </h3>
+      <div><p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
+</div>
+    </li><li><span class="post-meta">2022-01-21</span>
+      <h3>
+        <a class="post-link" href="/2022/01/deploy-php-in-k8s.html">
+          php应用容器化部署实践
+        </a>
+      </h3>
+      <div><p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
+</div>
+    </li><li><span class="post-meta">2021-07-16</span>
+      <h3>
+        <a class="post-link" href="/2021/07/create-kubeconfig.html">
+          生产有权限控制的 kubeconfig
+        </a>
+      </h3>
+      <div><p>​
+在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。</p>
+</div>
+    </li><li><span class="post-meta">2020-06-07</span>
+      <h3>
+        <a class="post-link" href="/2020/06/docker-as-web-server.html">
+          使用 docker 作为 Web 开发服务器
+        </a>
+      </h3>
+      <div><p>提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。</p>
+</div>
+    </li></ul>
 
+
+  </div>
     </div>
   </main><footer class="site-footer h-card">
   <data class="u-url" href="/"></data>

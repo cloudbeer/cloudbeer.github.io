@@ -1,0 +1,1798 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://cloudbeer.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://cloudbeer.github.io/" rel="alternate" type="text/html" /><updated>2022-12-04T14:12:18+00:00</updated><id>https://cloudbeer.github.io/feed.xml</id><title type="html">啤酒云</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://cloudbeer.github.io/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
+
+<h2 id="iac-和-cdk-简介">IaC 和 CDK 简介</h2>
+
+<h3 id="什么是-iac">什么是 IaC？</h3>
+
+<p>这段来自：<a href="https://www.redhat.com/zh/topics/automation/what-is-infrastructure-as-code-iac">https://www.redhat.com/zh/topics/automation/what-is-infrastructure-as-code-iac</a></p>
+
+<blockquote>
+  <p>基础设施即代码（IaC）是通过代码而非手动流程来管理和置备基础设施的方法。</p>
+</blockquote>
+
+<blockquote>
+  <p>利用 IaC 我们可以创建包含基础设施规范的配置文件，从而便于编辑和分发配置。此外，它还可确保每次置备的环境都完全相同。通过对配置规范进行整理和记录，IaC 有助于实现配置管理，并避免发生未记录的临时配置更改。</p>
+</blockquote>
+
+<blockquote>
+  <p>版本控制是 IaC 的一个重要组成部分，就像其他任何软件源代码文件一样，配置文件也应该在源代码控制之下。以基础设施即代码方式部署还意味着您可以将基础架构划分为若干模块化组件，它们可通过自动化以不同的方式进行组合。</p>
+</blockquote>
+
+<blockquote>
+  <p>借助 IaC 实现基础架构置备的自动化，意味着开发人员无需再在每次开发或部署应用时手动置备和管理服务器、操作系统、存储及其他基础架构组件。对基础架构编码即可创建一个置备用的模板，尽管置备过程仍然可以手动完成，但也可以由自动化工具（例如红帽® Ansible® 自动化平台）为您代劳。</p>
+</blockquote>
+
+<p>简要来说就是：使用描述性的代码管理您的基础设施。</p>
+
+<h3 id="什么是-cdk">什么是 CDK？</h3>
+
+<p>这段来自：<a href="https://aws.amazon.com/cn/getting-started/guides/setup-cdk/">https://aws.amazon.com/cn/getting-started/guides/setup-cdk/</a></p>
+
+<blockquote>
+  <p>AWS CDK 是一个开源软件开发框架，可让您使用熟悉的编程语言 (如 JavaScript、TypeScript、Python、Java、C# 和 Go) 定义云应用程序资源。您编写的代码转换为 CloudFormation (CFN) 模板，可使用 <a href="https://aws.amazon.com/cn/cloudformation/">AWS CloudFormation</a> 创建基础设施。</p>
+</blockquote>
+
+<p>这个也总结一下：CDK 就是 AWS 的 IaC，他依赖 Cloudformation，可以用常用的语言来描述您的基础设施。</p>
+
+<h2 id="安装和设置-aws-cdk">安装和设置 AWS CDK</h2>
+
+<p>我习惯使用命令行的方式运行，如 <code class="language-plaintext highlighter-rouge">cdk deploy</code>。cdk 这个命令其实是一个 nodejs 程序。</p>
+
+<p>nodejs 安装就不说了，现在国内有很多开源镜像，如：<a href="https://mirrors.tuna.tsinghua.edu.cn/nodejs-release">https://mirrors.tuna.tsinghua.edu.cn/nodejs-release</a>，请安装版本 &gt;= 10.3.0 的。</p>
+
+<p>nodejs 安装完成后，就可以安装 cdk 命令行：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm i <span class="nt">-g</span> aws-cdk
+</code></pre></div></div>
+
+<p>默认安装完成后 CDK 就是全局命令行了。</p>
+
+<p>CDK 同时要依赖 AWS CLI 以及 AWS 凭证。</p>
+
+<p>安装 AWS CLI 参考：<a href="https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html">https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html</a></p>
+
+<p>在开发环境配置凭证：<a href="https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/cli-configure-quickstart.html">https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/cli-configure-quickstart.html</a></p>
+
+<h2 id="hello-world">Hello World</h2>
+
+<p>开发环境都设置好了！</p>
+
+<p>首先新建一个目录：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir </span>cdk-demo <span class="o">&amp;&amp;</span> <span class="nb">cd </span>cdk-demo
+</code></pre></div></div>
+
+<p>初始换项目，使用 typescipt 语言:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk init app <span class="nt">--language</span> typescript
+</code></pre></div></div>
+
+<ul>
+  <li>选择 typescipt 语言，是因为 cdk 的文档最多最全的是 typescipt 语言，包括 api 和 示例。</li>
+</ul>
+
+<p>等若干分钟（会依赖您依赖包的下载速度）之后，打开 lib/cdk-workshop-stack.ts，默认示例代码可以看出，创建了一个 sqs 的 Queue 资源。</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">export</span> <span class="kd">class</span> <span class="nx">CdkWorkshopStack</span> <span class="kd">extends</span> <span class="nx">Stack</span> <span class="p">{</span>
+  <span class="kd">constructor</span><span class="p">(</span><span class="nx">scope</span><span class="p">:</span> <span class="nx">Construct</span><span class="p">,</span> <span class="nx">id</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">props</span><span class="p">?:</span> <span class="nx">StackProps</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">super</span><span class="p">(</span><span class="nx">scope</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">props</span><span class="p">);</span>
+
+    <span class="kd">const</span> <span class="nx">queue</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">sqs</span><span class="p">.</span><span class="nx">Queue</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">CdkWorkshopQueue</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">visibilityTimeout</span><span class="p">:</span> <span class="nx">Duration</span><span class="p">.</span><span class="nx">seconds</span><span class="p">(</span><span class="mi">300</span><span class="p">)</span>
+    <span class="p">});</span>
+
+    <span class="kd">const</span> <span class="nx">topic</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">sns</span><span class="p">.</span><span class="nx">Topic</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">CdkWorkshopTopic</span><span class="dl">'</span><span class="p">);</span>
+
+    <span class="nx">topic</span><span class="p">.</span><span class="nx">addSubscription</span><span class="p">(</span><span class="k">new</span> <span class="nx">subs</span><span class="p">.</span><span class="nx">SqsSubscription</span><span class="p">(</span><span class="nx">queue</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>对于新环境，需要运行:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk bootstrap
+</code></pre></div></div>
+
+<ul>
+  <li>此命令在同一个账号和 region 中只需执行一次。</li>
+</ul>
+
+<p>通过 list 命令可以查看 stack。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk <span class="nb">ls</span>
+</code></pre></div></div>
+
+<p>运行部署：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk deploy
+</code></pre></div></div>
+
+<ul>
+  <li>此命令执行后，会有资源改变列表，并询问是否确认部署。</li>
+  <li>检查无误后，输入 y</li>
+</ul>
+
+<p>待执行完成后，检查是否真的创建出了 SQS 资源。</p>
+
+<p>清理资源：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk destroy
+</code></pre></div></div>
+
+<p>验证完成之后，请及时使用 cdk destroy 清理资源，否则会<strong>产生费用</strong>。</p>
+
+<p>使用 cdk destroy 删除更干净。</p>]]></content><author><name></name></author><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry><entry><title type="html">容器 DevOps：Gitlab CI</title><link href="https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html" rel="alternate" type="text/html" title="容器 DevOps：Gitlab CI" /><published>2022-12-04T06:32:01+00:00</published><updated>2022-12-04T06:32:01+00:00</updated><id>https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html"><![CDATA[<p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。</p>
+
+<h2 id="示例描述">示例描述</h2>
+
+<p>本文使用了 gitlab saas 版本。使用 saas 版本的 ci 功能，需要填写信用卡，每个月有 400min 的免费的额度。</p>
+
+<p>本文的源代码在：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a>，这是一个 springcloud gateway 应用。</p>
+
+<p>ci 的过程包括：</p>
+
+<ul>
+  <li>编译 java 源码</li>
+  <li>打包 docker 镜像，并上传到镜像仓库（本文使用的是 AWS ECR 仓库）</li>
+  <li>修改部署目标脚本的镜像版本</li>
+</ul>
+
+<p>完成这几个步骤之后，argocd 会接手 cd 的工作。</p>
+
+<h2 id="gitlab-ciyml-代码拆解">.gitlab-ci.yml 代码拆解</h2>
+
+<h3 id="环境变量">环境变量</h3>
+
+<p>环境变量的定义有三种方式：</p>
+<ul>
+  <li>全局定义：左侧菜单 Settings -&gt; CI/CD, 页面上 Variables 部分，展开 Expand。</li>
+  <li>在 yaml 文件里直接定义：参见下面的代码。</li>
+  <li>手工指定：在每次手工启动流水线时，可以填写变量。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
+  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay</span>
+  <span class="na">DOCKER_REGISTRY</span><span class="pi">:</span> <span class="s">00000000.dkr.ecr.us-east-2.amazonaws.com</span>
+  <span class="na">AWS_DEFAULT_REGION</span><span class="pi">:</span> <span class="s">us-east-2</span>
+  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2375</span>
+</code></pre></div></div>
+
+<h3 id="stages-的定义">stages 的定义</h3>
+
+<p>首先定义几个 大的步骤：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">build</span>
+  <span class="pi">-</span> <span class="s">package</span>
+  <span class="pi">-</span> <span class="s">deploy</span>
+</code></pre></div></div>
+
+<p>然后在各个步骤详情里，可以把当前的步骤进行分类，就像这样：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">do-something</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">build</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">alpine</span>
+  <span class="na">script</span><span class="pi">:</span> <span class="s2">"</span><span class="s">sleep</span><span class="nv"> </span><span class="s">300"</span>
+</code></pre></div></div>
+
+<h3 id="源码编译">源码编译</h3>
+
+<p>对于编译型语言，需要将源代码进行编译，本示例中就是需要将 java 源代码编译打包成 jar 包。</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">maven</span><span class="o">-</span><span class="nl">build:</span>
+  <span class="nl">image:</span> <span class="nl">maven:</span><span class="n">latest</span>
+  <span class="nl">stage:</span> <span class="n">build</span>
+  <span class="nl">script:</span> <span class="s">"mvn package"</span>
+  <span class="nl">artifacts:</span>
+    <span class="nl">paths:</span>
+      <span class="o">-</span> <span class="n">target</span><span class="o">/*.</span><span class="na">jar</span>
+</code></pre></div></div>
+
+<ul>
+  <li>编译时使用 maven 这个镜像</li>
+  <li>运行的指令是 <code class="language-plaintext highlighter-rouge">mvn package</code></li>
+  <li>编译的结果指定为 target 目录下的所有 jar 文件，gitlab 会将 artifacts 上传，供给后面的步骤使用。</li>
+</ul>
+
+<h3 id="docker-镜像打包上传">Docker 镜像打包上传</h3>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">docker-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">amazon/aws-cli</span>
+    <span class="na">entrypoint</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">amazon-linux-extras install docker</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker build -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA .</span>
+    <span class="pi">-</span> <span class="s">aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY</span>
+    <span class="pi">-</span> <span class="s">docker push $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>打包完成后需要上传到 ecr，而 ecr 依赖了 aws cli，所以使用了 aws_cli 的镜像包。在执行过程中，还需要将 AWS 的 AKSK 配置到环境变量。</li>
+  <li>在 before_script 里，在 aws_cli 镜像里安装 docker，此时使用了 dind (docker in docker) 模式。</li>
+  <li>在 docker build 的过程中，使用了 git 的 commiot sha 作为版本号。 CI_COMMIT_SHORT_SHA 是 gitlab 的内置环境变量。</li>
+</ul>
+
+<blockquote>
+  <p>gitlab 的 dind 可以参考这个：<a href="https://docs.gitlab.com/ee/ci/docker/using_docker_build.html">https://docs.gitlab.com/ee/ci/docker/using_docker_build.html</a></p>
+</blockquote>
+
+<blockquote>
+  <p>gitlab 内置环境变量参考：<a href="https://docs.gitlab.com/ee/ci/variables/predefined_variables.html">https://docs.gitlab.com/ee/ci/variables/predefined_variables.html</a></p>
+</blockquote>
+
+<h3 id="部署">部署</h3>
+
+<p>在本示例中，采用了 gitops 的方式，将 CI 和 CD 完全解耦，CI 只需要做到构建完成，并更新部署代码仓库就可以了。剩下的工作交由 CD 来完成。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">yaml-change</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">deploy</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">line/kubectl-kustomize</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">apk add git</span>
+    <span class="pi">-</span> <span class="s">git clone https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cd-script.git "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.email "cloudbeer@gmail.com"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.name "gitlab-robot"</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}/gateway"</span>
+    <span class="pi">-</span> <span class="s">kustomize edit set image $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+    <span class="pi">-</span> <span class="s">cat kustomization.yaml</span>
+  <span class="na">after_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git add .</span>
+    <span class="pi">-</span> <span class="s">git commit -m "[skip ci]updating image $DOCKER_REGISTRY/$CI_COMMIT_SHORT_SHA"</span>
+    <span class="pi">-</span> <span class="s">git push origin main</span>
+</code></pre></div></div>
+
+<ul>
+  <li>镜像上传到镜像仓库后，就可以去修改部署代码了。本示例将部署代码放到了 github，您可以将部署代码放到任意 git 仓库。但在 gitops 模式下，部署脚本不建议和业务源代码放到一起。</li>
+  <li>本示例使用了 <a href="https://kustomize.io/">kustomize</a> 来更新部署，kustomize 也被 argocd 默认支持。</li>
+  <li>过程是：将部署代码从 git 仓库拉回本地，通过 kustomize 命令修改了 image 的地址，修改完成后推回 git 仓库。</li>
+</ul>
+
+<blockquote>
+  <p>GITHUB_PWD 需要配置一个 带有 scope 的 token，请到 <a href="https://github.com/settings/tokens">https://github.com/settings/tokens</a> 配置。</p>
+</blockquote>
+
+<p>完整的代码如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
+  <span class="na">DOCKER_REGISTRY</span><span class="pi">:</span> <span class="s">cloudbeer</span>
+  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay</span>
+  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2375</span>
+
+<span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">build</span>
+  <span class="pi">-</span> <span class="s">package</span>
+  <span class="pi">-</span> <span class="s">deploy</span>
+
+<span class="na">maven-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">build</span>
+  <span class="na">script</span><span class="pi">:</span> <span class="s2">"</span><span class="s">mvn</span><span class="nv"> </span><span class="s">package"</span>
+  <span class="na">artifacts</span><span class="pi">:</span>
+    <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">target/*.jar</span>
+
+<span class="na">docker-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker info</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker build -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA .</span>
+    <span class="pi">-</span> <span class="s">echo $DOCKER_PASS | docker login -u$DOCKER_USER --password-stdin</span>
+    <span class="pi">-</span> <span class="s">docker push $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+
+<span class="na">yaml-change</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">deploy</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">line/kubectl-kustomize</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">apk add git</span>
+    <span class="pi">-</span> <span class="s">git clone https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cd-script.git "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.email "cloudbeer@gmail.com"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.name "gitlab-robot"</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}/gateway"</span>
+    <span class="pi">-</span> <span class="s">kustomize edit set image $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+    <span class="pi">-</span> <span class="s">cat kustomization.yaml</span>
+  <span class="na">after_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git add .</span>
+    <span class="pi">-</span> <span class="s">git commit -m "[skip ci]updating image $DOCKER_REGISTRY/$CI_COMMIT_SHORT_SHA"</span>
+    <span class="pi">-</span> <span class="s">git push origin main</span>
+</code></pre></div></div>
+
+<p>完整代码与文章正文会稍有出入，改用了公开的 github 和 docker hub 来存储 部署文件 和 镜像。</p>
+
+<h3 id="本项目的运行和测试过程">本项目的运行和测试过程</h3>
+
+<p>克隆项目</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://gitlab.com/cloudbeer/gateway.git
+</code></pre></div></div>
+
+<p>上传到您自己的 gitlab 仓库，并启动自动构建。</p>
+
+<p>修改构建脚本，将 部署仓库，镜像仓库分别改成您自己的地址。并将相关账号配置到 Variables 里。</p>
+
+<p>改动代码后，如果您不想让 gitlab 自动启动 pipeline，在 commit 信息里加上 <code class="language-plaintext highlighter-rouge">[skip ci]xxxx</code> 即可。</p>
+
+<p>观察构建过程，成功后，可以看到镜像仓库中增加了 版本(tag)， 部署仓库中的 gateway 目录里的 kustomization.yaml 被修改。</p>
+
+<hr />
+
+<p>本文涉及的三个外部仓库，这三个仓库均为 public：</p>
+
+<p>业务源代码：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a></p>
+
+<p>部署仓库：<a href="https://github.com/cloudbeer/cd-script">https://github.com/cloudbeer/cd-script</a></p>
+
+<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name></name></author><category term="devops" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。]]></summary></entry><entry><title type="html">在 K8S 中实现 灰度，蓝绿 发布</title><link href="https://cloudbeer.github.io/2022/12/k8s-gray-blue-green.html" rel="alternate" type="text/html" title="在 K8S 中实现 灰度，蓝绿 发布" /><published>2022-12-01T08:09:00+00:00</published><updated>2022-12-01T08:09:00+00:00</updated><id>https://cloudbeer.github.io/2022/12/k8s-gray-blue-green</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/k8s-gray-blue-green.html"><![CDATA[<p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
+
+<h2 id="应用部署">应用部署</h2>
+
+<p>应用版本 1</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ng-v1</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">4</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
+        <span class="na">version</span><span class="pi">:</span> <span class="s">v1</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
+          <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:1.22</span>
+</code></pre></div></div>
+
+<p>应用版本 2</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ng-v2</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
+        <span class="na">version</span><span class="pi">:</span> <span class="s">v2</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
+          <span class="na">image</span><span class="pi">:</span> <span class="s">kong/httpbin</span>
+</code></pre></div></div>
+
+<ul>
+  <li>为了演示版本不同，分别部署了 2 个完全不同的应用作为演示。</li>
+  <li>这俩应用有着相同的 label: app 以及不同的 label: version</li>
+</ul>
+
+<h2 id="灰度发布">灰度发布</h2>
+
+<p>首先创建一个 service，这个 service 对外暴露服务使用了 app=ng 作为选择器。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ports</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">80</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
+</code></pre></div></div>
+
+<p>由于 service 本身是按照 RR 的策略进行轮询的，所有对应的 pod endpoint 得到的流量会保持一致。</p>
+
+<p>所以上述代码中，流量会按照 pod 数量分配，此示例中 v1:v2 流量比例为 4:1。通过改变 pod 的数量就可以实现<strong>粗糙的</strong>灰度了。</p>
+
+<p>启动一个 pod 测试一下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl run <span class="nt">-it</span> <span class="nt">--rm</span> <span class="nb">test</span> <span class="nt">--image</span><span class="o">=</span>nginx:1.22 <span class="nt">--restart</span><span class="o">=</span>Never <span class="nt">--</span> sh
+</code></pre></div></div>
+
+<p>在终端中重复执行多次 curl，查看会发现流量按照 4:1 的比例分配了。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl ng
+</code></pre></div></div>
+
+<p>这个 bash 代码模拟了每隔 5 秒逐步增加 V2 的流量，通过 4 次改变 pod 数量，最终将流量完全切换到 v2。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+<span class="nv">v1count</span><span class="o">=</span>5
+<span class="nv">v2count</span><span class="o">=</span>0
+<span class="k">for </span>i <span class="k">in</span> <span class="o">{</span>1..5<span class="o">}</span>
+<span class="k">do
+  </span><span class="nv">v1count</span><span class="o">=</span><span class="k">$((</span>v1count-1<span class="k">))</span>
+  <span class="nv">v2count</span><span class="o">=</span><span class="k">$((</span>v2count+1<span class="k">))</span>
+  kubectl scale deployment ng-v1 <span class="nt">--replicas</span> <span class="nv">$v1count</span>
+  kubectl scale deployment ng-v2 <span class="nt">--replicas</span> <span class="nv">$v2count</span>
+  <span class="nb">sleep </span>5
+<span class="k">done</span>
+</code></pre></div></div>
+
+<p>这个方法不适合如下情况：</p>
+
+<ul>
+  <li>pod数量只有一两个的</li>
+  <li>需按一定规则灰度</li>
+</ul>
+
+<h2 id="蓝绿发布">蓝绿发布</h2>
+
+<p>需要修改 service，增加一个版本的 selector，让 service 固定在特定版本：</p>
+
+<p>当应用是版本 v1 的时候：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ports</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">80</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
+    <span class="na">version</span><span class="pi">:</span> <span class="s">v1</span>
+</code></pre></div></div>
+
+<p>实际生产中，先部署好 v2 版本，当验证无误后，可以通过修改 service 的 version 为 v2 。</p>
+
+<p>现在测试一下：</p>
+
+<p>先将 2 个版本部署成等量 pod。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment ng-v1 <span class="nt">--replicas</span> 1
+
+kubectl scale deployment ng-v2 <span class="nt">--replicas</span> 1
+</code></pre></div></div>
+
+<p>初始的 service 为版本 v1：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: ng
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: ng
+    version: v1
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<p>现在切换到 v2 版本，如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl patch svc ng <span class="nt">-p</span> <span class="s1">'{"spec":{"selector": {"app": "ng", "version": "v2"}}}'</span>
+</code></pre></div></div>
+
+<h2 id="ab-test-发布">A/B test 发布</h2>
+
+<p>A/B test 意味着需要按照一定逻辑进行流量分发。</p>
+
+<blockquote>
+  <p>😭，臣妾做不到。</p>
+</blockquote>
+
+<p>但可以借助 nginx 等产品完成。</p>
+
+<p>事实上，一些第三方的 ingress 产品，以及 Service Mesh 就都可以解决这些问题的。</p>
+
+<p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>]]></content><author><name></name></author><category term="container," /><category term="devops" /><summary type="html"><![CDATA[在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。]]></summary></entry><entry><title type="html">Apache Airflow 入门</title><link href="https://cloudbeer.github.io/2022/12/airflow-start.html" rel="alternate" type="text/html" title="Apache Airflow 入门" /><published>2022-12-01T04:57:44+00:00</published><updated>2022-12-01T04:57:44+00:00</updated><id>https://cloudbeer.github.io/2022/12/airflow-start</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/airflow-start.html"><![CDATA[<p>从小白到略知一二。</p>
+
+<h2 id="背景">背景</h2>
+
+<p>都说 Airflow 很强大，用 python 语言写 DAG。</p>
+
+<p>对于我，语言不重要，了解他的运行架构和设计思想更重要。</p>
+
+<p>先安装一个单机版本试试。</p>
+
+<h2 id="安装">安装</h2>
+
+<p>在 Mac M1 上默认安装各种编译错误，然后使用 <strong>conda</strong> 重新安装了 python，终于搞定。</p>
+
+<p>安装过程复制自官方：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">AIRFLOW_VERSION</span><span class="o">=</span>2.4.3
+<span class="nv">PYTHON_VERSION</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span>python <span class="nt">--version</span> | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s2">" "</span> <span class="nt">-f</span> 2 | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s2">"."</span> <span class="nt">-f</span> 1-2<span class="si">)</span><span class="s2">"</span>
+<span class="nv">CONSTRAINT_URL</span><span class="o">=</span><span class="s2">"https://raw.githubusercontent.com/apache/airflow/constraints-</span><span class="k">${</span><span class="nv">AIRFLOW_VERSION</span><span class="k">}</span><span class="s2">/constraints-</span><span class="k">${</span><span class="nv">PYTHON_VERSION</span><span class="k">}</span><span class="s2">.txt"</span>
+pip <span class="nb">install</span> <span class="s2">"apache-airflow==</span><span class="k">${</span><span class="nv">AIRFLOW_VERSION</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--constraint</span> <span class="s2">"</span><span class="k">${</span><span class="nv">CONSTRAINT_URL</span><span class="k">}</span><span class="s2">"</span>
+</code></pre></div></div>
+
+<p>启动一个开发版本试试：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow standalone
+</code></pre></div></div>
+
+<p>成功启动后，控制台打印了一些有用信息。本机 Web 端默认为： <code class="language-plaintext highlighter-rouge">http://localhost:8080</code>。</p>
+
+<p>登录账号也在控制台中打印。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>standalone |
+standalone | Airflow is ready
+standalone | Login with username: admin  password: xxxxxxxxxx
+standalone | Airflow Standalone is <span class="k">for </span>development purposes only. Do not use this <span class="k">in </span>production!
+standalone |
+</code></pre></div></div>
+
+<p>进入之后，有很多现成的 DAG，一头雾水。</p>
+
+<p>或者<strong>走下面这个步骤，都差不多。</strong></p>
+
+<p>初始化数据库：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow db init
+</code></pre></div></div>
+
+<p>这个过程中，有个警告，是说要安装 kubernetes 的 excutor。顺手给他装一下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>apache-airflow-providers-cncf-kubernetes
+</code></pre></div></div>
+
+<p>创建一个新账号</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow <span class="nb">users </span>create <span class="se">\</span>
+    <span class="nt">--username</span> xie <span class="se">\</span>
+    <span class="nt">--firstname</span> Cloudbeer <span class="se">\</span>
+    <span class="nt">--lastname</span> Xie <span class="se">\</span>
+    <span class="nt">--role</span> Admin <span class="se">\</span>
+    <span class="nt">--email</span> cloudbeer@gmail.com
+</code></pre></div></div>
+
+<p>换个端口启动 Web Server</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow webserver <span class="nt">--port</span> 9000
+</code></pre></div></div>
+
+<p>换个 终端窗口启动 Scheduler：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow scheduler
+</code></pre></div></div>
+
+<h2 id="编写第一个-dag">编写第一个 DAG</h2>
+
+<p>Airflow 的 hello world 代码如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
+<span class="kn">from</span> <span class="nn">airflow</span> <span class="kn">import</span> <span class="n">DAG</span>
+
+<span class="kn">from</span> <span class="nn">airflow.operators.bash</span> <span class="kn">import</span> <span class="n">BashOperator</span>
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="s">'hellodag'</span><span class="p">,</span>
+    <span class="n">default_args</span><span class="o">=</span><span class="p">{</span>
+        <span class="s">'depends_on_past'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s">'email'</span><span class="p">:</span> <span class="p">[</span><span class="s">'cloudbeer@gmail.com'</span><span class="p">],</span>
+        <span class="s">'email_on_failure'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s">'email_on_retry'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s">'retries'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s">'retry_delay'</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">description</span><span class="o">=</span><span class="s">'这是一个简单的 DAG'</span><span class="p">,</span>
+    <span class="n">schedule</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">catchup</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">'example'</span><span class="p">],</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s">'print_date'</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="s">'date'</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s">'sleep'</span><span class="p">,</span>
+        <span class="n">depends_on_past</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="s">'sleep 5'</span><span class="p">,</span>
+        <span class="n">retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">t1</span><span class="p">.</span><span class="n">doc_md</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
+        <span class="s">"""</span><span class="se">\
+</span><span class="s">    #### Task Documentation
+    You can document your task using the attributes `doc_md` (markdown),
+    `doc` (plain text), `doc_rst`, `doc_json`, `doc_yaml` which gets
+    rendered in the UI's Task Instance Details page.
+    ![img](http://montcs.bloomu.edu/~bobmon/Semesters/2012-01/491/import%20soul.png)
+    **Image Credit:** Randall Munroe, [XKCD](https://xkcd.com/license.html)
+    """</span>
+    <span class="p">)</span>
+
+    <span class="n">dag</span><span class="p">.</span><span class="n">doc_md</span> <span class="o">=</span> <span class="s">"""
+    这是一个简单的 DAG。
+    """</span> 
+
+
+    <span class="n">templated_command</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
+        <span class="s">"""
+    {% for i in range(5) %}
+        echo "{{ ds }}"
+        echo "{{ macros.ds_add(ds, 7)}}"
+    {% endfor %}
+        """</span>
+    <span class="p">)</span>
+    <span class="n">t3</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s">'templated'</span><span class="p">,</span>
+        <span class="n">depends_on_past</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="n">templated_command</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">t1</span> <span class="o">&gt;&gt;</span> <span class="p">[</span><span class="n">t2</span><span class="p">,</span> <span class="n">t3</span><span class="p">]</span>
+</code></pre></div></div>
+
+<ul>
+  <li>上面的代码修改 DAG 的名字为 hellodag</li>
+  <li>文件名命名为 hellodag.py</li>
+</ul>
+
+<p>将这个文件放到 ~/airflow/dags 目录下。</p>
+
+<p>使用 python 验证一下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python hellodag.py
+</code></pre></div></div>
+
+<p>没有错误。</p>
+
+<h2 id="airflow-任务测试">Airflow 任务测试</h2>
+
+<p>dag 文件放到了对应的目录了，现在查看一下 dags。（又要开一个终端）</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow dags list
+</code></pre></div></div>
+
+<ul>
+  <li>hellodag 已经出现在列表了。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow tasks list hellodag <span class="nt">--tree</span>
+</code></pre></div></div>
+
+<ul>
+  <li>这个命令可以看到这个 dag 包含了三个任务 <code class="language-plaintext highlighter-rouge">print_date</code>, <code class="language-plaintext highlighter-rouge">sleep</code>, <code class="language-plaintext highlighter-rouge">templated</code></li>
+  <li>–tree 显示了依赖关系。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: print_date&gt;
+    &lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: <span class="nb">sleep</span><span class="o">&gt;</span>
+    &lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: templated&gt;
+</code></pre></div></div>
+
+<p>测试一下任务：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow tasks <span class="nb">test </span>hellodag print_date 2015-06-01
+
+airflow tasks <span class="nb">test </span>hellodag <span class="nb">sleep </span>2015-06-01
+
+airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
+</code></pre></div></div>
+
+<p>运行 backfill (回填)</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow dags backfill hellodag <span class="se">\</span>
+    <span class="nt">--start-date</span> 2015-06-01 <span class="se">\</span>
+    <span class="nt">--end-date</span> 2015-06-07
+</code></pre></div></div>
+
+<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name></name></author><category term="data" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry><entry><title type="html">使用 CDK 安装 Karpenter 新版</title><link href="https://cloudbeer.github.io/2022/11/cdk-install-karpenter-1.9.2.html" rel="alternate" type="text/html" title="使用 CDK 安装 Karpenter 新版" /><published>2022-11-30T13:49:06+00:00</published><updated>2022-11-30T13:49:06+00:00</updated><id>https://cloudbeer.github.io/2022/11/cdk-install-karpenter-1.9.2</id><content type="html" xml:base="https://cloudbeer.github.io/2022/11/cdk-install-karpenter-1.9.2.html"><![CDATA[<p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
+
+<h2 id="cdk-和-karpenter-分别是什么">CDK 和 Karpenter 分别是什么</h2>
+
+<p>这个问题先不细说了吧，后面会发文章补。</p>
+
+<p>可以去相应官方网站查看：</p>
+
+<p><a href="https://aws.amazon.com/cn/cdk/">CDK</a></p>
+
+<p><a href="https://karpenter.sh/">Karpenter</a></p>
+
+<p>反正好有一比：</p>
+
+<ul>
+  <li>CDK 类似于 terraform。</li>
+  <li>Karpenter 就是 K8S 的节点伸缩器。</li>
+</ul>
+
+<h2 id="适用性">适用性</h2>
+
+<p>CDK 和 Karpenter 当下这个时间点正在以天为单位 <strong>疯狂发版</strong>，所以这篇文章具有时效性。</p>
+
+<p>当前最新版本为：</p>
+
+<p>CDK 的版本为：<strong>2.53.0</strong></p>
+
+<p>Karpenter 的版本为： <strong>v0.19.2</strong></p>
+
+<h2 id="show-me-the-code">Show me the code</h2>
+
+<p>先上代码为敬！</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Cluster</span><span class="p">,</span> <span class="nx">HelmChart</span><span class="p">,</span> <span class="nx">KubernetesManifest</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">aws-cdk-lib/aws-eks</span><span class="dl">"</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">CfnInstanceProfile</span><span class="p">,</span> <span class="nx">CfnServiceLinkedRole</span><span class="p">,</span> <span class="nx">IRole</span><span class="p">,</span> <span class="nx">ManagedPolicy</span><span class="p">,</span> <span class="nx">PolicyDocument</span><span class="p">,</span> <span class="nx">Role</span><span class="p">,</span> <span class="nx">ServicePrincipal</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">aws-cdk-lib/aws-iam</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="kd">const</span> <span class="nx">KarpenterControllerPolicy</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="dl">"</span><span class="s2">Version</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">2012-10-17</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">Statement</span><span class="dl">"</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="dl">"</span><span class="s2">Effect</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Allow</span><span class="dl">"</span><span class="p">,</span>
+      <span class="dl">"</span><span class="s2">Action</span><span class="dl">"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="dl">"</span><span class="s2">ec2:CreateLaunchTemplate</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:CreateFleet</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:RunInstances</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:CreateTags</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:TerminateInstances</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DeleteLaunchTemplate</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeLaunchTemplates</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeInstances</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeSecurityGroups</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeSubnets</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeImages</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeInstanceTypes</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeInstanceTypeOfferings</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeAvailabilityZones</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ssm:GetParameter</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">pricing:GetProducts</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">ec2:DescribeSpotPriceHistory</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">sqs:DeleteMessage</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">sqs:GetQueueUrl</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">sqs:GetQueueAttributes</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">sqs:ReceiveMessage</span><span class="dl">"</span><span class="p">,</span>
+        <span class="dl">"</span><span class="s2">iam:PassRole</span><span class="dl">"</span><span class="p">,</span>
+      <span class="p">],</span>
+      <span class="dl">"</span><span class="s2">Resource</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">*</span><span class="dl">"</span>
+    <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">};</span>
+
+
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">KarpenterAddon</span> <span class="p">{</span>
+  <span class="nl">cluster</span><span class="p">:</span> <span class="nx">Cluster</span><span class="p">;</span>
+  <span class="kd">constructor</span><span class="p">(</span><span class="nx">cluster</span><span class="p">:</span> <span class="nx">Cluster</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span> <span class="o">=</span> <span class="nx">cluster</span><span class="p">;</span>
+
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">createNodeRole</span><span class="p">();</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">createKarpeter</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="nx">createNodeRole</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">new</span> <span class="nx">CfnServiceLinkedRole</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">SpotSLR</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">awsServiceName</span><span class="p">:</span> <span class="dl">'</span><span class="s1">spot.amazonaws.com</span><span class="dl">'</span><span class="p">,</span>
+    <span class="p">});</span>
+    <span class="kd">const</span> <span class="nx">karpenterNodeRole</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Role</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">karpenter-node-role</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">assumedBy</span><span class="p">:</span> <span class="k">new</span> <span class="nx">ServicePrincipal</span><span class="p">(</span><span class="s2">`ec2.</span><span class="p">${</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">stack</span><span class="p">.</span><span class="nx">urlSuffix</span><span class="p">}</span><span class="s2">`</span><span class="p">),</span>
+      <span class="na">managedPolicies</span><span class="p">:</span> <span class="p">[</span>
+        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonEKSWorkerNodePolicy</span><span class="dl">"</span><span class="p">),</span>
+        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonEKS_CNI_Policy</span><span class="dl">"</span><span class="p">),</span>
+        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonEC2ContainerRegistryReadOnly</span><span class="dl">"</span><span class="p">),</span>
+        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonSSMManagedInstanceCore</span><span class="dl">"</span><span class="p">),</span>
+      <span class="p">],</span>
+      <span class="na">roleName</span><span class="p">:</span> <span class="dl">'</span><span class="s1">KarpenterNodeRole-</span><span class="dl">'</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span>
+    <span class="p">});</span>
+
+    <span class="k">new</span> <span class="nx">CfnInstanceProfile</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">roles</span><span class="p">:</span> <span class="p">[</span><span class="nx">karpenterNodeRole</span><span class="p">.</span><span class="nx">roleName</span><span class="p">],</span>
+      <span class="na">instanceProfileName</span><span class="p">:</span> <span class="dl">'</span><span class="s1">KarpenterNodeInstanceProfile-</span><span class="dl">'</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span>
+    <span class="p">});</span>
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">awsAuth</span><span class="p">.</span><span class="nx">addRoleMapping</span><span class="p">(</span><span class="nx">karpenterNodeRole</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">groups</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">system:bootstrapper</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">system:nodes</span><span class="dl">'</span><span class="p">],</span>
+      <span class="na">username</span><span class="p">:</span> <span class="dl">'</span><span class="s1">system:node:</span><span class="dl">'</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+
+  <span class="nx">createKarpeter</span><span class="p">()</span> <span class="p">{</span>
+
+    <span class="kd">const</span> <span class="nx">ns</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">KubernetesManifest</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">"</span><span class="s2">karpenter-ns</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">cluster</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span>
+      <span class="na">manifest</span><span class="p">:</span> <span class="p">[{</span>
+        <span class="na">apiVersion</span><span class="p">:</span> <span class="dl">'</span><span class="s1">v1</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">kind</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Namespace</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">metadata</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span>
+        <span class="p">}</span>
+      <span class="p">}],</span>
+      <span class="na">overwrite</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="na">prune</span><span class="p">:</span> <span class="kc">true</span>
+    <span class="p">});</span>
+
+    <span class="kd">const</span> <span class="nx">sa</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">addServiceAccount</span><span class="p">(</span><span class="dl">"</span><span class="s2">karpenter-sa</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">namespace</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span>
+    <span class="p">});</span>
+    <span class="nx">sa</span><span class="p">.</span><span class="nx">role</span><span class="p">.</span><span class="nx">addManagedPolicy</span><span class="p">(</span><span class="k">new</span> <span class="nx">ManagedPolicy</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">karpenter-node-policy</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">document</span><span class="p">:</span> <span class="nx">PolicyDocument</span><span class="p">.</span><span class="nx">fromJson</span><span class="p">(</span><span class="nx">KarpenterControllerPolicy</span><span class="p">),</span>
+    <span class="p">}))</span>
+    <span class="nx">sa</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">addDependency</span><span class="p">(</span><span class="nx">ns</span><span class="p">);</span>
+
+    <span class="kd">const</span> <span class="nx">helm</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">HelmChart</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">"</span><span class="s2">karpenter-chart</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">cluster</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span>
+      <span class="na">namespace</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">chart</span><span class="p">:</span> <span class="dl">'</span><span class="s1">oci://public.ecr.aws/karpenter/karpenter</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">repository</span><span class="p">:</span> <span class="dl">'</span><span class="s1">oci://public.ecr.aws/karpenter/karpenter</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">karpenter</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">v0.19.2</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">serviceAccount</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">create</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+          <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">karpenter</span><span class="dl">"</span>
+        <span class="p">},</span>
+        <span class="dl">"</span><span class="s2">serviceAccount.annotations</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+          <span class="dl">"</span><span class="s2">eks.amazonaws.com/role-arn</span><span class="dl">"</span><span class="p">:</span> <span class="nx">sa</span><span class="p">.</span><span class="nx">role</span><span class="p">.</span><span class="nx">roleArn</span>
+        <span class="p">},</span>
+        <span class="na">settings</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">aws</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">clusterEndpoint</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterEndpoint</span><span class="p">,</span>
+            <span class="na">clusterName</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span><span class="p">,</span>
+            <span class="na">defaultInstanceProfile</span><span class="p">:</span> <span class="dl">'</span><span class="s1">KarpenterNodeInstanceProfile-</span><span class="dl">'</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span><span class="p">,</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">});</span>
+    <span class="nx">helm</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">addDependency</span><span class="p">(</span><span class="nx">ns</span><span class="p">);</span>
+    <span class="nx">helm</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">addDependency</span><span class="p">(</span><span class="nx">sa</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>上面的代码大概过程如下：</p>
+
+<ul>
+  <li>创建一个角色，这个拥有角色有 <code class="language-plaintext highlighter-rouge">AmazonEKSWorkerNodePolicy</code> <code class="language-plaintext highlighter-rouge">AmazonEKS_CNI_Policy</code> <code class="language-plaintext highlighter-rouge">AmazonEC2ContainerRegistryReadOnly</code> <code class="language-plaintext highlighter-rouge">AmazonSSMManagedInstanceCore</code> 几个预设策略。 未来 Kapenter 会将这个角色赋予 Node。</li>
+  <li>在 karpenter 这个命名空间下创建一系列资源，包括：
+    <ul>
+      <li>IRSA：将 K8S 的 Service Account 与 IAM 的 Role 建立关联。</li>
+      <li>通过 Helm 安装 Karpenter。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="上面代码的坑">上面代码的坑</h2>
+
+<p>坑主要集中在 Helm 图样的安装：</p>
+
+<ol>
+  <li>CDK 的 HelmChart 对于 oci 库的支持处于起步阶段，经过多次试验以及阅读相关源码，才确认写法：<code class="language-plaintext highlighter-rouge">chart: 'oci://public.ecr.aws/karpenter/karpenter'</code>，<code class="language-plaintext highlighter-rouge">repository: 'oci://public.ecr.aws/karpenter/karpenter'</code>。</li>
+  <li>Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是：”settings.aws.clusterEndpoint”，而这里的写法<strong>必须是</strong> JSON 格式。</li>
+</ol>]]></content><author><name></name></author><category term="container," /><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry><entry><title type="html">正式开张</title><link href="https://cloudbeer.github.io/2022/11/cloudbeer-first.html" rel="alternate" type="text/html" title="正式开张" /><published>2022-11-30T12:12:44+00:00</published><updated>2022-11-30T12:12:44+00:00</updated><id>https://cloudbeer.github.io/2022/11/cloudbeer-first</id><content type="html" xml:base="https://cloudbeer.github.io/2022/11/cloudbeer-first.html"><![CDATA[<p>开张咯</p>
+
+<h2 id="开张咯">开张咯</h2>
+
+<p>说点啥呢，我也不知道。</p>
+
+<h2 id="关于-jekyll">关于 jekyll</h2>
+
+<p>ruby 有点蛋疼，gem 又是个啥，bundle 呢？</p>
+
+<p>能用就好！</p>
+
+<p>本地启动动态加载是:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jekyll serve <span class="nt">--livereload</span>
+</code></pre></div></div>
+
+<p>我先推到 github 试试咯。</p>]]></content><author><name></name></author><category term="tucao" /><summary type="html"><![CDATA[开张咯]]></summary></entry><entry><title type="html">php应用容器化部署实践</title><link href="https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html" rel="alternate" type="text/html" title="php应用容器化部署实践" /><published>2022-01-21T02:56:53+00:00</published><updated>2022-01-21T02:56:53+00:00</updated><id>https://cloudbeer.github.io/2022/01/deploy-php-in-k8s</id><content type="html" xml:base="https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html"><![CDATA[<p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
+
+<h2 id="php-应用镜像准备">php 应用镜像准备</h2>
+
+<p>镜像的层次：基础依赖镜像-&gt;运行框架-&gt;应用/代码镜像</p>
+
+<p>基于容器的单进程运行理念，下面的部署过程并未使用单体的 nginx+php-fpm 一体的容器运行方式，而是将 php-fpm 和 nginx 拆散。</p>
+
+<h3 id="基础镜像">基础镜像</h3>
+
+<p>安装基础系统依赖包和公司 php 应用中各个开发小组都会用到的扩展包。</p>
+
+<p>下面的示例基于官方 fpm，安装了通用系统级的依赖和 php 包管理器。</p>
+
+<p>如果可以，建议使用更基础的镜像从 php 源码进行编译。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># runtime.Dockerfile</span>
+<span class="k">FROM</span><span class="s"> php:8.0.3-fpm</span>
+
+<span class="c"># 自定义类库示例</span>
+<span class="k">RUN </span>apt-get update <span class="o">&amp;&amp;</span> <span class="se">\
+</span>    apt-get <span class="nb">install</span> <span class="nt">-y</span> git zlib1g-dev libpng-dev libicu-dev
+<span class="k">RUN </span>docker-php-ext-install <span class="se">\
+</span>    gd <span class="se">\
+</span>    intl
+<span class="k">RUN </span>docker-php-ext-configure intl
+
+
+<span class="c"># 安装 composer</span>
+<span class="k">RUN </span>curl <span class="nt">-sS</span> https://getcomposer.org/installer | php <span class="nt">--</span> <span class="se">\
+</span>    <span class="nt">--install-dir</span><span class="o">=</span>/usr/local/bin <span class="nt">--filename</span><span class="o">=</span>composer <span class="se">\
+</span>    <span class="o">&amp;&amp;</span> <span class="nb">chmod</span> +x /usr/local/bin/composer 
+</code></pre></div></div>
+
+<p>将上述文件编译成镜像，并 push 到仓库：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker build <span class="nt">-t</span> cloudbeer/php-runtime:1.0 <span class="nt">-f</span> runtime.Dockerfile <span class="nb">.</span>
+docker push cloudbeer/php-runtime:1.0
+</code></pre></div></div>
+
+<h3 id="应用层框架镜像">应用层框架镜像</h3>
+
+<p>如果开发框架比较稳定，建议直接把框架打包成基础镜像以避免后续部署过程中频繁安装依赖包，加速发布打包发布过程，如业务开发A组使用了 lumen 框架，我们可以专门为 lumen 打一个镜像。</p>
+
+<p>如下镜像，安装了 lumen web 框架。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># lumen.Dockerfile</span>
+<span class="k">FROM</span><span class="s"> cloudbeer/php-runtime:1.0</span>
+
+<span class="k">RUN </span><span class="nb">mkdir</span> /app
+<span class="k">WORKDIR</span><span class="s"> /app</span>
+
+<span class="k">RUN </span><span class="nb">echo</span> <span class="s1">'{</span><span class="se">\
+</span><span class="s1">    "require": {</span><span class="se">\
+</span><span class="s1">    "php": "^7.3|^8.0",</span><span class="se">\
+</span><span class="s1">    "laravel/lumen-framework": "^8.0"</span><span class="se">\
+</span><span class="s1">    }</span><span class="se">\
+</span><span class="s1"> }'</span> <span class="o">&gt;</span> composer.json
+
+<span class="k">RUN </span>composer i
+</code></pre></div></div>
+
+<p>上述镜像打包为：cloudbeer/my-lumen:1.0</p>
+
+<h3 id="应用层镜像">应用层镜像</h3>
+
+<p>由于我们在应用层框架里已经把 lumen 运行时都安装好了，所以这个镜像里，只需拷贝纯源码即可。记得创建 .gitignore 或者 .dockerignore 文件，排除 vender，test 等目录。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># .dockerignore</span>
+/vendor
+/tests
+/.idea
+/.git
+.gitignore
+Dockerfile
+Homestead.json
+Homestead.yaml
+.env
+.ent.example
+.phpunit.result.cache
+</code></pre></div></div>
+
+<p>应用镜像里只需要拷贝脚本文件即可。这个镜像包含了完整的 php 运行时和业务代码，启动后可以直接接收 fastcgi 调用。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">FROM</span><span class="s"> cloudbeer/my-lumen:1.0</span>
+<span class="k">COPY</span><span class="s"> ./ /app/</span>
+</code></pre></div></div>
+
+<p>上面的镜像打包为： cloudbeer/php-caculate:1.0</p>
+
+<p>另一种打包代码方式，我们使用纯的容器将源代码打包，后面会在 K8S 中部署时将文件拷贝到框架运行时容器中运行。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">FROM</span><span class="s"> debian:buster-slim</span>
+<span class="k">RUN </span><span class="nb">mkdir</span> /app
+<span class="k">COPY</span><span class="s"> ./ /app/</span>
+</code></pre></div></div>
+
+<p>上面的镜像打包为： cloudbeer/php-caculate-purecode:1.0</p>
+
+<p>代码层在还可以有更多的打包方式，如上传到对象存储里，或者使用 NFS 存储，后期绑定到容器运行时运行。</p>
+
+<h3 id="本地测试">本地测试</h3>
+
+<p>启动镜像 cloudbeer/php-caculate:1.0</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> cloudbeer/php-caculate:1.0 sh
+
+<span class="c"># 容器内运行</span>
+<span class="c"># 启动 php 测试</span>
+php <span class="nt">-S</span> localhost:8000 <span class="nt">-t</span> public &amp;
+<span class="c"># 查看结果</span>
+curl http://localhost:8000/cpu
+</code></pre></div></div>
+
+<p>完美运行。</p>
+
+<p>目前已经完成了应用镜像打包。其中前两层镜像可以复用，真正的业务应用只需拷贝代码。</p>
+
+<p>上述代码中的镜像，我均已打包上传到 docker hub 官网，可以忽略 build 和 push 过程，直接进行测试。</p>
+
+<h2 id="部署到-k8s">部署到 K8S</h2>
+
+<p>php 应用部署到容器环境，最自然的一种方式是：直接将 php 的运行环境和 web server 以及业务源代码打包放在一个容器中运行。这个方式是最简单的方式，php 官方也提供了 php:nginx 这种镜像底包。</p>
+
+<p>但 php 运行时和 web server 是在两个进程中运行，这个不符合容器的最佳实践。一般建议将这两个进程分别运行在不同的容器中。</p>
+
+<h3 id="nginx-作为-sidecar-运行">nginx 作为 sidecar 运行</h3>
+
+<p>K8S 在同一个 pod 中，可以运行多个容器。我们将 php-fpm 的业务代码部署在一个容器中，与之相伴生的有一个 nginx 容器，nginx 作为fastcgi的调用方，并可以代理一些静态资源，这个模式类似 mesh 的sidecar 模式。架构图如下：</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/blob/main/readme-img/sidecar.jpg?raw=true" alt="nginx 作为 sidecar 部署" /></p>
+
+<h4 id="nginx-配置">nginx 配置</h4>
+
+<p>由于 nginx 和 php-fpm 在一个 pod 中，所以只需发起 localhost 调用即可。 nginx 的配置如下，我们将这个配置写到 cm 中，后面通过 volume 绑定到容器中。这个配置有几点需要注意的：</p>
+
+<ul>
+  <li>应用使用了 lumen 的 route 体系，所以需要将路由通过 try_files 全部指向 ./public/index.php 文件。</li>
+  <li>fastcgi_param  SCRIPT_FILENAME  /app/public/index.php 这里也将所有脚本指向这个文件。</li>
+</ul>
+
+<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># nginx config</span>
+<span class="k">apiVersion:</span> <span class="s">v1</span>
+<span class="s">kind:</span> <span class="s">ConfigMap</span>
+<span class="s">metadata:</span>
+    <span class="s">name:</span> <span class="s">caculate-sidecar-config</span>
+    <span class="s">namespace:</span> <span class="s">php-test</span>
+<span class="s">data:</span>
+    <span class="s">config:</span> <span class="s">|-</span>
+      <span class="s">server</span> <span class="p">{</span>
+          <span class="kn">listen</span>       <span class="mi">8081</span><span class="p">;</span>
+          <span class="kn">root</span>   <span class="n">/app/public</span><span class="p">;</span>
+          <span class="kn">index</span> <span class="s">index.php</span>
+          <span class="s">charset</span> <span class="s">utf-8</span><span class="p">;</span>
+
+          <span class="kn">location</span> <span class="n">/</span> <span class="p">{</span>
+            <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri</span><span class="n">/</span> <span class="n">/index.php?</span><span class="nv">$args</span><span class="p">;</span>
+          <span class="p">}</span>
+
+          <span class="kn">location</span> <span class="p">~</span> <span class="sr">\.php$</span>  <span class="p">{</span>
+            <span class="kn">fastcgi_pass</span>   <span class="nf">127.0.0.1</span><span class="p">:</span><span class="mi">9000</span><span class="p">;</span>
+            <span class="kn">fastcgi_index</span>  <span class="s">index.php</span><span class="p">;</span>
+            <span class="kn">fastcgi_param</span>  <span class="s">SCRIPT_FILENAME</span>  <span class="n">/app/public/index.php</span><span class="p">;</span>
+            <span class="kn">include</span>        <span class="s">fastcgi_params</span><span class="p">;</span>
+          <span class="p">}</span>
+      <span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="应用部署脚本">应用部署脚本</h4>
+
+<p>在下面的部署脚本中，有几点值得关注一下：</p>
+
+<ul>
+  <li>使用了 emptyDir:{} 作为容器的源代码存储介质，这样可以将应用读取到临时目录中，加速运行时 php 源码的加载。如果脚本文件不大，可以指定 emptyDir 使用内存运行，这个可以更加加速脚本加载。</li>
+  <li>pod 启动的时候使用了 2 个 初始化容器，使用的镜像分别是：极简源代码的镜像(php-caculate-purecode)和框架运行时镜像(my-lumen)，在启动的时候分别将 /app 的代码拷贝到了 emptyDir 卷中，分别拷贝了lumen的 vendor 依赖和业务源代码。这里拷贝业务源代码过程亦可以使用 cfs 或者 cos 来实现。由于使用了宿主机存储源代码，当源代码过于庞大的时候，请注意超出宿主机存储容量风险。</li>
+  <li>由于源码和依赖包都已经在 initContainers 组织好了，所以，只需要使用 php 基础容器来启动应用即可。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+  <span class="na">labels</span><span class="pi">:</span> 
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">volumes</span><span class="pi">:</span>
+      <span class="c1"># web app 的工作目录</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+        <span class="na">emptyDir</span><span class="pi">:</span> <span class="pi">{}</span>
+      <span class="c1"># nginx 的配置文件，从 cm 中绑定过来</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+        <span class="na">configMap</span><span class="pi">:</span>
+          <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-sidecar-config</span>
+          <span class="na">items</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">config</span>
+            <span class="na">path</span><span class="pi">:</span> <span class="s">caculate-sidecar.conf</span>
+      <span class="c1"># 初始化，将镜像中的源文件拷贝到临时文件夹。</span>
+      <span class="na">initContainers</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">copy-code</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-caculate-purecode:1.0</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/webapp</span>
+        <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">cp</span><span class="pi">,</span> <span class="nv">-R</span><span class="pi">,</span> <span class="nv">/app/</span><span class="pi">,</span> <span class="nv">/webapp</span><span class="pi">]</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">copy-lumen</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/my-lumen:1.0</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/webapp</span>
+        <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">cp</span><span class="pi">,</span> <span class="nv">-R</span><span class="pi">,</span> <span class="nv">/app/</span><span class="pi">,</span> <span class="nv">/webapp</span><span class="pi">]</span>
+      <span class="na">containers</span><span class="pi">:</span>
+      <span class="c1"># fpm 应用运行环境</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">caculate</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-runtime:1.0</span>
+        <span class="na">resources</span><span class="pi">:</span>
+          <span class="na">requests</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+          <span class="na">limits</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+        <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">9000</span>
+          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/app</span>
+          <span class="na">subPath</span><span class="pi">:</span> <span class="s">app</span>
+      <span class="c1"># nginx sidecar</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-sidecar</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/etc/nginx/conf.d/caculate-sidecar.conf</span>
+          <span class="na">subPath</span><span class="pi">:</span> <span class="s">caculate-sidecar.conf</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/app</span>
+          <span class="na">subPath</span><span class="pi">:</span> <span class="s">app</span>
+<span class="nn">---</span>
+</code></pre></div></div>
+
+<p>挂一个 LoadBalancer 看看。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-sidecar-service</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">spec</span><span class="pi">:</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">LoadBalancer</span>
+    <span class="na">selector</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+    <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+          <span class="na">port</span><span class="pi">:</span> <span class="m">8081</span>
+          <span class="na">targetPort</span><span class="pi">:</span> <span class="m">8081</span>
+</code></pre></div></div>
+
+<p>访问对应的 外部 ip:8081，完美运行。</p>
+
+<h3 id="nginx-独立部署">nginx 独立部署</h3>
+
+<p>通常情况下，运维部门希望将 web server 收敛并统一管理，开发也不太关心 nginx 的具体配置，将两者进行拆分众望所归，并且在微服务的横向扩展中，这种方式也更加“优雅”。</p>
+
+<p>部署架构图如下：</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/separate.jpg?raw=true" alt="nginx 独立部署架构" /></p>
+
+<h4 id="部署-fpm-业务应用">部署 fpm 业务应用</h4>
+
+<ul>
+  <li>此处部署了 php-caculate 镜像，此镜像里包含了源代码，Web框架以及 php 运行时，是一个完整的 php-fpm 业务应用。</li>
+  <li>通过 service 发布应用，以便 nginx 能发现 fpm 服务，并解偶了 webserver 和 业务服务。后期可以做纯php 业务的横向扩展和 nginx 的集中管理。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 为 php-fpm 部署 service</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ports</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">9000</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">tcp</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+
+<span class="nn">---</span>   
+<span class="c1"># 部署具体应用</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+  <span class="na">labels</span><span class="pi">:</span> 
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-caculate:1.0</span>
+        <span class="na">name</span><span class="pi">:</span> <span class="s">caculate</span>
+        <span class="na">resources</span><span class="pi">:</span>
+          <span class="na">requests</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+          <span class="na">limits</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+        <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">9000</span>
+          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+</code></pre></div></div>
+
+<h4 id="nginx-部署">nginx 部署</h4>
+
+<p>此部分的 nginx 配置基本和上面一样，唯一的区别就是 fastcgi_pass 的调用目标变成了 php 业务的 service：caculate-standalone 了。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
+<span class="na">metadata</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-config</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">data</span><span class="pi">:</span>
+    <span class="na">config</span><span class="pi">:</span> <span class="pi">|-</span>
+      <span class="s">server {</span>
+          <span class="s">listen       8081;</span>
+          <span class="s">root   /app/public;</span>
+          <span class="s">index index.php</span>
+          <span class="s">charset utf-8;</span>
+
+          <span class="s">location / {</span>
+            <span class="s">try_files $uri $uri/ /index.php?$args;</span>
+          <span class="s">}</span>
+
+          <span class="s">location ~ \.php$  {</span>
+            <span class="s">fastcgi_pass   caculate-standalone:9000;</span>
+            <span class="s">fastcgi_index  index.php;</span>
+            <span class="s">fastcgi_param  SCRIPT_FILENAME  /app/public/index.php;</span>
+            <span class="s">include        fastcgi_params;</span>
+          <span class="s">}</span>
+      <span class="s">}</span>
+</code></pre></div></div>
+
+<p>下面为 nginx 配置单独 pod 启动。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span>  <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-nginx-deployment</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">spec</span><span class="pi">:</span>
+    <span class="na">selector</span><span class="pi">:</span>
+        <span class="na">matchLabels</span><span class="pi">:</span>
+          <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+    <span class="na">template</span><span class="pi">:</span>
+        <span class="na">metadata</span><span class="pi">:</span>
+          <span class="na">labels</span><span class="pi">:</span>
+              <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+        <span class="na">spec</span><span class="pi">:</span>
+          <span class="na">containers</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+            <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+            <span class="na">volumeMounts</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+              <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/etc/nginx/conf.d/caculate-standalone.conf</span>
+              <span class="na">subPath</span><span class="pi">:</span> <span class="s">caculate-standalone.conf</span>
+          <span class="na">volumes</span><span class="pi">:</span>
+              <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+                <span class="na">configMap</span><span class="pi">:</span>
+                  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-config</span>
+                  <span class="na">items</span><span class="pi">:</span>
+                  <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">config</span>
+                    <span class="na">path</span><span class="pi">:</span> <span class="s">caculate-standalone.conf</span>
+</code></pre></div></div>
+
+<p>现在，给 nginx 应用挂一个 LoadBalancer 测试一下，亦完美运行。</p>
+
+<h3 id="使用-nginx-ingress-部署">使用 nginx-ingress 部署</h3>
+
+<p>上面的部署架构图中，ingress 和 nginx 分别进行了部署，但  nginx-ingress 其实已经合并了这两个部分。现在，我们试试使用 nginx-ingress 部署。</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/nginx-ingress.jpg?raw=true" alt="使用 nginx-ingress 部署" /></p>
+
+<p>使用上面的已经部署好的 fpm 业务的service: caculate-standalone 。</p>
+
+<p>部署脚本如下：</p>
+
+<ul>
+  <li>ingress.class 的值是创建 nginx-ingress 时候在控制台定义的。</li>
+  <li>与纯 nginx 配置不同，nginx-ingress 无需配置 try_files 节点，下面的配置其实已经将全部请求转发到了 public/index.php。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-ingress-config</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">data</span><span class="pi">:</span>
+  <span class="na">SCRIPT_FILENAME</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/app/public/index.php"</span>
+<span class="nn">---</span>  
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">networking.k8s.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Ingress</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">annotations</span><span class="pi">:</span>
+    <span class="na">kubernetes.io/ingress.class</span><span class="pi">:</span> <span class="s2">"</span><span class="s">your-ingress-class"</span>
+    <span class="na">nginx.ingress.kubernetes.io/backend-protocol</span><span class="pi">:</span> <span class="s2">"</span><span class="s">FCGI"</span>
+    <span class="na">nginx.ingress.kubernetes.io/fastcgi-index</span><span class="pi">:</span> <span class="s2">"</span><span class="s">index.php"</span>
+    <span class="na">nginx.ingress.kubernetes.io/fastcgi-params-configmap</span><span class="pi">:</span> <span class="s2">"</span><span class="s">caculate-nginx-ingress-config"</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-ingress</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">rules</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">http</span><span class="pi">:</span>
+      <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">backend</span><span class="pi">:</span>
+          <span class="na">serviceName</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+          <span class="na">servicePort</span><span class="pi">:</span> <span class="m">9000</span>
+</code></pre></div></div>
+
+<p>如果 nginx-ingress 提供了外网地址，可以访问一下试试，完美运行。</p>
+
+<h3 id="moremesh-化">MORE：mesh 化</h3>
+
+<p>在 php mesh 化中，需要考虑的问题如下：</p>
+
+<ul>
+  <li>fastcgi 使用 TCP 协议，并且有自己的序列化方法，此特性并未在 istio 和 envoy 中支持，无法进行精细的流量控制。</li>
+  <li>fpm + envoy sidecar 可以实现服务级别的流量控制。 fpm + nginx-sidecar + envoy sidecar 将 fastcgi 调用转化为 http 调用，可以实现基于 http 协议的精细流量控制。</li>
+  <li>实现调用链监控，需要使用 http 进行远程调用，有可能需要改造代码，在header 中封装 opentracing 。</li>
+</ul>
+
+<p>当下，php mesh 的部署模式建议采用 fpm 业务层，nginx-sidecar， envoy-sidecar 三个容器为一个pod 的部署模式。</p>
+
+<p>架构图如下：</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/mesh.jpg?raw=true" alt="php 应用的 mesh 部署架构" /></p>
+
+<p>此处的部署与第一部分的内容 - nginx 作为 sidecar 运行类似，在腾讯云中需要开通 TCM，并注入 envoy 的 sidecar。</p>
+
+<hr />
+
+<h2 id="本文相关的源代码说明">本文相关的源代码说明</h2>
+
+<p>位置：<a href="https://github.com/cloudbeer/php-best-practice">https://github.com/cloudbeer/php-best-practice</a></p>
+
+<h3 id="srclumen-app">src/lumen-app/</h3>
+
+<p>php 业务应用，映射了2个路径</p>
+
+<ul>
+  <li>/cpu： 两种方式计算了 pi</li>
+  <li>/mem: 在数组里塞了字符串为了撑爆内存</li>
+</ul>
+
+<h3 id="deployments">deployments/</h3>
+
+<p>部署代码</p>
+
+<ul>
+  <li>app-caculate-fpm-separate.yaml： nginx 和 fpm 分在不同的 pod 中部署</li>
+  <li>app-caculate-nginx-ingress.yaml： nginx-ingress 直接代理 fpm 服务</li>
+  <li>app-caculate-nginx-sidecar.yaml： nginx 和 fpm 部署在同一个pod中的两个容器</li>
+</ul>
+
+<h3 id="dockerfile">dockerfile/</h3>
+
+<ul>
+  <li>lumen.Dockerfile：包含 lumen 框架的运行环境</li>
+  <li>runtime.Dockerfile：php 基础运行环境</li>
+  <li>业务代码的 Dockerfile 位于 src/lumen-app/Dockerfile 和 src/lumen-app/purecode.Dockerfile</li>
+</ul>]]></content><author><name></name></author><category term="container," /><category term="language" /><summary type="html"><![CDATA[目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。]]></summary></entry><entry><title type="html">生产有权限控制的 kubeconfig</title><link href="https://cloudbeer.github.io/2021/07/create-kubeconfig.html" rel="alternate" type="text/html" title="生产有权限控制的 kubeconfig" /><published>2021-07-16T01:53:06+00:00</published><updated>2021-07-16T01:53:06+00:00</updated><id>https://cloudbeer.github.io/2021/07/create-kubeconfig</id><content type="html" xml:base="https://cloudbeer.github.io/2021/07/create-kubeconfig.html"><![CDATA[<p>​
+在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。</p>
+
+<p>下面的过程展示了如何使用 k8s 原生能力做到这一点。</p>
+
+<h2 id="实现步骤">实现步骤</h2>
+
+<h3 id="创建-namespace">创建 namespace</h3>
+
+<p>首先创建一个使用者名字的命名空间</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create ns well
+</code></pre></div></div>
+
+<h3 id="创建-serviceaccount">创建 ServiceAccount</h3>
+
+<p>在用户命名空间下创建 SA</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-sa</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
+</code></pre></div></div>
+
+<h3 id="创建一个-role">创建一个 Role</h3>
+
+<p>在用户命名空间下创建 Role，这里将你希望给使用者的资源和权限放进去。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-role</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
+<span class="na">rules</span><span class="pi">:</span>
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
+  <span class="na">resources</span><span class="pi">:</span> 
+  <span class="pi">-</span> <span class="s">pods</span>
+  <span class="pi">-</span> <span class="s">deployments</span>
+  <span class="pi">-</span> <span class="s">configmaps</span>
+  <span class="pi">-</span> <span class="s">services</span>
+  <span class="na">verbs</span><span class="pi">:</span> 
+  <span class="pi">-</span> <span class="s">get</span>
+  <span class="pi">-</span> <span class="s">list</span>
+  <span class="pi">-</span> <span class="s">watch</span>
+  <span class="pi">-</span> <span class="s">create</span>
+  <span class="pi">-</span> <span class="s">update</span>
+  <span class="pi">-</span> <span class="s">delete</span>
+</code></pre></div></div>
+
+<h3 id="创建-rolebinding">创建 RoleBinding</h3>
+
+<p>将刚刚创建的 SA 和 Role 绑在一起。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">kind</span><span class="pi">:</span> <span class="s">RoleBinding</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-binding</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
+<span class="na">subjects</span><span class="pi">:</span>
+<span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-sa</span>
+<span class="na">roleRef</span><span class="pi">:</span>
+  <span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-role</span>
+  <span class="na">apiGroup</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io</span>
+</code></pre></div></div>
+
+<p>现在 well-sa 这个 ServiceAccount 就可以访问 well 命名空间下的相应资源了。接下来需要把 SA 对应的钥匙给使用者。</p>
+
+<h3 id="生产-kubeconfig">生产 kubeconfig</h3>
+
+<p>kubeconfig 模版如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Config</span>
+<span class="na">users</span><span class="pi">:</span>
+<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">well</span>
+  <span class="na">user</span><span class="pi">:</span>
+    <span class="na">token</span><span class="pi">:</span> <span class="s">&lt;token&gt;</span>
+<span class="na">clusters</span><span class="pi">:</span>
+<span class="pi">-</span> <span class="na">cluster</span><span class="pi">:</span>
+    <span class="na">certificate-authority-data</span><span class="pi">:</span> <span class="s">&lt;certificate-authority-data&gt;</span>
+    <span class="na">server</span><span class="pi">:</span> <span class="s">&lt;api-server&gt;</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-cluster</span>
+<span class="na">contexts</span><span class="pi">:</span>
+<span class="pi">-</span> <span class="na">context</span><span class="pi">:</span>
+    <span class="na">cluster</span><span class="pi">:</span> <span class="s">well-cluster</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
+    <span class="na">user</span><span class="pi">:</span> <span class="s">well</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">well-cluster</span>
+<span class="na">current-context</span><span class="pi">:</span> <span class="s">well-cluster</span>
+</code></pre></div></div>
+
+<p>现在只需要将上面相应的内容替换成实际的内容。</p>
+
+<p>这些参数的获取路径如下：</p>
+
+<ul>
+  <li>通过命令 <code class="language-plaintext highlighter-rouge">kubectl config view --flatten --minify</code>  可以拿到 certificate-authority-data 和 api-server 信息 。</li>
+  <li>通过命令 <code class="language-plaintext highlighter-rouge">kubectl describe sa well-sa -n well</code>  拿到 secret 的 key。</li>
+  <li>通过命令 <code class="language-plaintext highlighter-rouge">kubectl describe secret &lt;key&gt; -n well</code>  拿到 token 信息。</li>
+</ul>
+
+<p>替换完成后将kubeconfig 存成文件发放给使用者即可。</p>
+
+<h2 id="自动化">自动化</h2>
+
+<p>上述过程可以自动化完成，下面是实现这一过程的完整 Shell 脚本。</p>
+
+<p>首先你需要有一个权限足够的 kubeconfig 在你的 kubectl 当前上下文。</p>
+
+<p>拷贝此脚本命名文件名为 create-key.sh，给执行权限。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+
+<span class="nb">echo</span> <span class="s2">"欢迎使用 kubeconfig 生成器，此脚本可以产生一个有限权限的密钥。"</span>
+<span class="nb">echo</span> <span class="s2">"执行此脚本需要您首先拥有集群最大权限的默认钥匙。"</span>
+<span class="nb">echo 
+echo</span> <span class="s2">"使用方法："</span>
+<span class="nb">echo</span> <span class="s2">"./create-key.sh"</span>
+<span class="nb">echo</span> <span class="s2">"或者"</span>
+<span class="nb">echo</span> <span class="s2">"./create-key.sh &lt;yourname&gt;"</span>
+<span class="nb">echo</span>
+
+<span class="c"># 检查 ns</span>
+<span class="k">function </span>userExists<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">checkUser</span><span class="o">=</span><span class="sb">`</span>kubectl get ns | <span class="nb">grep</span> <span class="nt">-w</span> <span class="nv">$1</span><span class="sb">`</span> 
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$checkUser</span><span class="s2">"</span> <span class="o">]</span>
+  <span class="k">then
+    </span><span class="nb">echo </span>0
+  <span class="k">else
+    </span><span class="nb">echo </span>1
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+
+<span class="nv">USER</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span><span class="k">then
+  while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do
+    </span><span class="nb">read</span> <span class="nt">-p</span> <span class="s2">"请输入用户标识："</span> USER
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span><span class="k">then</span> <span class="c"># 啥也不输入</span>
+      <span class="nb">echo</span> <span class="s2">"您得输入点啥，或者 ctrl + c 退出，请重新输入。"</span>
+      <span class="nb">echo
+    </span><span class="k">else
+      </span><span class="nv">checkUser</span><span class="o">=</span><span class="sb">`</span>userExists <span class="nv">$USER</span><span class="sb">`</span>
+      <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$checkUser</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"0"</span> <span class="o">]</span><span class="p">;</span>
+      <span class="k">then
+        </span><span class="nb">break
+      </span><span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2"> 被占用，请重新输入或者 ctrl + c 退出。"</span>
+        <span class="nb">echo
+      </span><span class="k">fi
+    fi
+  done
+else
+    </span><span class="nv">checkUser</span><span class="o">=</span><span class="sb">`</span>userExists <span class="nv">$USER</span><span class="sb">`</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$checkUser</span><span class="s2">"</span> <span class="o">=</span> <span class="s2">"1"</span> <span class="o">]</span><span class="p">;</span><span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2"> 被占用。"</span> <span class="o">&gt;&gt;</span>/dev/stderr
+        <span class="nb">exit
+    </span><span class="k">fi
+fi
+
+
+</span>kubectl create ns <span class="nv">$USER</span>
+
+<span class="c"># 创建 SA</span>
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: </span><span class="nv">$USER</span><span class="sh">-sa
+  namespace: </span><span class="nv">$USER</span><span class="sh">
+</span><span class="no">EOF
+
+</span><span class="c"># 创建一个角色，并控制资源，调整这部分分配您需要的资源权限</span>
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: </span><span class="nv">$USER</span><span class="sh">-role
+  namespace: </span><span class="nv">$USER</span><span class="sh">
+rules:
+- apiGroups: [""]
+  resources: 
+  - pods
+  - deployments
+  - configmaps
+  - services
+  verbs: 
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+</span><span class="no">EOF
+
+</span><span class="c"># 创建 Role Binding</span>
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: </span><span class="nv">$USER</span><span class="sh">-binding
+  namespace: </span><span class="nv">$USER</span><span class="sh">
+subjects:
+- kind: ServiceAccount
+  name: </span><span class="nv">$USER</span><span class="sh">-sa
+roleRef:
+  kind: Role
+  name: </span><span class="nv">$USER</span><span class="sh">-role
+  apiGroup: rbac.authorization.k8s.io
+</span><span class="no">EOF
+
+</span><span class="nv">KUBE_APISERVER</span><span class="o">=</span><span class="sb">`</span>kubectl config view <span class="nt">--minify</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.clusters[*].cluster.server}"</span><span class="sb">`</span>
+<span class="nv">TOKEN_KEY</span><span class="o">=</span><span class="sb">`</span>kubectl get sa <span class="nv">$USER</span><span class="nt">-sa</span> <span class="nt">-n</span> <span class="nv">$USER</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.secrets[0].name}"</span><span class="sb">`</span>
+<span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>kubectl get secrets <span class="nv">$TOKEN_KEY</span> <span class="nt">-n</span> <span class="nv">$USER</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.token}"</span><span class="sb">`</span>
+<span class="nv">CLUSTER_AUTH</span><span class="o">=</span><span class="sb">`</span>kubectl config view <span class="nt">--flatten</span> <span class="nt">--minify</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.clusters[0].cluster.certificate-authority-data}"</span><span class="sb">`</span>
+<span class="nv">TOKEN_DECODE</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$TOKEN</span> | <span class="nb">base64</span> <span class="nt">--decode</span><span class="sb">`</span>
+
+<span class="c"># 生产 kubeconfig 文件</span>
+<span class="nb">cat</span> <span class="o">&gt;</span> <span class="nv">$USER</span>.config  <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Config
+users:
+- name: </span><span class="nv">$USER</span><span class="sh">
+  user:
+    token: </span><span class="nv">$TOKEN_DECODE</span><span class="sh">
+clusters:
+- cluster:
+    certificate-authority-data: </span><span class="nv">$CLUSTER_AUTH</span><span class="sh">
+    server: </span><span class="nv">$KUBE_APISERVER</span><span class="sh">
+  name: </span><span class="nv">$USER</span><span class="sh">-cluster
+contexts:
+- context:
+    cluster: </span><span class="nv">$USER</span><span class="sh">-cluster
+    namespace: </span><span class="nv">$USER</span><span class="sh">
+    user: </span><span class="nv">$USER</span><span class="sh">
+  name: </span><span class="nv">$USER</span><span class="sh">-cluster
+current-context: </span><span class="nv">$USER</span><span class="sh">-cluster
+</span><span class="no">EOF
+
+</span><span class="nb">cat</span> <span class="nv">$USER</span>.config | pbcopy
+
+<span class="nb">echo
+echo</span> <span class="s2">"成功了！！！！"</span>
+<span class="nb">echo
+echo
+echo</span> <span class="s2">"kubeconfig 文件已经保存为 ./</span><span class="nv">$USER</span><span class="s2">.config，并已经拷贝至您的剪切板中了。"</span>
+<span class="nb">echo</span> <span class="s2">"当前 kubeconfig 仅允许访问命名空间 </span><span class="nv">$USER</span><span class="s2"> 下的特定资源。"</span>
+<span class="nb">echo
+echo</span> <span class="s2">"执行如下的命令试试看："</span>
+<span class="nb">echo</span> <span class="s2">"kubectl get po --kubeconfig=./</span><span class="nv">$USER</span><span class="s2">.config"</span>
+<span class="nb">echo</span> <span class="s2">"kubectl get secret --kubeconfig=./</span><span class="nv">$USER</span><span class="s2">.config"</span>
+<span class="nb">echo</span> <span class="s2">"kubectl get po --kubeconfig=./</span><span class="nv">$USER</span><span class="s2">.config -n default"</span>
+</code></pre></div></div>
+
+<ul>
+  <li>执行 ./create-key.sh 或者 ./create-key.sh well 都可以。</li>
+  <li>执行完成会在当前目录下保存一个 well.config 的文件，这个就是 kubeconfig 文件，发给使用这就好。或者将剪切板里的内容贴给使用者。</li>
+  <li>本脚本给了测试用例，其中，kubectl get po 有权限，kubectl get secret 没有权限，kubectl get po -n default 没有权限。</li>
+  <li>修改 Role 的部分，可以精细控制权限，也可以创建多个 Role 和 Binding，对不同的资源分权限控制。</li>
+  <li>需要释放资源，直接删除命名空间，方便快捷。<code class="language-plaintext highlighter-rouge">kubectl delete ns well</code></li>
+</ul>
+
+<p>此脚本在 Mac 下测试通过。</p>]]></content><author><name></name></author><category term="container" /><summary type="html"><![CDATA[​ 在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。]]></summary></entry><entry><title type="html">使用 docker 作为 Web 开发服务器</title><link href="https://cloudbeer.github.io/2020/06/docker-as-web-server.html" rel="alternate" type="text/html" title="使用 docker 作为 Web 开发服务器" /><published>2020-06-07T16:10:49+00:00</published><updated>2020-06-07T16:10:49+00:00</updated><id>https://cloudbeer.github.io/2020/06/docker-as-web-server</id><content type="html" xml:base="https://cloudbeer.github.io/2020/06/docker-as-web-server.html"><![CDATA[<p>提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。</p>
+
+<h2 id="前提条件">前提条件</h2>
+
+<ul>
+  <li>安装了 docker：安装方法略。</li>
+  <li>nginx 镜像： <code class="language-plaintext highlighter-rouge">docker pull nginx:alpine</code> 。</li>
+  <li>这个例子使用了 python 作为脚本语言。</li>
+</ul>
+
+<p>以下脚本我在 mac 中运行通过。</p>
+
+<h2 id="nginx-配置">nginx 配置</h2>
+
+<p>首先配置 nginx，这个脚本会从容器中启动，启动后，容器的 /app 是主目录，并反向代理了 2 组 api。</p>
+
+<p>如果远端服务器是本机，需要从容器内部访问宿主机资源，localhost 是不好使的，请使用域名：<code class="language-plaintext highlighter-rouge">host.docker.internal</code></p>
+
+<p>nginx 的配置如下：</p>
+
+<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span> 
+  <span class="kn">listen</span>       <span class="mi">8500</span><span class="p">;</span>
+  <span class="kn">index</span>   <span class="s">index.html</span><span class="p">;</span>
+  <span class="kn">location</span> <span class="n">/</span> <span class="p">{</span>
+    <span class="kn">index</span>   <span class="s">index.html</span><span class="p">;</span>
+    <span class="kn">root</span>    <span class="n">/app</span><span class="p">;</span>
+    <span class="kn">expires</span> <span class="s">1s</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="kn">location</span> <span class="s">^~/api/crm/</span> <span class="p">{</span>
+    <span class="kn">proxy_http_version</span> <span class="mi">1</span><span class="s">.1</span><span class="p">;</span>
+    <span class="kn">proxy_pass</span>      <span class="s">http://host.docker.internal:7304/</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="kn">location</span> <span class="s">^~/api/qq/</span> <span class="p">{</span>
+    <span class="kn">proxy_http_version</span> <span class="mi">1</span><span class="s">.1</span><span class="p">;</span>
+    <span class="kn">proxy_pass</span>      <span class="s">http://www.qq.com/api/</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="docker">docker</h2>
+
+<p>docker 启动脚本如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> <span class="nt">-v</span> &lt;publishPath&gt;:/app <span class="nt">-v</span> &lt;nginxConfPath&gt;:/etc/nginx/conf.d/server.conf <span class="nt">-p</span> 8500:8500 nginx:alpine
+</code></pre></div></div>
+
+<p>直接运行这个脚本，打开 <a href="http://localhost:8500">http://localhost:8500</a>，我们的简易开发服务环境就搭建起来了。每次修改文件的时候，刷新浏览器就可以看到改变。</p>
+
+<p>但，如果能自动刷新浏览器就圆满了。下面咱们试着来解决此问题。</p>
+
+<h2 id="开发过程中的自动刷新">开发过程中的自动刷新</h2>
+
+<p>我想直接通过外部脚本监控文件的改变。并自动刷新浏览器。</p>
+
+<p>docker 脚本也放在里面一起执行算了。</p>
+
+<p>完成这次任务使用了 python，完整的脚本是这么写的：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/env python3
+#coding=utf-8
+</span>
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">webbrowser</span>
+<span class="kn">import</span> <span class="nn">_thread</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">selenium</span> <span class="kn">import</span> <span class="n">webdriver</span>
+<span class="kn">from</span> <span class="nn">watchdog.observers</span> <span class="kn">import</span> <span class="n">Observer</span>
+<span class="kn">from</span> <span class="nn">watchdog.events</span> <span class="kn">import</span> <span class="n">FileSystemEventHandler</span>
+
+<span class="c1"># 启动浏览器，并访问目标地址
+</span><span class="n">driver</span> <span class="o">=</span> <span class="n">webdriver</span><span class="p">.</span><span class="n">Chrome</span><span class="p">()</span>
+<span class="n">driver</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'http://localhost:8500'</span><span class="p">)</span>
+
+<span class="c1"># 当前工作目录
+</span><span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">getcwd</span><span class="p">()</span>
+<span class="c1"># 我当前的发布目录
+</span><span class="n">publishPath</span> <span class="o">=</span> <span class="n">cwd</span> <span class="o">+</span> <span class="s">"/publish"</span>
+
+
+<span class="k">def</span> <span class="nf">dockerServer</span><span class="p">():</span>
+  <span class="s">""" 此函数启动 docker """</span>
+  <span class="n">dockerCmd</span> <span class="o">=</span> <span class="p">[</span><span class="s">'docker'</span><span class="p">,</span> <span class="s">'run'</span><span class="p">,</span> <span class="s">'--rm'</span><span class="p">,</span> <span class="s">'-it'</span><span class="p">,</span> 
+                <span class="s">'-v'</span><span class="p">,</span> <span class="n">publishPath</span> <span class="o">+</span><span class="s">":/app"</span><span class="p">,</span>
+                <span class="s">'-v'</span><span class="p">,</span> <span class="n">cwd</span><span class="o">+</span><span class="s">"/server.conf:/etc/nginx/conf.d/server.conf"</span><span class="p">,</span>
+                <span class="s">'-p'</span><span class="p">,</span> <span class="s">"8500:8500"</span><span class="p">,</span> <span class="s">'nginx:alpine'</span><span class="p">]</span>
+  <span class="k">print</span><span class="p">(</span><span class="s">"开始执行 nginx in docker..."</span><span class="p">)</span>
+  <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="s">" "</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">dockerCmd</span><span class="p">),</span> <span class="n">shell</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+
+
+<span class="k">def</span> <span class="nf">refreshBrowser</span><span class="p">(</span><span class="n">delay</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="s">""" 延时 1 秒刷新浏览器，当有大量文件被更新时候，可以丢弃无效刷新动作 """</span>
+  <span class="k">print</span><span class="p">(</span><span class="n">delay</span><span class="p">,</span> <span class="s">"秒后刷新浏览器..."</span><span class="p">)</span>
+  <span class="n">time</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span>
+  <span class="n">driver</span><span class="p">.</span><span class="n">refresh</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">RefreshBrowserHandler</span><span class="p">(</span><span class="n">FileSystemEventHandler</span><span class="p">):</span>
+  <span class="s">""" watchdog 的监控事件 """</span>
+  <span class="k">def</span> <span class="nf">on_modified</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">refreshBrowser</span><span class="p">()</span>  <span class="c1"># 这里需改进，应该将任务放到线程池里，以便丢弃持续刷新操作。
+</span>
+<span class="k">def</span> <span class="nf">watchPublish</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+  <span class="s">""" watchdog 监控发布目录，一旦发现文件改变，便出发刷新事件 """</span>
+  <span class="k">print</span><span class="p">(</span><span class="s">"正在监控目录改变:"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+  <span class="n">event_handler</span> <span class="o">=</span> <span class="n">RefreshBrowserHandler</span><span class="p">()</span>
+  <span class="n">observer</span> <span class="o">=</span> <span class="n">Observer</span><span class="p">()</span>
+  <span class="n">observer</span><span class="p">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">event_handler</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="n">observer</span><span class="p">.</span><span class="n">start</span><span class="p">()</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">time</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="k">except</span> <span class="nb">KeyboardInterrupt</span><span class="p">:</span>
+    <span class="n">observer</span><span class="p">.</span><span class="n">stop</span><span class="p">()</span>
+  <span class="n">observer</span><span class="p">.</span><span class="n">join</span><span class="p">()</span>
+
+
+<span class="c1"># 启动
+</span><span class="n">_thread</span><span class="p">.</span><span class="n">start_new_thread</span><span class="p">(</span><span class="n">dockerServer</span><span class="p">,</span> <span class="p">())</span>
+<span class="n">_thread</span><span class="p">.</span><span class="n">start_new_thread</span><span class="p">(</span><span class="n">refreshBrowser</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span>
+<span class="n">watchPublish</span><span class="p">(</span><span class="n">publishPath</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>上面的脚本需要如下的依赖：</p>
+
+<ul>
+  <li>python 自带的 webbrowser 无法控制刷新浏览器，所以采用了 selenium 包: <code class="language-plaintext highlighter-rouge">pip install selenium</code> 。</li>
+  <li>我使用了 chome，但提示无法找到 chromedriver，下载一个安装好了，从这里下载：<a href="http://npm.taobao.org/mirrors/chromedriver">http://npm.taobao.org/mirrors/chromedriver</a>，找到和你当前浏览器版本匹配的安装包。</li>
+  <li>另外需要安装的包 是 watchdog，也 pip 安装一下。</li>
+</ul>
+
+<h2 id="总结">总结</h2>
+
+<p>docker 的 images 平时就在那里安静的躺着，等我们需要开发的时候，启动他，开发完用 ctrl+c 关闭他，由于使用了 <code class="language-plaintext highlighter-rouge">--rm</code>，docker 的实例也跟着清除了，很清爽。</p>
+
+<p>推而广之，这种方法对于所有脚本类的 Web 开发都有效，我们无需安装任何环境，只需要临时启动一个 docker 容器就好，处女座程序员可以试试这种方法。</p>
+
+<hr />
+
+<p>参考：</p>
+
+<p><a href="https://stackoverflow.com/questions/32923451/how-to-run-an-function-when-anything-changes-in-a-dir-with-python-watchdog">How to run an function when anything changes in a dir with Python Watchdog?</a></p>
+
+<p><a href="https://selenium-python.readthedocs.io/">Selenium with Python</a></p>]]></content><author><name></name></author><category term="container" /><summary type="html"><![CDATA[提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。]]></summary></entry></feed>

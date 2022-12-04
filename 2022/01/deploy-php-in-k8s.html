@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>php应用容器化部署实践 | 啤酒云</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="php应用容器化部署实践" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。" />
+<meta property="og:description" content="目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。" />
+<link rel="canonical" href="https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html" />
+<meta property="og:url" content="https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html" />
+<meta property="og:site_name" content="啤酒云" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-01-21T02:56:53+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="php应用容器化部署实践" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-01-21T02:56:53+00:00","datePublished":"2022-01-21T02:56:53+00:00","description":"目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。","headline":"php应用容器化部署实践","mainEntityOfPage":{"@type":"WebPage","@id":"https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html"},"url":"https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
+if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'G-B4DC7SCVXM', 'auto');
+  ga('send', 'pageview');
+}
+</script>
+  
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">啤酒云</a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">php应用容器化部署实践</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-01-21T02:56:53+00:00" itemprop="datePublished">2022-01-21
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
+
+<h2 id="php-应用镜像准备">php 应用镜像准备</h2>
+
+<p>镜像的层次：基础依赖镜像-&gt;运行框架-&gt;应用/代码镜像</p>
+
+<p>基于容器的单进程运行理念，下面的部署过程并未使用单体的 nginx+php-fpm 一体的容器运行方式，而是将 php-fpm 和 nginx 拆散。</p>
+
+<h3 id="基础镜像">基础镜像</h3>
+
+<p>安装基础系统依赖包和公司 php 应用中各个开发小组都会用到的扩展包。</p>
+
+<p>下面的示例基于官方 fpm，安装了通用系统级的依赖和 php 包管理器。</p>
+
+<p>如果可以，建议使用更基础的镜像从 php 源码进行编译。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># runtime.Dockerfile</span>
+<span class="k">FROM</span><span class="s"> php:8.0.3-fpm</span>
+
+<span class="c"># 自定义类库示例</span>
+<span class="k">RUN </span>apt-get update <span class="o">&amp;&amp;</span> <span class="se">\
+</span>    apt-get <span class="nb">install</span> <span class="nt">-y</span> git zlib1g-dev libpng-dev libicu-dev
+<span class="k">RUN </span>docker-php-ext-install <span class="se">\
+</span>    gd <span class="se">\
+</span>    intl
+<span class="k">RUN </span>docker-php-ext-configure intl
+
+
+<span class="c"># 安装 composer</span>
+<span class="k">RUN </span>curl <span class="nt">-sS</span> https://getcomposer.org/installer | php <span class="nt">--</span> <span class="se">\
+</span>    <span class="nt">--install-dir</span><span class="o">=</span>/usr/local/bin <span class="nt">--filename</span><span class="o">=</span>composer <span class="se">\
+</span>    <span class="o">&amp;&amp;</span> <span class="nb">chmod</span> +x /usr/local/bin/composer 
+</code></pre></div></div>
+
+<p>将上述文件编译成镜像，并 push 到仓库：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker build <span class="nt">-t</span> cloudbeer/php-runtime:1.0 <span class="nt">-f</span> runtime.Dockerfile <span class="nb">.</span>
+docker push cloudbeer/php-runtime:1.0
+</code></pre></div></div>
+
+<h3 id="应用层框架镜像">应用层框架镜像</h3>
+
+<p>如果开发框架比较稳定，建议直接把框架打包成基础镜像以避免后续部署过程中频繁安装依赖包，加速发布打包发布过程，如业务开发A组使用了 lumen 框架，我们可以专门为 lumen 打一个镜像。</p>
+
+<p>如下镜像，安装了 lumen web 框架。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># lumen.Dockerfile</span>
+<span class="k">FROM</span><span class="s"> cloudbeer/php-runtime:1.0</span>
+
+<span class="k">RUN </span><span class="nb">mkdir</span> /app
+<span class="k">WORKDIR</span><span class="s"> /app</span>
+
+<span class="k">RUN </span><span class="nb">echo</span> <span class="s1">'{</span><span class="se">\
+</span><span class="s1">    "require": {</span><span class="se">\
+</span><span class="s1">    "php": "^7.3|^8.0",</span><span class="se">\
+</span><span class="s1">    "laravel/lumen-framework": "^8.0"</span><span class="se">\
+</span><span class="s1">    }</span><span class="se">\
+</span><span class="s1"> }'</span> <span class="o">&gt;</span> composer.json
+
+<span class="k">RUN </span>composer i
+</code></pre></div></div>
+
+<p>上述镜像打包为：cloudbeer/my-lumen:1.0</p>
+
+<h3 id="应用层镜像">应用层镜像</h3>
+
+<p>由于我们在应用层框架里已经把 lumen 运行时都安装好了，所以这个镜像里，只需拷贝纯源码即可。记得创建 .gitignore 或者 .dockerignore 文件，排除 vender，test 等目录。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># .dockerignore</span>
+/vendor
+/tests
+/.idea
+/.git
+.gitignore
+Dockerfile
+Homestead.json
+Homestead.yaml
+.env
+.ent.example
+.phpunit.result.cache
+</code></pre></div></div>
+
+<p>应用镜像里只需要拷贝脚本文件即可。这个镜像包含了完整的 php 运行时和业务代码，启动后可以直接接收 fastcgi 调用。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">FROM</span><span class="s"> cloudbeer/my-lumen:1.0</span>
+<span class="k">COPY</span><span class="s"> ./ /app/</span>
+</code></pre></div></div>
+
+<p>上面的镜像打包为： cloudbeer/php-caculate:1.0</p>
+
+<p>另一种打包代码方式，我们使用纯的容器将源代码打包，后面会在 K8S 中部署时将文件拷贝到框架运行时容器中运行。</p>
+
+<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">FROM</span><span class="s"> debian:buster-slim</span>
+<span class="k">RUN </span><span class="nb">mkdir</span> /app
+<span class="k">COPY</span><span class="s"> ./ /app/</span>
+</code></pre></div></div>
+
+<p>上面的镜像打包为： cloudbeer/php-caculate-purecode:1.0</p>
+
+<p>代码层在还可以有更多的打包方式，如上传到对象存储里，或者使用 NFS 存储，后期绑定到容器运行时运行。</p>
+
+<h3 id="本地测试">本地测试</h3>
+
+<p>启动镜像 cloudbeer/php-caculate:1.0</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> cloudbeer/php-caculate:1.0 sh
+
+<span class="c"># 容器内运行</span>
+<span class="c"># 启动 php 测试</span>
+php <span class="nt">-S</span> localhost:8000 <span class="nt">-t</span> public &amp;
+<span class="c"># 查看结果</span>
+curl http://localhost:8000/cpu
+</code></pre></div></div>
+
+<p>完美运行。</p>
+
+<p>目前已经完成了应用镜像打包。其中前两层镜像可以复用，真正的业务应用只需拷贝代码。</p>
+
+<p>上述代码中的镜像，我均已打包上传到 docker hub 官网，可以忽略 build 和 push 过程，直接进行测试。</p>
+
+<h2 id="部署到-k8s">部署到 K8S</h2>
+
+<p>php 应用部署到容器环境，最自然的一种方式是：直接将 php 的运行环境和 web server 以及业务源代码打包放在一个容器中运行。这个方式是最简单的方式，php 官方也提供了 php:nginx 这种镜像底包。</p>
+
+<p>但 php 运行时和 web server 是在两个进程中运行，这个不符合容器的最佳实践。一般建议将这两个进程分别运行在不同的容器中。</p>
+
+<h3 id="nginx-作为-sidecar-运行">nginx 作为 sidecar 运行</h3>
+
+<p>K8S 在同一个 pod 中，可以运行多个容器。我们将 php-fpm 的业务代码部署在一个容器中，与之相伴生的有一个 nginx 容器，nginx 作为fastcgi的调用方，并可以代理一些静态资源，这个模式类似 mesh 的sidecar 模式。架构图如下：</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/blob/main/readme-img/sidecar.jpg?raw=true" alt="nginx 作为 sidecar 部署" /></p>
+
+<h4 id="nginx-配置">nginx 配置</h4>
+
+<p>由于 nginx 和 php-fpm 在一个 pod 中，所以只需发起 localhost 调用即可。 nginx 的配置如下，我们将这个配置写到 cm 中，后面通过 volume 绑定到容器中。这个配置有几点需要注意的：</p>
+
+<ul>
+  <li>应用使用了 lumen 的 route 体系，所以需要将路由通过 try_files 全部指向 ./public/index.php 文件。</li>
+  <li>fastcgi_param  SCRIPT_FILENAME  /app/public/index.php 这里也将所有脚本指向这个文件。</li>
+</ul>
+
+<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># nginx config</span>
+<span class="k">apiVersion:</span> <span class="s">v1</span>
+<span class="s">kind:</span> <span class="s">ConfigMap</span>
+<span class="s">metadata:</span>
+    <span class="s">name:</span> <span class="s">caculate-sidecar-config</span>
+    <span class="s">namespace:</span> <span class="s">php-test</span>
+<span class="s">data:</span>
+    <span class="s">config:</span> <span class="s">|-</span>
+      <span class="s">server</span> <span class="p">{</span>
+          <span class="kn">listen</span>       <span class="mi">8081</span><span class="p">;</span>
+          <span class="kn">root</span>   <span class="n">/app/public</span><span class="p">;</span>
+          <span class="kn">index</span> <span class="s">index.php</span>
+          <span class="s">charset</span> <span class="s">utf-8</span><span class="p">;</span>
+
+          <span class="kn">location</span> <span class="n">/</span> <span class="p">{</span>
+            <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri</span><span class="n">/</span> <span class="n">/index.php?</span><span class="nv">$args</span><span class="p">;</span>
+          <span class="p">}</span>
+
+          <span class="kn">location</span> <span class="p">~</span> <span class="sr">\.php$</span>  <span class="p">{</span>
+            <span class="kn">fastcgi_pass</span>   <span class="nf">127.0.0.1</span><span class="p">:</span><span class="mi">9000</span><span class="p">;</span>
+            <span class="kn">fastcgi_index</span>  <span class="s">index.php</span><span class="p">;</span>
+            <span class="kn">fastcgi_param</span>  <span class="s">SCRIPT_FILENAME</span>  <span class="n">/app/public/index.php</span><span class="p">;</span>
+            <span class="kn">include</span>        <span class="s">fastcgi_params</span><span class="p">;</span>
+          <span class="p">}</span>
+      <span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="应用部署脚本">应用部署脚本</h4>
+
+<p>在下面的部署脚本中，有几点值得关注一下：</p>
+
+<ul>
+  <li>使用了 emptyDir:{} 作为容器的源代码存储介质，这样可以将应用读取到临时目录中，加速运行时 php 源码的加载。如果脚本文件不大，可以指定 emptyDir 使用内存运行，这个可以更加加速脚本加载。</li>
+  <li>pod 启动的时候使用了 2 个 初始化容器，使用的镜像分别是：极简源代码的镜像(php-caculate-purecode)和框架运行时镜像(my-lumen)，在启动的时候分别将 /app 的代码拷贝到了 emptyDir 卷中，分别拷贝了lumen的 vendor 依赖和业务源代码。这里拷贝业务源代码过程亦可以使用 cfs 或者 cos 来实现。由于使用了宿主机存储源代码，当源代码过于庞大的时候，请注意超出宿主机存储容量风险。</li>
+  <li>由于源码和依赖包都已经在 initContainers 组织好了，所以，只需要使用 php 基础容器来启动应用即可。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+  <span class="na">labels</span><span class="pi">:</span> 
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">volumes</span><span class="pi">:</span>
+      <span class="c1"># web app 的工作目录</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+        <span class="na">emptyDir</span><span class="pi">:</span> <span class="pi">{}</span>
+      <span class="c1"># nginx 的配置文件，从 cm 中绑定过来</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+        <span class="na">configMap</span><span class="pi">:</span>
+          <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-sidecar-config</span>
+          <span class="na">items</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">config</span>
+            <span class="na">path</span><span class="pi">:</span> <span class="s">caculate-sidecar.conf</span>
+      <span class="c1"># 初始化，将镜像中的源文件拷贝到临时文件夹。</span>
+      <span class="na">initContainers</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">copy-code</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-caculate-purecode:1.0</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/webapp</span>
+        <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">cp</span><span class="pi">,</span> <span class="nv">-R</span><span class="pi">,</span> <span class="nv">/app/</span><span class="pi">,</span> <span class="nv">/webapp</span><span class="pi">]</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">copy-lumen</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/my-lumen:1.0</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/webapp</span>
+        <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">cp</span><span class="pi">,</span> <span class="nv">-R</span><span class="pi">,</span> <span class="nv">/app/</span><span class="pi">,</span> <span class="nv">/webapp</span><span class="pi">]</span>
+      <span class="na">containers</span><span class="pi">:</span>
+      <span class="c1"># fpm 应用运行环境</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">caculate</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-runtime:1.0</span>
+        <span class="na">resources</span><span class="pi">:</span>
+          <span class="na">requests</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+          <span class="na">limits</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+        <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">9000</span>
+          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/app</span>
+          <span class="na">subPath</span><span class="pi">:</span> <span class="s">app</span>
+      <span class="c1"># nginx sidecar</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-sidecar</span>
+        <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+        <span class="na">volumeMounts</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/etc/nginx/conf.d/caculate-sidecar.conf</span>
+          <span class="na">subPath</span><span class="pi">:</span> <span class="s">caculate-sidecar.conf</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
+          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/app</span>
+          <span class="na">subPath</span><span class="pi">:</span> <span class="s">app</span>
+<span class="nn">---</span>
+</code></pre></div></div>
+
+<p>挂一个 LoadBalancer 看看。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-sidecar-service</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">spec</span><span class="pi">:</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">LoadBalancer</span>
+    <span class="na">selector</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
+    <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+          <span class="na">port</span><span class="pi">:</span> <span class="m">8081</span>
+          <span class="na">targetPort</span><span class="pi">:</span> <span class="m">8081</span>
+</code></pre></div></div>
+
+<p>访问对应的 外部 ip:8081，完美运行。</p>
+
+<h3 id="nginx-独立部署">nginx 独立部署</h3>
+
+<p>通常情况下，运维部门希望将 web server 收敛并统一管理，开发也不太关心 nginx 的具体配置，将两者进行拆分众望所归，并且在微服务的横向扩展中，这种方式也更加“优雅”。</p>
+
+<p>部署架构图如下：</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/separate.jpg?raw=true" alt="nginx 独立部署架构" /></p>
+
+<h4 id="部署-fpm-业务应用">部署 fpm 业务应用</h4>
+
+<ul>
+  <li>此处部署了 php-caculate 镜像，此镜像里包含了源代码，Web框架以及 php 运行时，是一个完整的 php-fpm 业务应用。</li>
+  <li>通过 service 发布应用，以便 nginx 能发现 fpm 服务，并解偶了 webserver 和 业务服务。后期可以做纯php 业务的横向扩展和 nginx 的集中管理。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 为 php-fpm 部署 service</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ports</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">9000</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">tcp</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+
+<span class="nn">---</span>   
+<span class="c1"># 部署具体应用</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+  <span class="na">labels</span><span class="pi">:</span> 
+    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-caculate:1.0</span>
+        <span class="na">name</span><span class="pi">:</span> <span class="s">caculate</span>
+        <span class="na">resources</span><span class="pi">:</span>
+          <span class="na">requests</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+          <span class="na">limits</span><span class="pi">:</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
+        <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">9000</span>
+          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+</code></pre></div></div>
+
+<h4 id="nginx-部署">nginx 部署</h4>
+
+<p>此部分的 nginx 配置基本和上面一样，唯一的区别就是 fastcgi_pass 的调用目标变成了 php 业务的 service：caculate-standalone 了。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
+<span class="na">metadata</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-config</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">data</span><span class="pi">:</span>
+    <span class="na">config</span><span class="pi">:</span> <span class="pi">|-</span>
+      <span class="s">server {</span>
+          <span class="s">listen       8081;</span>
+          <span class="s">root   /app/public;</span>
+          <span class="s">index index.php</span>
+          <span class="s">charset utf-8;</span>
+
+          <span class="s">location / {</span>
+            <span class="s">try_files $uri $uri/ /index.php?$args;</span>
+          <span class="s">}</span>
+
+          <span class="s">location ~ \.php$  {</span>
+            <span class="s">fastcgi_pass   caculate-standalone:9000;</span>
+            <span class="s">fastcgi_index  index.php;</span>
+            <span class="s">fastcgi_param  SCRIPT_FILENAME  /app/public/index.php;</span>
+            <span class="s">include        fastcgi_params;</span>
+          <span class="s">}</span>
+      <span class="s">}</span>
+</code></pre></div></div>
+
+<p>下面为 nginx 配置单独 pod 启动。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span>  <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-nginx-deployment</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">spec</span><span class="pi">:</span>
+    <span class="na">selector</span><span class="pi">:</span>
+        <span class="na">matchLabels</span><span class="pi">:</span>
+          <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+    <span class="na">template</span><span class="pi">:</span>
+        <span class="na">metadata</span><span class="pi">:</span>
+          <span class="na">labels</span><span class="pi">:</span>
+              <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+        <span class="na">spec</span><span class="pi">:</span>
+          <span class="na">containers</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+            <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+            <span class="na">volumeMounts</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+              <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/etc/nginx/conf.d/caculate-standalone.conf</span>
+              <span class="na">subPath</span><span class="pi">:</span> <span class="s">caculate-standalone.conf</span>
+          <span class="na">volumes</span><span class="pi">:</span>
+              <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
+                <span class="na">configMap</span><span class="pi">:</span>
+                  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-config</span>
+                  <span class="na">items</span><span class="pi">:</span>
+                  <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">config</span>
+                    <span class="na">path</span><span class="pi">:</span> <span class="s">caculate-standalone.conf</span>
+</code></pre></div></div>
+
+<p>现在，给 nginx 应用挂一个 LoadBalancer 测试一下，亦完美运行。</p>
+
+<h3 id="使用-nginx-ingress-部署">使用 nginx-ingress 部署</h3>
+
+<p>上面的部署架构图中，ingress 和 nginx 分别进行了部署，但  nginx-ingress 其实已经合并了这两个部分。现在，我们试试使用 nginx-ingress 部署。</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/nginx-ingress.jpg?raw=true" alt="使用 nginx-ingress 部署" /></p>
+
+<p>使用上面的已经部署好的 fpm 业务的service: caculate-standalone 。</p>
+
+<p>部署脚本如下：</p>
+
+<ul>
+  <li>ingress.class 的值是创建 nginx-ingress 时候在控制台定义的。</li>
+  <li>与纯 nginx 配置不同，nginx-ingress 无需配置 try_files 节点，下面的配置其实已经将全部请求转发到了 public/index.php。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-ingress-config</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">data</span><span class="pi">:</span>
+  <span class="na">SCRIPT_FILENAME</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/app/public/index.php"</span>
+<span class="nn">---</span>  
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">networking.k8s.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Ingress</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">annotations</span><span class="pi">:</span>
+    <span class="na">kubernetes.io/ingress.class</span><span class="pi">:</span> <span class="s2">"</span><span class="s">your-ingress-class"</span>
+    <span class="na">nginx.ingress.kubernetes.io/backend-protocol</span><span class="pi">:</span> <span class="s2">"</span><span class="s">FCGI"</span>
+    <span class="na">nginx.ingress.kubernetes.io/fastcgi-index</span><span class="pi">:</span> <span class="s2">"</span><span class="s">index.php"</span>
+    <span class="na">nginx.ingress.kubernetes.io/fastcgi-params-configmap</span><span class="pi">:</span> <span class="s2">"</span><span class="s">caculate-nginx-ingress-config"</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-ingress</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">rules</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">http</span><span class="pi">:</span>
+      <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">backend</span><span class="pi">:</span>
+          <span class="na">serviceName</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
+          <span class="na">servicePort</span><span class="pi">:</span> <span class="m">9000</span>
+</code></pre></div></div>
+
+<p>如果 nginx-ingress 提供了外网地址，可以访问一下试试，完美运行。</p>
+
+<h3 id="moremesh-化">MORE：mesh 化</h3>
+
+<p>在 php mesh 化中，需要考虑的问题如下：</p>
+
+<ul>
+  <li>fastcgi 使用 TCP 协议，并且有自己的序列化方法，此特性并未在 istio 和 envoy 中支持，无法进行精细的流量控制。</li>
+  <li>fpm + envoy sidecar 可以实现服务级别的流量控制。 fpm + nginx-sidecar + envoy sidecar 将 fastcgi 调用转化为 http 调用，可以实现基于 http 协议的精细流量控制。</li>
+  <li>实现调用链监控，需要使用 http 进行远程调用，有可能需要改造代码，在header 中封装 opentracing 。</li>
+</ul>
+
+<p>当下，php mesh 的部署模式建议采用 fpm 业务层，nginx-sidecar， envoy-sidecar 三个容器为一个pod 的部署模式。</p>
+
+<p>架构图如下：</p>
+
+<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/mesh.jpg?raw=true" alt="php 应用的 mesh 部署架构" /></p>
+
+<p>此处的部署与第一部分的内容 - nginx 作为 sidecar 运行类似，在腾讯云中需要开通 TCM，并注入 envoy 的 sidecar。</p>
+
+<hr />
+
+<h2 id="本文相关的源代码说明">本文相关的源代码说明</h2>
+
+<p>位置：<a href="https://github.com/cloudbeer/php-best-practice">https://github.com/cloudbeer/php-best-practice</a></p>
+
+<h3 id="srclumen-app">src/lumen-app/</h3>
+
+<p>php 业务应用，映射了2个路径</p>
+
+<ul>
+  <li>/cpu： 两种方式计算了 pi</li>
+  <li>/mem: 在数组里塞了字符串为了撑爆内存</li>
+</ul>
+
+<h3 id="deployments">deployments/</h3>
+
+<p>部署代码</p>
+
+<ul>
+  <li>app-caculate-fpm-separate.yaml： nginx 和 fpm 分在不同的 pod 中部署</li>
+  <li>app-caculate-nginx-ingress.yaml： nginx-ingress 直接代理 fpm 服务</li>
+  <li>app-caculate-nginx-sidecar.yaml： nginx 和 fpm 部署在同一个pod中的两个容器</li>
+</ul>
+
+<h3 id="dockerfile">dockerfile/</h3>
+
+<ul>
+  <li>lumen.Dockerfile：包含 lumen 框架的运行环境</li>
+  <li>runtime.Dockerfile：php 基础运行环境</li>
+  <li>业务代码的 Dockerfile 位于 src/lumen-app/Dockerfile 和 src/lumen-app/purecode.Dockerfile</li>
+</ul>
+
+  </div><a class="u-url" href="/2022/01/deploy-php-in-k8s.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

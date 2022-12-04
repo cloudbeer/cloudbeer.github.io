@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>容器 DevOps：Gitlab CI | 啤酒云</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="容器 DevOps：Gitlab CI" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。" />
+<meta property="og:description" content="当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。" />
+<link rel="canonical" href="https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html" />
+<meta property="og:url" content="https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html" />
+<meta property="og:site_name" content="啤酒云" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-04T06:32:01+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="容器 DevOps：Gitlab CI" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-12-04T06:32:01+00:00","datePublished":"2022-12-04T06:32:01+00:00","description":"当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。","headline":"容器 DevOps：Gitlab CI","mainEntityOfPage":{"@type":"WebPage","@id":"https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html"},"url":"https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
+if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'G-B4DC7SCVXM', 'auto');
+  ga('send', 'pageview');
+}
+</script>
+  
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">啤酒云</a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">容器 DevOps：Gitlab CI</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-04T06:32:01+00:00" itemprop="datePublished">2022-12-04
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。</p>
+
+<h2 id="示例描述">示例描述</h2>
+
+<p>本文使用了 gitlab saas 版本。使用 saas 版本的 ci 功能，需要填写信用卡，每个月有 400min 的免费的额度。</p>
+
+<p>本文的源代码在：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a>，这是一个 springcloud gateway 应用。</p>
+
+<p>ci 的过程包括：</p>
+
+<ul>
+  <li>编译 java 源码</li>
+  <li>打包 docker 镜像，并上传到镜像仓库（本文使用的是 AWS ECR 仓库）</li>
+  <li>修改部署目标脚本的镜像版本</li>
+</ul>
+
+<p>完成这几个步骤之后，argocd 会接手 cd 的工作。</p>
+
+<h2 id="gitlab-ciyml-代码拆解">.gitlab-ci.yml 代码拆解</h2>
+
+<h3 id="环境变量">环境变量</h3>
+
+<p>环境变量的定义有三种方式：</p>
+<ul>
+  <li>全局定义：左侧菜单 Settings -&gt; CI/CD, 页面上 Variables 部分，展开 Expand。</li>
+  <li>在 yaml 文件里直接定义：参见下面的代码。</li>
+  <li>手工指定：在每次手工启动流水线时，可以填写变量。</li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
+  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay</span>
+  <span class="na">DOCKER_REGISTRY</span><span class="pi">:</span> <span class="s">00000000.dkr.ecr.us-east-2.amazonaws.com</span>
+  <span class="na">AWS_DEFAULT_REGION</span><span class="pi">:</span> <span class="s">us-east-2</span>
+  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2375</span>
+</code></pre></div></div>
+
+<h3 id="stages-的定义">stages 的定义</h3>
+
+<p>首先定义几个 大的步骤：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">build</span>
+  <span class="pi">-</span> <span class="s">package</span>
+  <span class="pi">-</span> <span class="s">deploy</span>
+</code></pre></div></div>
+
+<p>然后在各个步骤详情里，可以把当前的步骤进行分类，就像这样：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">do-something</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">build</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">alpine</span>
+  <span class="na">script</span><span class="pi">:</span> <span class="s2">"</span><span class="s">sleep</span><span class="nv"> </span><span class="s">300"</span>
+</code></pre></div></div>
+
+<h3 id="源码编译">源码编译</h3>
+
+<p>对于编译型语言，需要将源代码进行编译，本示例中就是需要将 java 源代码编译打包成 jar 包。</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">maven</span><span class="o">-</span><span class="nl">build:</span>
+  <span class="nl">image:</span> <span class="nl">maven:</span><span class="n">latest</span>
+  <span class="nl">stage:</span> <span class="n">build</span>
+  <span class="nl">script:</span> <span class="s">"mvn package"</span>
+  <span class="nl">artifacts:</span>
+    <span class="nl">paths:</span>
+      <span class="o">-</span> <span class="n">target</span><span class="o">/*.</span><span class="na">jar</span>
+</code></pre></div></div>
+
+<ul>
+  <li>编译时使用 maven 这个镜像</li>
+  <li>运行的指令是 <code class="language-plaintext highlighter-rouge">mvn package</code></li>
+  <li>编译的结果指定为 target 目录下的所有 jar 文件，gitlab 会将 artifacts 上传，供给后面的步骤使用。</li>
+</ul>
+
+<h3 id="docker-镜像打包上传">Docker 镜像打包上传</h3>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">docker-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">amazon/aws-cli</span>
+    <span class="na">entrypoint</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">amazon-linux-extras install docker</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker build -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA .</span>
+    <span class="pi">-</span> <span class="s">aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY</span>
+    <span class="pi">-</span> <span class="s">docker push $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>打包完成后需要上传到 ecr，而 ecr 依赖了 aws cli，所以使用了 aws_cli 的镜像包。在执行过程中，还需要将 AWS 的 AKSK 配置到环境变量。</li>
+  <li>在 before_script 里，在 aws_cli 镜像里安装 docker，此时使用了 dind (docker in docker) 模式。</li>
+  <li>在 docker build 的过程中，使用了 git 的 commiot sha 作为版本号。 CI_COMMIT_SHORT_SHA 是 gitlab 的内置环境变量。</li>
+</ul>
+
+<blockquote>
+  <p>gitlab 的 dind 可以参考这个：<a href="https://docs.gitlab.com/ee/ci/docker/using_docker_build.html">https://docs.gitlab.com/ee/ci/docker/using_docker_build.html</a></p>
+</blockquote>
+
+<blockquote>
+  <p>gitlab 内置环境变量参考：<a href="https://docs.gitlab.com/ee/ci/variables/predefined_variables.html">https://docs.gitlab.com/ee/ci/variables/predefined_variables.html</a></p>
+</blockquote>
+
+<h3 id="部署">部署</h3>
+
+<p>在本示例中，采用了 gitops 的方式，将 CI 和 CD 完全解耦，CI 只需要做到构建完成，并更新部署代码仓库就可以了。剩下的工作交由 CD 来完成。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">yaml-change</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">deploy</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">line/kubectl-kustomize</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">apk add git</span>
+    <span class="pi">-</span> <span class="s">git clone https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cd-script.git "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.email "cloudbeer@gmail.com"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.name "gitlab-robot"</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}/gateway"</span>
+    <span class="pi">-</span> <span class="s">kustomize edit set image $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+    <span class="pi">-</span> <span class="s">cat kustomization.yaml</span>
+  <span class="na">after_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git add .</span>
+    <span class="pi">-</span> <span class="s">git commit -m "[skip ci]updating image $DOCKER_REGISTRY/$CI_COMMIT_SHORT_SHA"</span>
+    <span class="pi">-</span> <span class="s">git push origin main</span>
+</code></pre></div></div>
+
+<ul>
+  <li>镜像上传到镜像仓库后，就可以去修改部署代码了。本示例将部署代码放到了 github，您可以将部署代码放到任意 git 仓库。但在 gitops 模式下，部署脚本不建议和业务源代码放到一起。</li>
+  <li>本示例使用了 <a href="https://kustomize.io/">kustomize</a> 来更新部署，kustomize 也被 argocd 默认支持。</li>
+  <li>过程是：将部署代码从 git 仓库拉回本地，通过 kustomize 命令修改了 image 的地址，修改完成后推回 git 仓库。</li>
+</ul>
+
+<blockquote>
+  <p>GITHUB_PWD 需要配置一个 带有 scope 的 token，请到 <a href="https://github.com/settings/tokens">https://github.com/settings/tokens</a> 配置。</p>
+</blockquote>
+
+<p>完整的代码如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
+  <span class="na">DOCKER_REGISTRY</span><span class="pi">:</span> <span class="s">cloudbeer</span>
+  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay</span>
+  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2375</span>
+
+<span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">build</span>
+  <span class="pi">-</span> <span class="s">package</span>
+  <span class="pi">-</span> <span class="s">deploy</span>
+
+<span class="na">maven-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">build</span>
+  <span class="na">script</span><span class="pi">:</span> <span class="s2">"</span><span class="s">mvn</span><span class="nv"> </span><span class="s">package"</span>
+  <span class="na">artifacts</span><span class="pi">:</span>
+    <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">target/*.jar</span>
+
+<span class="na">docker-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker info</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker build -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA .</span>
+    <span class="pi">-</span> <span class="s">echo $DOCKER_PASS | docker login -u$DOCKER_USER --password-stdin</span>
+    <span class="pi">-</span> <span class="s">docker push $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+
+<span class="na">yaml-change</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">deploy</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">line/kubectl-kustomize</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">apk add git</span>
+    <span class="pi">-</span> <span class="s">git clone https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cd-script.git "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.email "cloudbeer@gmail.com"</span>
+    <span class="pi">-</span> <span class="s">git config --global user.name "gitlab-robot"</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}/gateway"</span>
+    <span class="pi">-</span> <span class="s">kustomize edit set image $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
+    <span class="pi">-</span> <span class="s">cat kustomization.yaml</span>
+  <span class="na">after_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}"</span>
+    <span class="pi">-</span> <span class="s">git add .</span>
+    <span class="pi">-</span> <span class="s">git commit -m "[skip ci]updating image $DOCKER_REGISTRY/$CI_COMMIT_SHORT_SHA"</span>
+    <span class="pi">-</span> <span class="s">git push origin main</span>
+</code></pre></div></div>
+
+<p>完整代码与文章正文会稍有出入，改用了公开的 github 和 docker hub 来存储 部署文件 和 镜像。</p>
+
+<h3 id="本项目的运行和测试过程">本项目的运行和测试过程</h3>
+
+<p>克隆项目</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://gitlab.com/cloudbeer/gateway.git
+</code></pre></div></div>
+
+<p>上传到您自己的 gitlab 仓库，并启动自动构建。</p>
+
+<p>修改构建脚本，将 部署仓库，镜像仓库分别改成您自己的地址。并将相关账号配置到 Variables 里。</p>
+
+<p>改动代码后，如果您不想让 gitlab 自动启动 pipeline，在 commit 信息里加上 <code class="language-plaintext highlighter-rouge">[skip ci]xxxx</code> 即可。</p>
+
+<p>观察构建过程，成功后，可以看到镜像仓库中增加了 版本(tag)， 部署仓库中的 gateway 目录里的 kustomization.yaml 被修改。</p>
+
+<hr />
+
+<p>本文涉及的三个外部仓库，这三个仓库均为 public：</p>
+
+<p>业务源代码：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a></p>
+
+<p>部署仓库：<a href="https://github.com/cloudbeer/cd-script">https://github.com/cloudbeer/cd-script</a></p>
+
+<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>
+
+
+  </div><a class="u-url" href="/2022/12/k8s-devops-gitlab-ci.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

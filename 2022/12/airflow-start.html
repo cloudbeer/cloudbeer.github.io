@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Apache Airflow 入门 | 啤酒云</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="Apache Airflow 入门" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="从小白到略知一二。" />
+<meta property="og:description" content="从小白到略知一二。" />
+<link rel="canonical" href="https://cloudbeer.github.io/2022/12/airflow-start.html" />
+<meta property="og:url" content="https://cloudbeer.github.io/2022/12/airflow-start.html" />
+<meta property="og:site_name" content="啤酒云" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-01T04:57:44+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Apache Airflow 入门" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-12-01T04:57:44+00:00","datePublished":"2022-12-01T04:57:44+00:00","description":"从小白到略知一二。","headline":"Apache Airflow 入门","mainEntityOfPage":{"@type":"WebPage","@id":"https://cloudbeer.github.io/2022/12/airflow-start.html"},"url":"https://cloudbeer.github.io/2022/12/airflow-start.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
+if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'G-B4DC7SCVXM', 'auto');
+  ga('send', 'pageview');
+}
+</script>
+  
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">啤酒云</a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Apache Airflow 入门</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-01T04:57:44+00:00" itemprop="datePublished">2022-12-01
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>从小白到略知一二。</p>
+
+<h2 id="背景">背景</h2>
+
+<p>都说 Airflow 很强大，用 python 语言写 DAG。</p>
+
+<p>对于我，语言不重要，了解他的运行架构和设计思想更重要。</p>
+
+<p>先安装一个单机版本试试。</p>
+
+<h2 id="安装">安装</h2>
+
+<p>在 Mac M1 上默认安装各种编译错误，然后使用 <strong>conda</strong> 重新安装了 python，终于搞定。</p>
+
+<p>安装过程复制自官方：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">AIRFLOW_VERSION</span><span class="o">=</span>2.4.3
+<span class="nv">PYTHON_VERSION</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span>python <span class="nt">--version</span> | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s2">" "</span> <span class="nt">-f</span> 2 | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s2">"."</span> <span class="nt">-f</span> 1-2<span class="si">)</span><span class="s2">"</span>
+<span class="nv">CONSTRAINT_URL</span><span class="o">=</span><span class="s2">"https://raw.githubusercontent.com/apache/airflow/constraints-</span><span class="k">${</span><span class="nv">AIRFLOW_VERSION</span><span class="k">}</span><span class="s2">/constraints-</span><span class="k">${</span><span class="nv">PYTHON_VERSION</span><span class="k">}</span><span class="s2">.txt"</span>
+pip <span class="nb">install</span> <span class="s2">"apache-airflow==</span><span class="k">${</span><span class="nv">AIRFLOW_VERSION</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--constraint</span> <span class="s2">"</span><span class="k">${</span><span class="nv">CONSTRAINT_URL</span><span class="k">}</span><span class="s2">"</span>
+</code></pre></div></div>
+
+<p>启动一个开发版本试试：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow standalone
+</code></pre></div></div>
+
+<p>成功启动后，控制台打印了一些有用信息。本机 Web 端默认为： <code class="language-plaintext highlighter-rouge">http://localhost:8080</code>。</p>
+
+<p>登录账号也在控制台中打印。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>standalone |
+standalone | Airflow is ready
+standalone | Login with username: admin  password: xxxxxxxxxx
+standalone | Airflow Standalone is <span class="k">for </span>development purposes only. Do not use this <span class="k">in </span>production!
+standalone |
+</code></pre></div></div>
+
+<p>进入之后，有很多现成的 DAG，一头雾水。</p>
+
+<p>或者<strong>走下面这个步骤，都差不多。</strong></p>
+
+<p>初始化数据库：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow db init
+</code></pre></div></div>
+
+<p>这个过程中，有个警告，是说要安装 kubernetes 的 excutor。顺手给他装一下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>apache-airflow-providers-cncf-kubernetes
+</code></pre></div></div>
+
+<p>创建一个新账号</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow <span class="nb">users </span>create <span class="se">\</span>
+    <span class="nt">--username</span> xie <span class="se">\</span>
+    <span class="nt">--firstname</span> Cloudbeer <span class="se">\</span>
+    <span class="nt">--lastname</span> Xie <span class="se">\</span>
+    <span class="nt">--role</span> Admin <span class="se">\</span>
+    <span class="nt">--email</span> cloudbeer@gmail.com
+</code></pre></div></div>
+
+<p>换个端口启动 Web Server</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow webserver <span class="nt">--port</span> 9000
+</code></pre></div></div>
+
+<p>换个 终端窗口启动 Scheduler：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow scheduler
+</code></pre></div></div>
+
+<h2 id="编写第一个-dag">编写第一个 DAG</h2>
+
+<p>Airflow 的 hello world 代码如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
+<span class="kn">from</span> <span class="nn">airflow</span> <span class="kn">import</span> <span class="n">DAG</span>
+
+<span class="kn">from</span> <span class="nn">airflow.operators.bash</span> <span class="kn">import</span> <span class="n">BashOperator</span>
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="s">'hellodag'</span><span class="p">,</span>
+    <span class="n">default_args</span><span class="o">=</span><span class="p">{</span>
+        <span class="s">'depends_on_past'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s">'email'</span><span class="p">:</span> <span class="p">[</span><span class="s">'cloudbeer@gmail.com'</span><span class="p">],</span>
+        <span class="s">'email_on_failure'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s">'email_on_retry'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s">'retries'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s">'retry_delay'</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">description</span><span class="o">=</span><span class="s">'这是一个简单的 DAG'</span><span class="p">,</span>
+    <span class="n">schedule</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">catchup</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">'example'</span><span class="p">],</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s">'print_date'</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="s">'date'</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s">'sleep'</span><span class="p">,</span>
+        <span class="n">depends_on_past</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="s">'sleep 5'</span><span class="p">,</span>
+        <span class="n">retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">t1</span><span class="p">.</span><span class="n">doc_md</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
+        <span class="s">"""</span><span class="se">\
+</span><span class="s">    #### Task Documentation
+    You can document your task using the attributes `doc_md` (markdown),
+    `doc` (plain text), `doc_rst`, `doc_json`, `doc_yaml` which gets
+    rendered in the UI's Task Instance Details page.
+    ![img](http://montcs.bloomu.edu/~bobmon/Semesters/2012-01/491/import%20soul.png)
+    **Image Credit:** Randall Munroe, [XKCD](https://xkcd.com/license.html)
+    """</span>
+    <span class="p">)</span>
+
+    <span class="n">dag</span><span class="p">.</span><span class="n">doc_md</span> <span class="o">=</span> <span class="s">"""
+    这是一个简单的 DAG。
+    """</span> 
+
+
+    <span class="n">templated_command</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
+        <span class="s">"""
+    {% for i in range(5) %}
+        echo "{{ ds }}"
+        echo "{{ macros.ds_add(ds, 7)}}"
+    {% endfor %}
+        """</span>
+    <span class="p">)</span>
+    <span class="n">t3</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s">'templated'</span><span class="p">,</span>
+        <span class="n">depends_on_past</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="n">templated_command</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">t1</span> <span class="o">&gt;&gt;</span> <span class="p">[</span><span class="n">t2</span><span class="p">,</span> <span class="n">t3</span><span class="p">]</span>
+</code></pre></div></div>
+
+<ul>
+  <li>上面的代码修改 DAG 的名字为 hellodag</li>
+  <li>文件名命名为 hellodag.py</li>
+</ul>
+
+<p>将这个文件放到 ~/airflow/dags 目录下。</p>
+
+<p>使用 python 验证一下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python hellodag.py
+</code></pre></div></div>
+
+<p>没有错误。</p>
+
+<h2 id="airflow-任务测试">Airflow 任务测试</h2>
+
+<p>dag 文件放到了对应的目录了，现在查看一下 dags。（又要开一个终端）</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow dags list
+</code></pre></div></div>
+
+<ul>
+  <li>hellodag 已经出现在列表了。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow tasks list hellodag <span class="nt">--tree</span>
+</code></pre></div></div>
+
+<ul>
+  <li>这个命令可以看到这个 dag 包含了三个任务 <code class="language-plaintext highlighter-rouge">print_date</code>, <code class="language-plaintext highlighter-rouge">sleep</code>, <code class="language-plaintext highlighter-rouge">templated</code></li>
+  <li>–tree 显示了依赖关系。</li>
+</ul>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: print_date&gt;
+    &lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: <span class="nb">sleep</span><span class="o">&gt;</span>
+    &lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: templated&gt;
+</code></pre></div></div>
+
+<p>测试一下任务：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow tasks <span class="nb">test </span>hellodag print_date 2015-06-01
+
+airflow tasks <span class="nb">test </span>hellodag <span class="nb">sleep </span>2015-06-01
+
+airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
+</code></pre></div></div>
+
+<p>运行 backfill (回填)</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow dags backfill hellodag <span class="se">\</span>
+    <span class="nt">--start-date</span> 2015-06-01 <span class="se">\</span>
+    <span class="nt">--end-date</span> 2015-06-07
+</code></pre></div></div>
+
+<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>
+
+  </div><a class="u-url" href="/2022/12/airflow-start.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

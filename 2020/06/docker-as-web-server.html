@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>使用 docker 作为 Web 开发服务器 | 啤酒云</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="使用 docker 作为 Web 开发服务器" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。" />
+<meta property="og:description" content="提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。" />
+<link rel="canonical" href="https://cloudbeer.github.io/2020/06/docker-as-web-server.html" />
+<meta property="og:url" content="https://cloudbeer.github.io/2020/06/docker-as-web-server.html" />
+<meta property="og:site_name" content="啤酒云" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-06-07T16:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="使用 docker 作为 Web 开发服务器" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2020-06-07T16:10:49+00:00","datePublished":"2020-06-07T16:10:49+00:00","description":"提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。","headline":"使用 docker 作为 Web 开发服务器","mainEntityOfPage":{"@type":"WebPage","@id":"https://cloudbeer.github.io/2020/06/docker-as-web-server.html"},"url":"https://cloudbeer.github.io/2020/06/docker-as-web-server.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
+if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'G-B4DC7SCVXM', 'auto');
+  ga('send', 'pageview');
+}
+</script>
+  
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">啤酒云</a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">使用 docker 作为 Web 开发服务器</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-06-07T16:10:49+00:00" itemprop="datePublished">2020-06-07
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。</p>
+
+<h2 id="前提条件">前提条件</h2>
+
+<ul>
+  <li>安装了 docker：安装方法略。</li>
+  <li>nginx 镜像： <code class="language-plaintext highlighter-rouge">docker pull nginx:alpine</code> 。</li>
+  <li>这个例子使用了 python 作为脚本语言。</li>
+</ul>
+
+<p>以下脚本我在 mac 中运行通过。</p>
+
+<h2 id="nginx-配置">nginx 配置</h2>
+
+<p>首先配置 nginx，这个脚本会从容器中启动，启动后，容器的 /app 是主目录，并反向代理了 2 组 api。</p>
+
+<p>如果远端服务器是本机，需要从容器内部访问宿主机资源，localhost 是不好使的，请使用域名：<code class="language-plaintext highlighter-rouge">host.docker.internal</code></p>
+
+<p>nginx 的配置如下：</p>
+
+<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span> 
+  <span class="kn">listen</span>       <span class="mi">8500</span><span class="p">;</span>
+  <span class="kn">index</span>   <span class="s">index.html</span><span class="p">;</span>
+  <span class="kn">location</span> <span class="n">/</span> <span class="p">{</span>
+    <span class="kn">index</span>   <span class="s">index.html</span><span class="p">;</span>
+    <span class="kn">root</span>    <span class="n">/app</span><span class="p">;</span>
+    <span class="kn">expires</span> <span class="s">1s</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="kn">location</span> <span class="s">^~/api/crm/</span> <span class="p">{</span>
+    <span class="kn">proxy_http_version</span> <span class="mi">1</span><span class="s">.1</span><span class="p">;</span>
+    <span class="kn">proxy_pass</span>      <span class="s">http://host.docker.internal:7304/</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="kn">location</span> <span class="s">^~/api/qq/</span> <span class="p">{</span>
+    <span class="kn">proxy_http_version</span> <span class="mi">1</span><span class="s">.1</span><span class="p">;</span>
+    <span class="kn">proxy_pass</span>      <span class="s">http://www.qq.com/api/</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="docker">docker</h2>
+
+<p>docker 启动脚本如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> <span class="nt">-v</span> &lt;publishPath&gt;:/app <span class="nt">-v</span> &lt;nginxConfPath&gt;:/etc/nginx/conf.d/server.conf <span class="nt">-p</span> 8500:8500 nginx:alpine
+</code></pre></div></div>
+
+<p>直接运行这个脚本，打开 <a href="http://localhost:8500">http://localhost:8500</a>，我们的简易开发服务环境就搭建起来了。每次修改文件的时候，刷新浏览器就可以看到改变。</p>
+
+<p>但，如果能自动刷新浏览器就圆满了。下面咱们试着来解决此问题。</p>
+
+<h2 id="开发过程中的自动刷新">开发过程中的自动刷新</h2>
+
+<p>我想直接通过外部脚本监控文件的改变。并自动刷新浏览器。</p>
+
+<p>docker 脚本也放在里面一起执行算了。</p>
+
+<p>完成这次任务使用了 python，完整的脚本是这么写的：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/env python3
+#coding=utf-8
+</span>
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">webbrowser</span>
+<span class="kn">import</span> <span class="nn">_thread</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">selenium</span> <span class="kn">import</span> <span class="n">webdriver</span>
+<span class="kn">from</span> <span class="nn">watchdog.observers</span> <span class="kn">import</span> <span class="n">Observer</span>
+<span class="kn">from</span> <span class="nn">watchdog.events</span> <span class="kn">import</span> <span class="n">FileSystemEventHandler</span>
+
+<span class="c1"># 启动浏览器，并访问目标地址
+</span><span class="n">driver</span> <span class="o">=</span> <span class="n">webdriver</span><span class="p">.</span><span class="n">Chrome</span><span class="p">()</span>
+<span class="n">driver</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'http://localhost:8500'</span><span class="p">)</span>
+
+<span class="c1"># 当前工作目录
+</span><span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">getcwd</span><span class="p">()</span>
+<span class="c1"># 我当前的发布目录
+</span><span class="n">publishPath</span> <span class="o">=</span> <span class="n">cwd</span> <span class="o">+</span> <span class="s">"/publish"</span>
+
+
+<span class="k">def</span> <span class="nf">dockerServer</span><span class="p">():</span>
+  <span class="s">""" 此函数启动 docker """</span>
+  <span class="n">dockerCmd</span> <span class="o">=</span> <span class="p">[</span><span class="s">'docker'</span><span class="p">,</span> <span class="s">'run'</span><span class="p">,</span> <span class="s">'--rm'</span><span class="p">,</span> <span class="s">'-it'</span><span class="p">,</span> 
+                <span class="s">'-v'</span><span class="p">,</span> <span class="n">publishPath</span> <span class="o">+</span><span class="s">":/app"</span><span class="p">,</span>
+                <span class="s">'-v'</span><span class="p">,</span> <span class="n">cwd</span><span class="o">+</span><span class="s">"/server.conf:/etc/nginx/conf.d/server.conf"</span><span class="p">,</span>
+                <span class="s">'-p'</span><span class="p">,</span> <span class="s">"8500:8500"</span><span class="p">,</span> <span class="s">'nginx:alpine'</span><span class="p">]</span>
+  <span class="k">print</span><span class="p">(</span><span class="s">"开始执行 nginx in docker..."</span><span class="p">)</span>
+  <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="s">" "</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">dockerCmd</span><span class="p">),</span> <span class="n">shell</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+
+
+<span class="k">def</span> <span class="nf">refreshBrowser</span><span class="p">(</span><span class="n">delay</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="s">""" 延时 1 秒刷新浏览器，当有大量文件被更新时候，可以丢弃无效刷新动作 """</span>
+  <span class="k">print</span><span class="p">(</span><span class="n">delay</span><span class="p">,</span> <span class="s">"秒后刷新浏览器..."</span><span class="p">)</span>
+  <span class="n">time</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span>
+  <span class="n">driver</span><span class="p">.</span><span class="n">refresh</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">RefreshBrowserHandler</span><span class="p">(</span><span class="n">FileSystemEventHandler</span><span class="p">):</span>
+  <span class="s">""" watchdog 的监控事件 """</span>
+  <span class="k">def</span> <span class="nf">on_modified</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">refreshBrowser</span><span class="p">()</span>  <span class="c1"># 这里需改进，应该将任务放到线程池里，以便丢弃持续刷新操作。
+</span>
+<span class="k">def</span> <span class="nf">watchPublish</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+  <span class="s">""" watchdog 监控发布目录，一旦发现文件改变，便出发刷新事件 """</span>
+  <span class="k">print</span><span class="p">(</span><span class="s">"正在监控目录改变:"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+  <span class="n">event_handler</span> <span class="o">=</span> <span class="n">RefreshBrowserHandler</span><span class="p">()</span>
+  <span class="n">observer</span> <span class="o">=</span> <span class="n">Observer</span><span class="p">()</span>
+  <span class="n">observer</span><span class="p">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">event_handler</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="n">observer</span><span class="p">.</span><span class="n">start</span><span class="p">()</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">time</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="k">except</span> <span class="nb">KeyboardInterrupt</span><span class="p">:</span>
+    <span class="n">observer</span><span class="p">.</span><span class="n">stop</span><span class="p">()</span>
+  <span class="n">observer</span><span class="p">.</span><span class="n">join</span><span class="p">()</span>
+
+
+<span class="c1"># 启动
+</span><span class="n">_thread</span><span class="p">.</span><span class="n">start_new_thread</span><span class="p">(</span><span class="n">dockerServer</span><span class="p">,</span> <span class="p">())</span>
+<span class="n">_thread</span><span class="p">.</span><span class="n">start_new_thread</span><span class="p">(</span><span class="n">refreshBrowser</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span>
+<span class="n">watchPublish</span><span class="p">(</span><span class="n">publishPath</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>上面的脚本需要如下的依赖：</p>
+
+<ul>
+  <li>python 自带的 webbrowser 无法控制刷新浏览器，所以采用了 selenium 包: <code class="language-plaintext highlighter-rouge">pip install selenium</code> 。</li>
+  <li>我使用了 chome，但提示无法找到 chromedriver，下载一个安装好了，从这里下载：<a href="http://npm.taobao.org/mirrors/chromedriver">http://npm.taobao.org/mirrors/chromedriver</a>，找到和你当前浏览器版本匹配的安装包。</li>
+  <li>另外需要安装的包 是 watchdog，也 pip 安装一下。</li>
+</ul>
+
+<h2 id="总结">总结</h2>
+
+<p>docker 的 images 平时就在那里安静的躺着，等我们需要开发的时候，启动他，开发完用 ctrl+c 关闭他，由于使用了 <code class="language-plaintext highlighter-rouge">--rm</code>，docker 的实例也跟着清除了，很清爽。</p>
+
+<p>推而广之，这种方法对于所有脚本类的 Web 开发都有效，我们无需安装任何环境，只需要临时启动一个 docker 容器就好，处女座程序员可以试试这种方法。</p>
+
+<hr />
+
+<p>参考：</p>
+
+<p><a href="https://stackoverflow.com/questions/32923451/how-to-run-an-function-when-anything-changes-in-a-dir-with-python-watchdog">How to run an function when anything changes in a dir with Python Watchdog?</a></p>
+
+<p><a href="https://selenium-python.readthedocs.io/">Selenium with Python</a></p>
+
+  </div><a class="u-url" href="/2020/06/docker-as-web-server.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

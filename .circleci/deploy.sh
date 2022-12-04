@@ -9,16 +9,16 @@ mv _site/* .
 rm -R _site/
 
 
-# git checkout -f main
-# git pull origin main
+git checkout -f main
+git pull origin main
  
 git add -A .
 git commit --allow-empty -m "Page release ${CIRCLE_BUILD_NUM} from ${CIRCLE_BRANCH}"
 
-
+echo "-----git stats----"
 git status
 # git commit -m "Create new files $(git log source -1 --pretty=%B)"
-
+echo "--------------------------------"
 
 # git remote set-url origin https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cloudbeer.github.io.git
 # git push -f origin main

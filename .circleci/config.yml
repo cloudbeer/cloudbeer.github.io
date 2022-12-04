@@ -8,11 +8,11 @@ jobs:
           USER_EMAIL: cloudbeer@gmail.com
     steps:
       - checkout
-      - run:
-          name: install dependencies
-          command: |
-            gem update --system
-            gem install bundler
+      # - run:
+      #     name: install dependencies
+      #     command: |
+      #       gem update --system
+      #       gem install bundler
       # - restore_cache:
       #     keys:
       #       - rubygems-v1-{{ checksum "Gemfile.lock" }}

@@ -10,6 +10,9 @@ rm -R _site/
 
 git add -fA
 git commit --allow-empty -m "$(git log source -1 --pretty=%B)"
+
+git remote set-url origin https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cloudbeer.github.io.git
+
 git push -f origin main
 
 echo "deployed successfully"

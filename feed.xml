@@ -1,4 +1,140 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://cloudbeer.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://cloudbeer.github.io/" rel="alternate" type="text/html" /><updated>2022-12-04T14:12:18+00:00</updated><id>https://cloudbeer.github.io/feed.xml</id><title type="html">啤酒云</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://cloudbeer.github.io/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://cloudbeer.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://cloudbeer.github.io/" rel="alternate" type="text/html" /><updated>2022-12-04T16:33:52+00:00</updated><id>https://cloudbeer.github.io/feed.xml</id><title type="html">啤酒云</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Github pages jekyll 插件不支持怎么办</title><link href="https://cloudbeer.github.io/2022/12/github-pages-not-support.html" rel="alternate" type="text/html" title="Github pages jekyll 插件不支持怎么办" /><published>2022-12-04T14:13:33+00:00</published><updated>2022-12-04T14:13:33+00:00</updated><id>https://cloudbeer.github.io/2022/12/github-pages-not-support</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/github-pages-not-support.html"><![CDATA[<p>花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。</p>
+
+<p>这片文章记录了如何解决这个麻烦。</p>
+
+<h2 id="github-pages-插件别瞎用">github pages 插件别瞎用</h2>
+
+<p>当你觉得你完美解决了写博客的问题的时候，就发现问题了。</p>
+
+<p>下午找到一个不错的分页插件：jekyll-paginate-v2， 搞定了 分页，tags 功能，本地渲染出来很不错，甚合我意。</p>
+
+<p>推送之后，发现了蛋疼的事情：所有的列表页面都是空的。</p>
+
+<p>Actions 也都正常，调查半天才发现，github pages 不支持 jekyll-paginate-v2。</p>
+
+<p>这是他支持的：<a href="https://pages.github.com/versions/">https://pages.github.com/versions/</a></p>
+
+<h2 id="circleci-集成">circleci 集成</h2>
+
+<p>那只能用第三方 CI 工具了。用 gitlab ci 肯定是可以的。</p>
+
+<p>现在试试 circleci。 下面记录了过程：</p>
+
+<h3 id="step-1-创建新分支">step 1. 创建新分支</h3>
+
+<p>创建 cloudbeer.github.io 新分支：soruce。</p>
+
+<h3 id="step-2-添加-circleci-config-文件">step 2. 添加 circleci config 文件</h3>
+
+<p>在新分支里添加文件：<code class="language-plaintext highlighter-rouge">.circleci/config.yml</code>，内容如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="na">version</span><span class="pi">:</span> <span class="m">2</span>
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">deploy</span><span class="pi">:</span>
+    <span class="na">docker</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">circleci/ruby:latest</span>
+        <span class="na">environment</span><span class="pi">:</span>
+          <span class="na">USER_NAME</span><span class="pi">:</span> <span class="s">cloudbeer</span>
+          <span class="na">USER_EMAIL</span><span class="pi">:</span> <span class="s">cloudbeer@gmail.com</span>
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">checkout</span>
+      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span>
+          <span class="na">name</span><span class="pi">:</span> <span class="s">install dependencies</span>
+          <span class="na">command</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">gem update --system</span>
+            <span class="s">gem install bundler</span>
+      <span class="pi">-</span> <span class="na">restore_cache</span><span class="pi">:</span>
+          <span class="na">keys</span><span class="pi">:</span> 
+            <span class="pi">-</span> <span class="s">v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}</span>
+            <span class="pi">-</span> <span class="s">v1-gem-cache-{{ arch }}-{{ .Branch }}-</span>
+            <span class="pi">-</span> <span class="s">v1-gem-cache-{{ arch }}-</span> 
+      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span> <span class="s">bundle install --path=vendor/bundle &amp;&amp; bundle clean</span>
+      <span class="pi">-</span> <span class="na">save_cache</span><span class="pi">:</span>
+          <span class="na">paths</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="s">vendor/bundle</span>
+          <span class="na">key</span><span class="pi">:</span> <span class="s">v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}</span>
+
+      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span> <span class="s">JEKYLL_ENV=production bundle exec jekyll build</span>
+      <span class="pi">-</span> <span class="na">deploy</span><span class="pi">:</span>
+          <span class="na">name</span><span class="pi">:</span> <span class="s">Deploy Release to GitHub</span>
+          <span class="na">command</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">if [ $CIRCLE_BRANCH == 'source' ]; then</span>
+              <span class="s">bash .circleci/deploy.sh</span>
+            <span class="s">fi</span>
+<span class="na">workflows</span><span class="pi">:</span>
+  <span class="na">version</span><span class="pi">:</span> <span class="m">2</span>
+  <span class="na">build</span><span class="pi">:</span>
+    <span class="na">jobs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">deploy</span><span class="pi">:</span>
+          <span class="na">filters</span><span class="pi">:</span>
+            <span class="na">branches</span><span class="pi">:</span>
+              <span class="na">only</span><span class="pi">:</span> 
+                <span class="pi">-</span> <span class="s">source</span>
+
+</code></pre></div></div>
+
+<p>代码的意思大概是：</p>
+
+<ul>
+  <li>使用 ruby 镜像，安装依赖，build</li>
+  <li>然后调用 deploy 脚本</li>
+</ul>
+
+<h3 id="step-3-doploy-脚本">step 3. doploy 脚本</h3>
+
+<p>添加脚本 <code class="language-plaintext highlighter-rouge">.circleci/deploy.sh</code>，内容如下：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git config user.name <span class="s2">"</span><span class="nv">$USER_NAME</span><span class="s2">"</span>
+git config user.email <span class="s2">"</span><span class="nv">$USER_EMAIL</span><span class="s2">"</span>
+
+git checkout main
+git pull origin main
+
+find <span class="nb">.</span> <span class="nt">-maxdepth</span> 1 <span class="o">!</span> <span class="nt">-name</span> <span class="s1">'_site'</span> <span class="o">!</span> <span class="nt">-name</span> <span class="s1">'.git'</span> <span class="o">!</span> <span class="nt">-name</span> <span class="s1">'.gitignore'</span> <span class="o">!</span> <span class="nt">-name</span> <span class="s1">'.circleci'</span> <span class="nt">-exec</span> <span class="nb">rm</span> <span class="nt">-rf</span> <span class="o">{}</span> <span class="se">\;</span>
+<span class="nb">mv </span>_site/<span class="k">*</span> <span class="nb">.</span>
+<span class="nb">rm</span> <span class="nt">-R</span> _site/
+
+git add <span class="nt">-fA</span>
+git commit <span class="nt">--allow-empty</span> <span class="nt">-m</span> <span class="s2">"</span><span class="si">$(</span>git log <span class="nb">source</span> <span class="nt">-1</span> <span class="nt">--pretty</span><span class="o">=</span>%B<span class="si">)</span><span class="s2">"</span>
+
+git remote set-url origin https://cloudbeer:<span class="k">${</span><span class="nv">GITHUB_PWD</span><span class="k">}</span>@github.com/cloudbeer/cloudbeer.github.io.git
+
+git push <span class="nt">-f</span> origin main
+
+<span class="nb">echo</span> <span class="s2">"deployed successfully"</span>
+</code></pre></div></div>
+
+<p>代码的大概意思是：</p>
+
+<ul>
+  <li>把分支切到 main，把编译目标 _site 目录里面的文件拷贝到根目录。</li>
+  <li>把代码推回去。</li>
+  <li>github pages 里设置的是 main 分支的 / 目录，此时 main 下面都是纯 html 页面。</li>
+  <li>稍等一会儿 github pages 发布完成就可以看到结果了。</li>
+</ul>
+
+<p>上面的代码有个地方需要改进，就是这行：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git remote set-url origin https://cloudbeer:<span class="k">${</span><span class="nv">GITHUB_PWD</span><span class="k">}</span>@github.com/cloudbeer/cloudbeer.github.io.git
+</code></pre></div></div>
+
+<p>推送的时候发现没有权限，先用这个土办法了。这里的 <a href="https://github.com/settings/tokens">GITHUB_PWD 需要去生产</a>，我把申请到的结果存入了 circleci 的环境变量里。</p>
+
+<p>还需要改进的有：</p>
+
+<p>github 在发现有新的 push 之后 还是在运行 jekyll build，在此种情况下，应该直接部署就好。后面再看看咋搞。</p>
+
+<h2 id="github-pages-随便搞">github pages 随便搞</h2>
+
+<p>了解了 github pages 的规则，就可以用任意支持 markdown 的框架来做你的博客了，前提是他静态页面生产器。</p>
+
+<p>发现 circleci 在第二次 build 的时候很快啊，比 gitlab 快很多。可能是一个默认缓存，一个没默认缓存的缘故吧。</p>
+
+<hr />
+
+<p>本文代码修改自这个文章：<a href="https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/">How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
+</a></p>]]></content><author><name></name></author><category term="devops," /><category term="tucao," /><category term="circleci" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://cloudbeer.github.io/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
 
 <h2 id="iac-和-cdk-简介">IaC 和 CDK 简介</h2>
 

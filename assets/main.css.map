@@ -4,9 +4,9 @@
 	"sources": [
 		"main.scss",
 		"_sass/minima.scss",
-		"vendor/bundle/ruby/3.0.0/gems/minima-2.5.1/_sass/minima/_base.scss",
-		"vendor/bundle/ruby/3.0.0/gems/minima-2.5.1/_sass/minima/_layout.scss",
-		"vendor/bundle/ruby/3.0.0/gems/minima-2.5.1/_sass/minima/_syntax-highlighting.scss"
+		"../.rubygems/gems/minima-2.5.1/_sass/minima/_base.scss",
+		"../.rubygems/gems/minima-2.5.1/_sass/minima/_layout.scss",
+		"../.rubygems/gems/minima-2.5.1/_sass/minima/_syntax-highlighting.scss"
 	],
 	"sourcesContent": [
 		"@import \"minima\";\n",

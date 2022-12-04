@@ -2,7 +2,7 @@ version: 2
 jobs:
   deploy:
     docker:
-      - image: circleci/ruby:latest
+      - image: cimg/ruby:2.7.4
         environment:
           USER_NAME: cloudbeer
           USER_EMAIL: cloudbeer@gmail.com

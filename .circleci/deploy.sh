@@ -8,8 +8,7 @@ find . -maxdepth 1  ! -name '.'  ! -name '..' ! -name '_site' ! -name '.git' ! -
 mv _site/* .
 rm -R _site/
 
-cat index.html
-
+git status
 
 # git checkout -f main
 # git pull origin main

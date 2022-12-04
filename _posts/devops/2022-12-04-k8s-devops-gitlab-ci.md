@@ -23,7 +23,7 @@ ci 的过程包括：
 完成这几个步骤之后，argocd 会接手 cd 的工作。
 
 
-## gitlab-ci.yml 代码拆解
+## .gitlab-ci.yml 代码拆解
 
 ### 环境变量
 
@@ -207,7 +207,7 @@ git clone https://gitlab.com/cloudbeer/gateway.git
 
 改动代码后，如果您不想让 gitlab 自动启动 pipeline，在 commit 信息里加上 `[skip ci]xxxx` 即可。
 
-自动构建后，可以观察构建过程，成功后，可以看到镜像仓库中增加了 版本(tag)， 部署仓库中的 gateway 目录里的 kustomization.yaml 被修改。
+观察构建过程，成功后，可以看到镜像仓库中增加了 版本(tag)， 部署仓库中的 gateway 目录里的 kustomization.yaml 被修改。
 
 ---
 

@@ -2,7 +2,7 @@
 layout: post
 title:  "php应用容器化部署实践"
 date:   2022-01-21 10:56:53 +0800
-categories: container
+categories: container, language
 ---
 
 目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。 

@@ -30,6 +30,4 @@ pagination:
   sort_reverse: true
 
 exclude:
-  - Gemfile
-  - Gemfile.lock
   - dev.sh

@@ -36,6 +36,7 @@ Actions 也都正常，调查半天才发现，github pages 不支持 jekyll-pag
 在新分支里添加文件：`.circleci/config.yml`，内容如下：
 
 ```yaml
+{% raw %}
 version: 2
 jobs:
   deploy:
@@ -52,10 +53,10 @@ jobs:
             gem update --system
             gem install bundler
       - restore_cache:
-          keys:
+          keys: 
             - v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
             - v1-gem-cache-{{ arch }}-{{ .Branch }}-
-            - v1-gem-cache-{{ arch }}-
+            - v1-gem-cache-{{ arch }}- 
       - run: bundle install --path=vendor/bundle && bundle clean
       - save_cache:
           paths:
@@ -78,6 +79,7 @@ workflows:
             branches:
               only: 
                 - source
+{% endraw %}
 ```
 
 代码的意思大概是：

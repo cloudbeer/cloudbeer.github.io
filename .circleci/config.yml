@@ -19,13 +19,14 @@ jobs:
             - rubygems-v1-fallback
       - run:
           name: Bundle Install
-          command: bundle check || bundle install
+          command: bundle install && bundle clean
       - save_cache:
           paths:
             - vendor/bundle
           key: rubygems-v1-{{ checksum "Gemfile.lock" }}
-
-      - run: JEKYLL_ENV=production bundle exec jekyll build
+      - run: 
+          name: Jekyll Build
+          command: JEKYLL_ENV=production bundle exec jekyll build
       - deploy:
           name: Deploy Release to GitHub
           command: |

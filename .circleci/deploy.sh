@@ -2,6 +2,9 @@ git config user.name "$USER_NAME"
 git config user.email "$USER_EMAIL"
 
 
+git checkout -f main
+git pull origin main
+
 # find . -maxdepth 1 ! -name '_site' ! -name '.git' ! -name '.gitignore' ! -name '.circleci' -exec rm -rf {} \;
 
 find . -maxdepth 1  ! -name '.'  ! -name '..' ! -name '_site' ! -name '.git' ! -name '.gitignore' ! -name '.circleci' -exec rm -rf {} \;
@@ -9,13 +12,21 @@ mv _site/* .
 rm -R _site/
 
 
-git checkout -f main
-git pull origin main
- 
+echo "-----ls----"
+ls
+echo "--------------------------------"
+
+
 git add -A .
+
+echo "-----git status----"
+git status
+echo "--------------------------------"
+
+
 git commit --allow-empty -m "Page release ${CIRCLE_BUILD_NUM} from ${CIRCLE_BRANCH}"
 
-echo "-----git stats----"
+echo "-----git status----"
 git status
 # git commit -m "Create new files $(git log source -1 --pretty=%B)"
 echo "--------------------------------"

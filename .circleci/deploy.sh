@@ -2,7 +2,7 @@ git config user.name "$USER_NAME"
 git config user.email "$USER_EMAIL"
 
 git checkout main
-git pull origin main
+# git pull origin main
 
 find . -maxdepth 1 ! -name '_site' ! -name '.git' ! -name '.gitignore' ! -name '.circleci' -exec rm -rf {} \;
 mv _site/* .

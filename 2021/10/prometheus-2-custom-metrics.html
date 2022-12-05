@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Prometheus 入门 ② 自定义数据源 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="Prometheus 入门 ② 自定义数据源" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="​本文将介绍如何使用第三方的 exporter，并尝试自己编写一个业务度量接口。" />
+<meta property="og:description" content="​本文将介绍如何使用第三方的 exporter，并尝试自己编写一个业务度量接口。" />
+<link rel="canonical" href="https://youbug.cn/2021/10/prometheus-2-custom-metrics.html" />
+<meta property="og:url" content="https://youbug.cn/2021/10/prometheus-2-custom-metrics.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-10-09T12:08:34+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Prometheus 入门 ② 自定义数据源" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2021-10-09T12:08:34+00:00","datePublished":"2021-10-09T12:08:34+00:00","description":"​本文将介绍如何使用第三方的 exporter，并尝试自己编写一个业务度量接口。","headline":"Prometheus 入门 ② 自定义数据源","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2021/10/prometheus-2-custom-metrics.html"},"url":"https://youbug.cn/2021/10/prometheus-2-custom-metrics.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script>
+if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'G-B4DC7SCVXM', 'auto');
+  ga('send', 'pageview');
+}
+</script>
+  
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Prometheus 入门 ② 自定义数据源</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-10-09T12:08:34+00:00" itemprop="datePublished">2021-10-09
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>​本文将介绍如何使用第三方的 exporter，并尝试自己编写一个业务度量接口。</p>
+
+<h2 id="现成的-exporter">现成的 exporter</h2>
+
+<p>prom 官方提供了很多数据源 exporter。包括：</p>
+
+<ul>
+  <li>blackbox_exporter</li>
+  <li>consul_exporter</li>
+  <li>graphite_exporter</li>
+  <li>haproxy_exporter</li>
+  <li>memcached_exporter</li>
+  <li>mysqld_exporter</li>
+  <li>node_exporter</li>
+  <li>statsd_exporter</li>
+</ul>
+
+<p>前面的章节里，我们已经使用过官方的 node_exporter。</p>
+
+<p>我们现在尝试使用第三方的 exporter。</p>
+
+<p>下面的示例演示了使用 腾讯云的 exporter。</p>
+
+<p>腾讯云的 exporter 地址在：<a href="https://github.com/tencentyun/tencentcloud-exporter">https://github.com/tencentyun/tencentcloud-exporter</a></p>
+
+<p>首先，需要拉下上述源代码并编译成可执行文件：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/tencentyun/tencentcloud-exporter
+<span class="nb">cd </span>tencentcloud-exporter
+go build cmd/qcloud-exporter/qcloud_exporter.go
+</code></pre></div></div>
+
+<p>编译完成，生成了一个文件：<code class="language-plaintext highlighter-rouge">qcloud_exporter</code></p>
+
+<p>现在需要编写一个 config 文件（config.yml）：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">credential</span><span class="pi">:</span>
+  <span class="na">region</span><span class="pi">:</span> <span class="s2">"</span><span class="s">ap-shanghai"</span>
+<span class="na">rate_limit</span><span class="pi">:</span> <span class="m">15</span>
+<span class="na">products</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">namespace</span><span class="pi">:</span> <span class="s">QCE/CVM</span>
+    <span class="na">all_metrics</span><span class="pi">:</span> <span class="no">true</span>
+    <span class="na">all_instances</span><span class="pi">:</span> <span class="no">true</span>
+    <span class="na">extra_labels</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">InstanceId</span><span class="pi">,</span> <span class="nv">InstanceName</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<p>我将 access_key 和 secret_key 放入了环境变量，所以上述配置文件中无需配置这两个参数：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">TENCENTCLOUD_SECRET_ID</span><span class="o">=</span><span class="s2">"YOUR_ACCESS_KEY"</span>
+<span class="nb">export </span><span class="nv">TENCENTCLOUD_SECRET_KEY</span><span class="o">=</span><span class="s2">"YOUR_ACCESS_SECRET"</span>
+</code></pre></div></div>
+
+<p>现在只需要启动 exporter 即可：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./qcloud_exporter <span class="nt">--config</span>.file<span class="o">=</span>./config.yml
+</code></pre></div></div>
+
+<p>启动完成后，可以在浏览器中看到 metrics 信息，地址是：<a href="http://0.0.0.0:9123/metrics">http://0.0.0.0:9123/metrics</a></p>
+
+<p>腾讯云的 exporter 使用的是 云 API 实现，如果在本地运行 exporter，会有明显的延时，实际使用中，建议部署在云上的同 region。</p>
+
+<p>现在，将这个 exporter 配置到 prom 中，只需要在 config 文件的 <code class="language-plaintext highlighter-rouge">scrape_configs</code> 下新增一个 job 配置（prometheus.yml）。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
+  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span>
+  <span class="na">external_labels</span><span class="pi">:</span>
+    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">cvm-monitor'</span>
+<span class="na">scrape_configs</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">qcloud_cvm'</span>
+    <span class="na">scrape_timeout</span><span class="pi">:</span> <span class="s">20s</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">30s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9123</span>
+</code></pre></div></div>
+
+<p>然后，启动 prom：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
+    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/prometheus.yml:/etc/prometheus/prometheus.yml <span class="se">\</span>
+    prom/prometheus
+</code></pre></div></div>
+
+<p>启动后查询“外网网卡每秒出流量” <code class="language-plaintext highlighter-rouge">qce_cvm_wanouttraffic_max</code> 试试。</p>
+
+<h2 id="编写自定义业务监控指标">编写自定义业务监控指标</h2>
+
+<p>我们通过观察 metrics 的数据格式，可以看出他的格式是：名称{键=”值”,键=”值”…} 数值，如：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># TYPE qce_cvm_wanouttraffic_max gauge</span>
+qce_cvm_wanouttraffic_max<span class="o">{</span><span class="nv">instance_id</span><span class="o">=</span><span class="s2">"ins-ireqmbad"</span>,instance_name<span class="o">=</span><span class="s2">"tke_cls-k383r70d_worker1"</span><span class="o">}</span> 0.0.1
+</code></pre></div></div>
+
+<p>现在我们模拟编写两个业务指标试试。</p>
+
+<p>下面使用了 php 代码模拟了 2 个商品的价格波动，采用了随机数进行演示。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$router</span>-&gt;get<span class="o">(</span><span class="s1">'/metrics'</span>, <span class="k">function</span> <span class="o">()</span> use <span class="o">(</span><span class="nv">$router</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nv">$v</span> <span class="o">=</span> <span class="s1">'# TYPE price gauge'</span><span class="p">;</span>
+    <span class="nv">$v</span> .<span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">;</span>
+    <span class="nv">$v</span> .<span class="o">=</span> <span class="s1">'price{product="蓝色潜水艇"} '</span>.rand<span class="o">(</span>100,10000<span class="o">)</span>/100<span class="p">;</span>
+    <span class="nv">$v</span> .<span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">;</span>
+    <span class="nv">$v</span> .<span class="o">=</span> <span class="s1">'price{product="果壳中的宇宙"} '</span>.rand<span class="o">(</span>200,20000<span class="o">)</span>/100<span class="p">;</span>
+    <span class="nv">$v</span> .<span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">;</span>
+    <span class="k">return</span> <span class="o">(</span>new Response<span class="o">(</span><span class="nv">$v</span>, 200<span class="o">))</span>
+                  -&gt;header<span class="o">(</span><span class="s1">'Content-Type'</span>, <span class="s1">'text/plain; version=0.0.4'</span><span class="o">)</span><span class="p">;</span>
+<span class="o">})</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>请注意，这里需要按照规范来写，包括头部的注释 <code class="language-plaintext highlighter-rouge"># TYPE price gauge</code>，规范请看这里：<a href="https://prometheus.io/docs/instrumenting/exposition_formats/">https://prometheus.io/docs/instrumenting/exposition_formats/</a></p>
+
+<p>输出结果大概为：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># TYPE price gauge</span>
+price<span class="o">{</span><span class="nv">product</span><span class="o">=</span><span class="s2">"蓝色潜水艇"</span><span class="o">}</span> 59.71
+price<span class="o">{</span><span class="nv">product</span><span class="o">=</span><span class="s2">"果壳中的宇宙"</span><span class="o">}</span> 121.69
+</code></pre></div></div>
+
+<p>假设我们把这个接口发布到地址：<a href="http://localhost:8004/metrics">http://localhost:8004/metrics</a>。</p>
+
+<p>现在我们把他配置到 prom 中。</p>
+
+<p>编写 config 文件（prometheus2.yml）:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
+  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span>
+  <span class="na">external_labels</span><span class="pi">:</span>
+    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prom-monitor'</span>
+<span class="na">scrape_configs</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">book-price'</span>
+    <span class="na">scrape_timeout</span><span class="pi">:</span> <span class="s">5s</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">10s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:8004</span>
+</code></pre></div></div>
+
+<p>用这个配置文件启动 prom：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
+    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/prometheus2.yml:/etc/prometheus/prometheus.yml <span class="se">\</span>
+    prom/prometheus
+</code></pre></div></div>
+
+<p>​
+在 prom 的UI 查询 price，会得到类似下面的折线图：</p>
+
+<p><img src="/assets/posts/observability/custom-metrics.png" alt="自定义业务指标监控" /></p>
+
+<p>​</p>
+
+<p>现在，我们可以对业务指标进行监控了。</p>
+
+<p>​</p>
+
+  </div>
+
+  <a class="u-url" href="/2021/10/prometheus-2-custom-metrics.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

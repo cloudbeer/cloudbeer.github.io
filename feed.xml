@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://cloudbeer.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://cloudbeer.github.io/" rel="alternate" type="text/html" /><updated>2022-12-05T11:22:53+00:00</updated><id>https://cloudbeer.github.io/feed.xml</id><title type="html">啤酒云</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Argo CD 入门</title><link href="https://cloudbeer.github.io/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://cloudbeer.github.io/2022/12/argocd-start</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-05T15:19:01+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Argo CD 入门</title><link href="https://youbug.cn/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://youbug.cn/2022/12/argocd-start</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
 
 <h2 id="gitops-和-argo-cd">GitOps 和 Argo CD</h2>
 
@@ -203,7 +203,7 @@ nginx   Synced        Healthy
 
 <p>然后访问 <a href="http://localhost:8080">http://localhost:8080</a>，登录用户名 admin，密码为刚刚查询的密码。</p>
 
-<p>登录进去之后，就可以看到 Web 界面了，在 Web 里，可以看到很多绚烂的内容。</p>]]></content><author><name></name></author><category term="devops," /><category term="argocd," /><category term="container," /><category term="gitops" /><summary type="html"><![CDATA[在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。]]></summary></entry><entry><title type="html">Github pages jekyll 插件不支持怎么办</title><link href="https://cloudbeer.github.io/2022/12/github-pages-not-support.html" rel="alternate" type="text/html" title="Github pages jekyll 插件不支持怎么办" /><published>2022-12-04T14:13:33+00:00</published><updated>2022-12-04T14:13:33+00:00</updated><id>https://cloudbeer.github.io/2022/12/github-pages-not-support</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/github-pages-not-support.html"><![CDATA[<p>花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。</p>
+<p>登录进去之后，就可以看到 Web 界面了，在 Web 里，可以看到很多绚烂的内容。</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="argocd," /><category term="container," /><category term="gitops" /><summary type="html"><![CDATA[在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。]]></summary></entry><entry><title type="html">Github pages jekyll 插件不支持怎么办</title><link href="https://youbug.cn/2022/12/github-pages-not-support.html" rel="alternate" type="text/html" title="Github pages jekyll 插件不支持怎么办" /><published>2022-12-04T14:13:33+00:00</published><updated>2022-12-04T14:13:33+00:00</updated><id>https://youbug.cn/2022/12/github-pages-not-support</id><content type="html" xml:base="https://youbug.cn/2022/12/github-pages-not-support.html"><![CDATA[<p>花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。</p>
 
 <p>这片文章记录了如何解决这个麻烦。</p>
 
@@ -340,7 +340,7 @@ git push <span class="nt">-f</span> origin main
 <p><a href="https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/">How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
 </a></p>
 
-<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>]]></content><author><name></name></author><category term="devops," /><category term="tucao," /><category term="circleci" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://cloudbeer.github.io/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
+<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="tucao," /><category term="circleci" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://youbug.cn/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://youbug.cn/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://youbug.cn/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
 
 <h2 id="iac-和-cdk-简介">IaC 和 CDK 简介</h2>
 
@@ -463,7 +463,7 @@ git push <span class="nt">-f</span> origin main
 
 <p>验证完成之后，请及时使用 cdk destroy 清理资源，否则会<strong>产生费用</strong>。</p>
 
-<p>使用 cdk destroy 删除更干净。</p>]]></content><author><name></name></author><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry><entry><title type="html">容器 DevOps：Gitlab CI</title><link href="https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html" rel="alternate" type="text/html" title="容器 DevOps：Gitlab CI" /><published>2022-12-04T06:32:01+00:00</published><updated>2022-12-04T06:32:01+00:00</updated><id>https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/k8s-devops-gitlab-ci.html"><![CDATA[<p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。</p>
+<p>使用 cdk destroy 删除更干净。</p>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry><entry><title type="html">容器 DevOps：Gitlab CI</title><link href="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html" rel="alternate" type="text/html" title="容器 DevOps：Gitlab CI" /><published>2022-12-04T06:32:01+00:00</published><updated>2022-12-04T06:32:01+00:00</updated><id>https://youbug.cn/2022/12/k8s-devops-gitlab-ci</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html"><![CDATA[<p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。</p>
 
 <h2 id="示例描述">示例描述</h2>
 
@@ -678,7 +678,7 @@ git push <span class="nt">-f</span> origin main
 
 <p>部署仓库：<a href="https://github.com/cloudbeer/cd-script">https://github.com/cloudbeer/cd-script</a></p>
 
-<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name></name></author><category term="devops," /><category term="gitops," /><category term="gitlab" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。]]></summary></entry><entry><title type="html">在 K8S 中实现 灰度，蓝绿 发布</title><link href="https://cloudbeer.github.io/2022/12/k8s-gray-blue-green.html" rel="alternate" type="text/html" title="在 K8S 中实现 灰度，蓝绿 发布" /><published>2022-12-01T08:09:00+00:00</published><updated>2022-12-01T08:09:00+00:00</updated><id>https://cloudbeer.github.io/2022/12/k8s-gray-blue-green</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/k8s-gray-blue-green.html"><![CDATA[<p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
+<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="gitops," /><category term="gitlab" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。]]></summary></entry><entry><title type="html">在 K8S 中实现 灰度，蓝绿 发布</title><link href="https://youbug.cn/2022/12/k8s-gray-blue-green.html" rel="alternate" type="text/html" title="在 K8S 中实现 灰度，蓝绿 发布" /><published>2022-12-01T08:09:00+00:00</published><updated>2022-12-01T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/k8s-gray-blue-green</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-gray-blue-green.html"><![CDATA[<p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
 
 <h2 id="应用部署">应用部署</h2>
 
@@ -844,7 +844,7 @@ spec:
 
 <p>事实上，一些第三方的 ingress 产品，以及 Service Mesh 就都可以解决这些问题的。</p>
 
-<p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>]]></content><author><name></name></author><category term="container," /><category term="devops" /><summary type="html"><![CDATA[在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。]]></summary></entry><entry><title type="html">Apache Airflow 入门</title><link href="https://cloudbeer.github.io/2022/12/airflow-start.html" rel="alternate" type="text/html" title="Apache Airflow 入门" /><published>2022-12-01T04:57:44+00:00</published><updated>2022-12-01T04:57:44+00:00</updated><id>https://cloudbeer.github.io/2022/12/airflow-start</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/airflow-start.html"><![CDATA[<p>从小白到略知一二。</p>
+<p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="devops" /><summary type="html"><![CDATA[在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。]]></summary></entry><entry><title type="html">Apache Airflow 入门</title><link href="https://youbug.cn/2022/12/airflow-start.html" rel="alternate" type="text/html" title="Apache Airflow 入门" /><published>2022-12-01T04:57:44+00:00</published><updated>2022-12-01T04:57:44+00:00</updated><id>https://youbug.cn/2022/12/airflow-start</id><content type="html" xml:base="https://youbug.cn/2022/12/airflow-start.html"><![CDATA[<p>从小白到略知一二。</p>
 
 <h2 id="背景">背景</h2>
 
@@ -1040,7 +1040,7 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
     <span class="nt">--end-date</span> 2015-06-07
 </code></pre></div></div>
 
-<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name></name></author><category term="data" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry><entry><title type="html">使用 CDK 安装 Karpenter 新版</title><link href="https://cloudbeer.github.io/2022/11/cdk-install-karpenter-1.9.2.html" rel="alternate" type="text/html" title="使用 CDK 安装 Karpenter 新版" /><published>2022-11-30T13:49:06+00:00</published><updated>2022-11-30T13:49:06+00:00</updated><id>https://cloudbeer.github.io/2022/11/cdk-install-karpenter-1.9.2</id><content type="html" xml:base="https://cloudbeer.github.io/2022/11/cdk-install-karpenter-1.9.2.html"><![CDATA[<p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
+<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name>啤酒云</name></author><category term="data," /><category term="airflow" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry><entry><title type="html">使用 CDK 安装 Karpenter 新版</title><link href="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html" rel="alternate" type="text/html" title="使用 CDK 安装 Karpenter 新版" /><published>2022-11-30T13:49:06+00:00</published><updated>2022-11-30T13:49:06+00:00</updated><id>https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2</id><content type="html" xml:base="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html"><![CDATA[<p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
 
 <h2 id="cdk-和-karpenter-分别是什么">CDK 和 Karpenter 分别是什么</h2>
 
@@ -1220,7 +1220,7 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
 <ol>
   <li>CDK 的 HelmChart 对于 oci 库的支持处于起步阶段，经过多次试验以及阅读相关源码，才确认写法：<code class="language-plaintext highlighter-rouge">chart: 'oci://public.ecr.aws/karpenter/karpenter'</code>，<code class="language-plaintext highlighter-rouge">repository: 'oci://public.ecr.aws/karpenter/karpenter'</code>。</li>
   <li>Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是：”settings.aws.clusterEndpoint”，而这里的写法<strong>必须是</strong> JSON 格式。</li>
-</ol>]]></content><author><name></name></author><category term="container," /><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry><entry><title type="html">正式开张</title><link href="https://cloudbeer.github.io/2022/11/cloudbeer-first.html" rel="alternate" type="text/html" title="正式开张" /><published>2022-11-30T12:12:44+00:00</published><updated>2022-11-30T12:12:44+00:00</updated><id>https://cloudbeer.github.io/2022/11/cloudbeer-first</id><content type="html" xml:base="https://cloudbeer.github.io/2022/11/cloudbeer-first.html"><![CDATA[<p>开张咯</p>
+</ol>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry><entry><title type="html">正式开张</title><link href="https://youbug.cn/2022/11/cloudbeer-first.html" rel="alternate" type="text/html" title="正式开张" /><published>2022-11-30T12:12:44+00:00</published><updated>2022-11-30T12:12:44+00:00</updated><id>https://youbug.cn/2022/11/cloudbeer-first</id><content type="html" xml:base="https://youbug.cn/2022/11/cloudbeer-first.html"><![CDATA[<p>—————-———— 开张咯，这里是分割线  这里更早的文章是以前写的 —————-————</p>
 
 <h2 id="开张咯">开张咯</h2>
 
@@ -1237,7 +1237,7 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
 <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jekyll serve <span class="nt">--livereload</span>
 </code></pre></div></div>
 
-<p>我先推到 github 试试咯。</p>]]></content><author><name></name></author><category term="tucao" /><summary type="html"><![CDATA[开张咯]]></summary></entry><entry><title type="html">php应用容器化部署实践</title><link href="https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html" rel="alternate" type="text/html" title="php应用容器化部署实践" /><published>2022-01-21T02:56:53+00:00</published><updated>2022-01-21T02:56:53+00:00</updated><id>https://cloudbeer.github.io/2022/01/deploy-php-in-k8s</id><content type="html" xml:base="https://cloudbeer.github.io/2022/01/deploy-php-in-k8s.html"><![CDATA[<p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
+<p>我先推到 github 试试咯。</p>]]></content><author><name>啤酒云</name></author><category term="tucao" /><summary type="html"><![CDATA[—————-———— 开张咯，这里是分割线 这里更早的文章是以前写的 —————-————]]></summary></entry><entry><title type="html">php应用容器化部署实践</title><link href="https://youbug.cn/2022/01/deploy-php-in-k8s.html" rel="alternate" type="text/html" title="php应用容器化部署实践" /><published>2022-01-21T02:56:53+00:00</published><updated>2022-01-21T02:56:53+00:00</updated><id>https://youbug.cn/2022/01/deploy-php-in-k8s</id><content type="html" xml:base="https://youbug.cn/2022/01/deploy-php-in-k8s.html"><![CDATA[<p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
 
 <h2 id="php-应用镜像准备">php 应用镜像准备</h2>
 
@@ -1728,271 +1728,154 @@ curl http://localhost:8000/cpu
   <li>lumen.Dockerfile：包含 lumen 框架的运行环境</li>
   <li>runtime.Dockerfile：php 基础运行环境</li>
   <li>业务代码的 Dockerfile 位于 src/lumen-app/Dockerfile 和 src/lumen-app/purecode.Dockerfile</li>
-</ul>]]></content><author><name></name></author><category term="container," /><category term="language" /><summary type="html"><![CDATA[目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。]]></summary></entry><entry><title type="html">生产有权限控制的 kubeconfig</title><link href="https://cloudbeer.github.io/2021/07/create-kubeconfig.html" rel="alternate" type="text/html" title="生产有权限控制的 kubeconfig" /><published>2021-07-16T01:53:06+00:00</published><updated>2021-07-16T01:53:06+00:00</updated><id>https://cloudbeer.github.io/2021/07/create-kubeconfig</id><content type="html" xml:base="https://cloudbeer.github.io/2021/07/create-kubeconfig.html"><![CDATA[<p>​
-在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。</p>
+</ul>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="language" /><summary type="html"><![CDATA[目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。]]></summary></entry><entry><title type="html">Prometheus 入门 ① Hello World</title><link href="https://youbug.cn/2021/10/prometheus-1-start.html" rel="alternate" type="text/html" title="Prometheus 入门 ① Hello World" /><published>2021-10-09T13:08:14+00:00</published><updated>2021-10-09T13:08:14+00:00</updated><id>https://youbug.cn/2021/10/prometheus-1-start</id><content type="html" xml:base="https://youbug.cn/2021/10/prometheus-1-start.html"><![CDATA[<p>此入门文档是依据官网文档参考而来。没有理论，没有架构，直接实战。现在开始。</p>
 
-<p>下面的过程展示了如何使用 k8s 原生能力做到这一点。</p>
+<h2 id="小试牛刀">小试牛刀</h2>
 
-<h2 id="实现步骤">实现步骤</h2>
+<p>创建一个目录，写一个配置 (config/prom.yaml)：</p>
 
-<h3 id="创建-namespace">创建 namespace</h3>
-
-<p>首先创建一个使用者名字的命名空间</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create ns well
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
+  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span> 
+  <span class="na">external_labels</span><span class="pi">:</span>
+    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">codelab-monitor'</span>
+<span class="na">scrape_configs</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prometheus'</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span> <span class="pi">[</span><span class="s1">'</span><span class="s">localhost:9090'</span><span class="pi">]</span>
 </code></pre></div></div>
 
-<h3 id="创建-serviceaccount">创建 ServiceAccount</h3>
+<p>然后启动普罗米修斯：</p>
 
-<p>在用户命名空间下创建 SA</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-sa</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
+    <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
+    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/config/prom.yaml:/etc/prometheus/prometheus.yml <span class="se">\</span>
+    prom/prometheus
 </code></pre></div></div>
 
-<h3 id="创建一个-role">创建一个 Role</h3>
+<p>搞定！现在检验一下：</p>
 
-<p>在用户命名空间下创建 Role，这里将你希望给使用者的资源和权限放进去。</p>
+<p>在浏览器里看看这俩 url：</p>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-role</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
-<span class="na">rules</span><span class="pi">:</span>
-<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
-  <span class="na">resources</span><span class="pi">:</span> 
-  <span class="pi">-</span> <span class="s">pods</span>
-  <span class="pi">-</span> <span class="s">deployments</span>
-  <span class="pi">-</span> <span class="s">configmaps</span>
-  <span class="pi">-</span> <span class="s">services</span>
-  <span class="na">verbs</span><span class="pi">:</span> 
-  <span class="pi">-</span> <span class="s">get</span>
-  <span class="pi">-</span> <span class="s">list</span>
-  <span class="pi">-</span> <span class="s">watch</span>
-  <span class="pi">-</span> <span class="s">create</span>
-  <span class="pi">-</span> <span class="s">update</span>
-  <span class="pi">-</span> <span class="s">delete</span>
+<p>数据：<a href="http://localhost:9090/metrics">http://localhost:9090/metrics</a></p>
+
+<p>UI：<a href="http://localhost:9090/graph">http://localhost:9090/graph</a></p>
+
+<p>在 metrics 这个地址里，第一个指标是 <code class="language-plaintext highlighter-rouge">go_gc_duration_seconds</code></p>
+
+<p>我们把在 UI 里查询一下这个指标，可以显示如下的图表。</p>
+
+<p><img src="/assets/posts/observability/prom01.png" alt="Prom UI" /></p>
+
+<p>​</p>
+
+<p>万里长征开始迈出了第一步了。</p>
+
+<h2 id="增加-exporter">增加 exporter</h2>
+
+<p>这里直接使用官方的 node exporter 来输出指标。</p>
+
+<p>分别启动 3 个 node exporter：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-d</span> <span class="nt">-p</span> 9100:9100 prom/node-exporter
+docker run <span class="nt">--rm</span> <span class="nt">-d</span> <span class="nt">-p</span> 9101:9100 prom/node-exporter
+docker run <span class="nt">--rm</span> <span class="nt">-d</span> <span class="nt">-p</span> 9102:9100 prom/node-exporter
 </code></pre></div></div>
 
-<h3 id="创建-rolebinding">创建 RoleBinding</h3>
+<p>这些 exporter 暴露了metrics 信息，可以访问试试：<a href="http://localhost:9100/metrics">http://localhost:9100/metrics</a></p>
 
-<p>将刚刚创建的 SA 和 Role 绑在一起。</p>
+<p>编写 config 配置(config/nodes.yaml)：</p>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">kind</span><span class="pi">:</span> <span class="s">RoleBinding</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-binding</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
-<span class="na">subjects</span><span class="pi">:</span>
-<span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-sa</span>
-<span class="na">roleRef</span><span class="pi">:</span>
-  <span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-role</span>
-  <span class="na">apiGroup</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io</span>
-</code></pre></div></div>
-
-<p>现在 well-sa 这个 ServiceAccount 就可以访问 well 命名空间下的相应资源了。接下来需要把 SA 对应的钥匙给使用者。</p>
-
-<h3 id="生产-kubeconfig">生产 kubeconfig</h3>
-
-<p>kubeconfig 模版如下：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Config</span>
-<span class="na">users</span><span class="pi">:</span>
-<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">well</span>
-  <span class="na">user</span><span class="pi">:</span>
-    <span class="na">token</span><span class="pi">:</span> <span class="s">&lt;token&gt;</span>
-<span class="na">clusters</span><span class="pi">:</span>
-<span class="pi">-</span> <span class="na">cluster</span><span class="pi">:</span>
-    <span class="na">certificate-authority-data</span><span class="pi">:</span> <span class="s">&lt;certificate-authority-data&gt;</span>
-    <span class="na">server</span><span class="pi">:</span> <span class="s">&lt;api-server&gt;</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-cluster</span>
-<span class="na">contexts</span><span class="pi">:</span>
-<span class="pi">-</span> <span class="na">context</span><span class="pi">:</span>
-    <span class="na">cluster</span><span class="pi">:</span> <span class="s">well-cluster</span>
-    <span class="na">namespace</span><span class="pi">:</span> <span class="s">well</span>
-    <span class="na">user</span><span class="pi">:</span> <span class="s">well</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">well-cluster</span>
-<span class="na">current-context</span><span class="pi">:</span> <span class="s">well-cluster</span>
-</code></pre></div></div>
-
-<p>现在只需要将上面相应的内容替换成实际的内容。</p>
-
-<p>这些参数的获取路径如下：</p>
-
-<ul>
-  <li>通过命令 <code class="language-plaintext highlighter-rouge">kubectl config view --flatten --minify</code>  可以拿到 certificate-authority-data 和 api-server 信息 。</li>
-  <li>通过命令 <code class="language-plaintext highlighter-rouge">kubectl describe sa well-sa -n well</code>  拿到 secret 的 key。</li>
-  <li>通过命令 <code class="language-plaintext highlighter-rouge">kubectl describe secret &lt;key&gt; -n well</code>  拿到 token 信息。</li>
-</ul>
-
-<p>替换完成后将kubeconfig 存成文件发放给使用者即可。</p>
-
-<h2 id="自动化">自动化</h2>
-
-<p>上述过程可以自动化完成，下面是实现这一过程的完整 Shell 脚本。</p>
-
-<p>首先你需要有一个权限足够的 kubeconfig 在你的 kubectl 当前上下文。</p>
-
-<p>拷贝此脚本命名文件名为 create-key.sh，给执行权限。</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
-
-<span class="nb">echo</span> <span class="s2">"欢迎使用 kubeconfig 生成器，此脚本可以产生一个有限权限的密钥。"</span>
-<span class="nb">echo</span> <span class="s2">"执行此脚本需要您首先拥有集群最大权限的默认钥匙。"</span>
-<span class="nb">echo 
-echo</span> <span class="s2">"使用方法："</span>
-<span class="nb">echo</span> <span class="s2">"./create-key.sh"</span>
-<span class="nb">echo</span> <span class="s2">"或者"</span>
-<span class="nb">echo</span> <span class="s2">"./create-key.sh &lt;yourname&gt;"</span>
-<span class="nb">echo</span>
-
-<span class="c"># 检查 ns</span>
-<span class="k">function </span>userExists<span class="o">()</span> <span class="o">{</span>
-  <span class="nv">checkUser</span><span class="o">=</span><span class="sb">`</span>kubectl get ns | <span class="nb">grep</span> <span class="nt">-w</span> <span class="nv">$1</span><span class="sb">`</span> 
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$checkUser</span><span class="s2">"</span> <span class="o">]</span>
-  <span class="k">then
-    </span><span class="nb">echo </span>0
-  <span class="k">else
-    </span><span class="nb">echo </span>1
-  <span class="k">fi</span>
-<span class="o">}</span>
-
-
-<span class="nv">USER</span><span class="o">=</span><span class="nv">$1</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span><span class="k">then
-  while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do
-    </span><span class="nb">read</span> <span class="nt">-p</span> <span class="s2">"请输入用户标识："</span> USER
-
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span><span class="k">then</span> <span class="c"># 啥也不输入</span>
-      <span class="nb">echo</span> <span class="s2">"您得输入点啥，或者 ctrl + c 退出，请重新输入。"</span>
-      <span class="nb">echo
-    </span><span class="k">else
-      </span><span class="nv">checkUser</span><span class="o">=</span><span class="sb">`</span>userExists <span class="nv">$USER</span><span class="sb">`</span>
-      <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$checkUser</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"0"</span> <span class="o">]</span><span class="p">;</span>
-      <span class="k">then
-        </span><span class="nb">break
-      </span><span class="k">else
-        </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2"> 被占用，请重新输入或者 ctrl + c 退出。"</span>
-        <span class="nb">echo
-      </span><span class="k">fi
-    fi
-  done
-else
-    </span><span class="nv">checkUser</span><span class="o">=</span><span class="sb">`</span>userExists <span class="nv">$USER</span><span class="sb">`</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$checkUser</span><span class="s2">"</span> <span class="o">=</span> <span class="s2">"1"</span> <span class="o">]</span><span class="p">;</span><span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$USER</span><span class="s2"> 被占用。"</span> <span class="o">&gt;&gt;</span>/dev/stderr
-        <span class="nb">exit
-    </span><span class="k">fi
-fi
-
-
-</span>kubectl create ns <span class="nv">$USER</span>
-
-<span class="c"># 创建 SA</span>
-<span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: </span><span class="nv">$USER</span><span class="sh">-sa
-  namespace: </span><span class="nv">$USER</span><span class="sh">
-</span><span class="no">EOF
-
-</span><span class="c"># 创建一个角色，并控制资源，调整这部分分配您需要的资源权限</span>
-<span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: </span><span class="nv">$USER</span><span class="sh">-role
-  namespace: </span><span class="nv">$USER</span><span class="sh">
-rules:
-- apiGroups: [""]
-  resources: 
-  - pods
-  - deployments
-  - configmaps
-  - services
-  verbs: 
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - delete
-</span><span class="no">EOF
-
-</span><span class="c"># 创建 Role Binding</span>
-<span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: </span><span class="nv">$USER</span><span class="sh">-binding
-  namespace: </span><span class="nv">$USER</span><span class="sh">
-subjects:
-- kind: ServiceAccount
-  name: </span><span class="nv">$USER</span><span class="sh">-sa
-roleRef:
-  kind: Role
-  name: </span><span class="nv">$USER</span><span class="sh">-role
-  apiGroup: rbac.authorization.k8s.io
-</span><span class="no">EOF
-
-</span><span class="nv">KUBE_APISERVER</span><span class="o">=</span><span class="sb">`</span>kubectl config view <span class="nt">--minify</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.clusters[*].cluster.server}"</span><span class="sb">`</span>
-<span class="nv">TOKEN_KEY</span><span class="o">=</span><span class="sb">`</span>kubectl get sa <span class="nv">$USER</span><span class="nt">-sa</span> <span class="nt">-n</span> <span class="nv">$USER</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.secrets[0].name}"</span><span class="sb">`</span>
-<span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>kubectl get secrets <span class="nv">$TOKEN_KEY</span> <span class="nt">-n</span> <span class="nv">$USER</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.token}"</span><span class="sb">`</span>
-<span class="nv">CLUSTER_AUTH</span><span class="o">=</span><span class="sb">`</span>kubectl config view <span class="nt">--flatten</span> <span class="nt">--minify</span> <span class="nt">-o</span><span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.clusters[0].cluster.certificate-authority-data}"</span><span class="sb">`</span>
-<span class="nv">TOKEN_DECODE</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$TOKEN</span> | <span class="nb">base64</span> <span class="nt">--decode</span><span class="sb">`</span>
-
-<span class="c"># 生产 kubeconfig 文件</span>
-<span class="nb">cat</span> <span class="o">&gt;</span> <span class="nv">$USER</span>.config  <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiVersion: v1
-kind: Config
-users:
-- name: </span><span class="nv">$USER</span><span class="sh">
-  user:
-    token: </span><span class="nv">$TOKEN_DECODE</span><span class="sh">
-clusters:
-- cluster:
-    certificate-authority-data: </span><span class="nv">$CLUSTER_AUTH</span><span class="sh">
-    server: </span><span class="nv">$KUBE_APISERVER</span><span class="sh">
-  name: </span><span class="nv">$USER</span><span class="sh">-cluster
-contexts:
-- context:
-    cluster: </span><span class="nv">$USER</span><span class="sh">-cluster
-    namespace: </span><span class="nv">$USER</span><span class="sh">
-    user: </span><span class="nv">$USER</span><span class="sh">
-  name: </span><span class="nv">$USER</span><span class="sh">-cluster
-current-context: </span><span class="nv">$USER</span><span class="sh">-cluster
-</span><span class="no">EOF
-
-</span><span class="nb">cat</span> <span class="nv">$USER</span>.config | pbcopy
-
-<span class="nb">echo
-echo</span> <span class="s2">"成功了！！！！"</span>
-<span class="nb">echo
-echo
-echo</span> <span class="s2">"kubeconfig 文件已经保存为 ./</span><span class="nv">$USER</span><span class="s2">.config，并已经拷贝至您的剪切板中了。"</span>
-<span class="nb">echo</span> <span class="s2">"当前 kubeconfig 仅允许访问命名空间 </span><span class="nv">$USER</span><span class="s2"> 下的特定资源。"</span>
-<span class="nb">echo
-echo</span> <span class="s2">"执行如下的命令试试看："</span>
-<span class="nb">echo</span> <span class="s2">"kubectl get po --kubeconfig=./</span><span class="nv">$USER</span><span class="s2">.config"</span>
-<span class="nb">echo</span> <span class="s2">"kubectl get secret --kubeconfig=./</span><span class="nv">$USER</span><span class="s2">.config"</span>
-<span class="nb">echo</span> <span class="s2">"kubectl get po --kubeconfig=./</span><span class="nv">$USER</span><span class="s2">.config -n default"</span>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
+  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span>
+  <span class="na">external_labels</span><span class="pi">:</span>
+    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes-monitor'</span>
+<span class="na">scrape_configs</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prometheus'</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span> <span class="pi">[</span><span class="s1">'</span><span class="s">localhost:9090'</span><span class="pi">]</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes'</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9100</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9101</span>
+        <span class="na">labels</span><span class="pi">:</span>
+          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prod'</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9102</span>
+        <span class="na">labels</span><span class="pi">:</span>
+          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">dev'</span>
 </code></pre></div></div>
 
 <ul>
-  <li>执行 ./create-key.sh 或者 ./create-key.sh well 都可以。</li>
-  <li>执行完成会在当前目录下保存一个 well.config 的文件，这个就是 kubeconfig 文件，发给使用这就好。或者将剪切板里的内容贴给使用者。</li>
-  <li>本脚本给了测试用例，其中，kubectl get po 有权限，kubectl get secret 没有权限，kubectl get po -n default 没有权限。</li>
-  <li>修改 Role 的部分，可以精细控制权限，也可以创建多个 Role 和 Binding，对不同的资源分权限控制。</li>
-  <li>需要释放资源，直接删除命名空间，方便快捷。<code class="language-plaintext highlighter-rouge">kubectl delete ns well</code></li>
+  <li>host.docker.internal 这个是宿主机的地址。这里是从容器内访问，所以使用了这个域名。</li>
 </ul>
 
-<p>此脚本在 Mac 下测试通过。</p>]]></content><author><name></name></author><category term="container" /><summary type="html"><![CDATA[​ 在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。]]></summary></entry></feed>
+<p>启动普罗米修斯：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
+    <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
+    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/config/nodes.yaml:/etc/prometheus/prometheus.yml <span class="se">\</span>
+    prom/prometheus
+</code></pre></div></div>
+
+<p>现在 普罗米修斯的 UI 中查询 <code class="language-plaintext highlighter-rouge">node_cpu_seconds_total</code> 试试。</p>
+
+<h2 id="聚合指标">聚合指标</h2>
+
+<p>现在加入一个聚合规则（config/nodes-rule.yaml）：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">groups</span><span class="pi">:</span>
+<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">cpu-node</span>
+  <span class="na">rules</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">record</span><span class="pi">:</span> <span class="s">job_instance_mode:node_cpu_seconds:avg_rate5m</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">avg by (job, instance, mode) (rate(node_cpu_seconds_total[5m]))</span>
+</code></pre></div></div>
+
+<ul>
+  <li>定义了一个记录，名字是 <code class="language-plaintext highlighter-rouge">job_instance_mode:node_cpu_seconds:avg_rate5m</code></li>
+  <li>prom 表达式是：<code class="language-plaintext highlighter-rouge">avg by (job, instance, mode) (rate(node_cpu_seconds_total[5m]))</code></li>
+</ul>
+
+<p>重新写一个启动配置，加入这个聚合规则（config/prometheus.yml）：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
+  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span>
+  <span class="na">external_labels</span><span class="pi">:</span>
+    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes-monitor'</span>
+<span class="na">rule_files</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s1">'</span><span class="s">nodes-rule.yaml'</span>
+<span class="na">scrape_configs</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prometheus'</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span> <span class="pi">[</span><span class="s1">'</span><span class="s">localhost:9090'</span><span class="pi">]</span>
+  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes'</span>
+    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
+    <span class="na">static_configs</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9100</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9101</span>
+        <span class="na">labels</span><span class="pi">:</span>
+          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prod'</span>
+      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">host.docker.internal:9102</span>
+        <span class="na">labels</span><span class="pi">:</span>
+          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">dev'</span>
+</code></pre></div></div>
+
+<p>启动普罗米修斯：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
+    <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
+    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/config:/etc/prometheus <span class="se">\</span>
+    prom/prometheus
+</code></pre></div></div>
+
+<p>启动后，在 UI 里查一下 <code class="language-plaintext highlighter-rouge">job_instance_mode:node_cpu_seconds:avg_rate5m</code></p>
+
+<p>现在，咱们的监控之路迈出了第一步！</p>
+
+<p>​</p>]]></content><author><name>啤酒云</name></author><category term="observability," /><category term="prometheus" /><summary type="html"><![CDATA[此入门文档是依据官网文档参考而来。没有理论，没有架构，直接实战。现在开始。]]></summary></entry></feed>

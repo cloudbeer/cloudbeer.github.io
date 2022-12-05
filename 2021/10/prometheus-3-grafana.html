@@ -3,21 +3,22 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>Page 2 of 2 for 更早的文章 第 2 页，共 2 页 | YouBug</title>
+<title>Prometheus 入门 ③ 使用 Grafana 美化 | YouBug</title>
 <meta name="generator" content="Jekyll v4.3.1" />
-<meta property="og:title" content="更早的文章 第 2 页，共 2 页" />
+<meta property="og:title" content="Prometheus 入门 ③ 使用 Grafana 美化" />
+<meta name="author" content="啤酒云" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="分享，记录而已" />
-<meta property="og:description" content="分享，记录而已" />
-<link rel="canonical" href="https://youbug.cn/page/2/" />
-<meta property="og:url" content="https://youbug.cn/page/2/" />
+<meta name="description" content="​ Prometheus 本身带了一个简单的 UI，用于查询指标，并能显示简单的 chart。而 Grafana 是 Prometheus 好伴侣，能画出好看的图表。" />
+<meta property="og:description" content="​ Prometheus 本身带了一个简单的 UI，用于查询指标，并能显示简单的 chart。而 Grafana 是 Prometheus 好伴侣，能画出好看的图表。" />
+<link rel="canonical" href="https://youbug.cn/2021/10/prometheus-3-grafana.html" />
+<meta property="og:url" content="https://youbug.cn/2021/10/prometheus-3-grafana.html" />
 <meta property="og:site_name" content="YouBug" />
-<meta property="og:type" content="website" />
-<link rel="prev" href="https://youbug.cn/" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-10-09T10:08:34+00:00" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="更早的文章 第 2 页，共 2 页" />
+<meta property="twitter:title" content="Prometheus 入门 ③ 使用 Grafana 美化" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","description":"分享，记录而已","headline":"更早的文章 第 2 页，共 2 页","url":"https://youbug.cn/page/2/"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2021-10-09T10:08:34+00:00","datePublished":"2021-10-09T10:08:34+00:00","description":"​ Prometheus 本身带了一个简单的 UI，用于查询指标，并能显示简单的 chart。而 Grafana 是 Prometheus 好伴侣，能画出好看的图表。","headline":"Prometheus 入门 ③ 使用 Grafana 美化","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2021/10/prometheus-3-grafana.html"},"url":"https://youbug.cn/2021/10/prometheus-3-grafana.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script>
 if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
@@ -60,71 +61,136 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
 </header><main class="page-content" aria-label="Content">
     <div class="wrapper">
       <style>
-  ul.pager {
-    text-align: center;
-    list-style: none;
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
   }
 
-  ul.pager li {
-    display: inline;
-    border: 1px solid black;
-    padding: 10px;
-    margin: 5px;
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
   }
 
-  .page-heading {
-    font-size: 16px;
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
 
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
   }
 </style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Prometheus 入门 ③ 使用 Grafana 美化</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-10-09T10:08:34+00:00" itemprop="datePublished">2021-10-09
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
 
-<div class="home"><h1 class="page-heading">更早的文章 | 第 2 页，共 2 页</h1><ul class="post-list"><li><span class="post-meta">2021-10-09</span>
-      <h3>
-        <a class="post-link" href="/2021/10/prometheus-2-custom-metrics.html">
-          Prometheus 入门 ② 自定义数据源
-        </a>
-      </h3>
-      <div><p>​本文将介绍如何使用第三方的 exporter，并尝试自己编写一个业务度量接口。</p>
-</div>
-    </li><li><span class="post-meta">2021-10-09</span>
-      <h3>
-        <a class="post-link" href="/2021/10/prometheus-3-grafana.html">
-          Prometheus 入门 ③ 使用 Grafana 美化
-        </a>
-      </h3>
-      <div><p>​
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>​
 Prometheus 本身带了一个简单的 UI，用于查询指标，并能显示简单的 chart。而 Grafana 是 Prometheus 好伴侣，能画出好看的图表。</p>
-</div>
-    </li><li><span class="post-meta">2021-07-16</span>
-      <h3>
-        <a class="post-link" href="/2021/07/create-kubeconfig.html">
-          生产有权限控制的 kubeconfig
-        </a>
-      </h3>
-      <div><p>​
-在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。</p>
-</div>
-    </li><li><span class="post-meta">2020-06-07</span>
-      <h3>
-        <a class="post-link" href="/2020/06/docker-as-web-server.html">
-          使用 docker 作为 Web 开发服务器
-        </a>
-      </h3>
-      <div><p>提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。</p>
-</div>
-    </li></ul>
 
+<h2 id="grafana-一瞥">Grafana 一瞥</h2>
 
-  
-  <ul class="pager">
-    
-    <li class="previous">
-      <a href="/">&larr; 更新的</a>
-    </li>
-    
-    
-  </ul>
+<h3 id="启动-grafana">启动 grafana</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-p</span> 3000:3000 grafana/grafana-enterprise
+</code></pre></div></div>
+
+<p>启动 <a href="http://localhost:3000/">http://localhost:3000/</a>，输入用户名和密码：admin/admin</p>
+
+<p>第一次登入之后，需要修改密码。</p>
+
+<h3 id="增加一个仪表盘">增加一个仪表盘</h3>
+
+<p>点击 ➕ 图标，增加一个 Dashboard，然后点击 “Add an empty panel” 增加一个空面板。</p>
+
+<p>选择数据源为 Grafana，这个会显示一个随机的模拟图，点击 Save 后，取个名字 “模拟面板”，保存后，就完成了一个仪表盘。</p>
+
+<h2 id="prometheus--grafana">Prometheus + Grafana</h2>
+
+<h3 id="启动-prometheus">启动 Prometheus</h3>
+
+<p>首先检查本地的 Prometheus 和 exporter 是否已经启动，本示例将按照上一章的 《Prometheus (二) 自定义数据源》的价格波动来适配 Grafana。</p>
+
+<h3 id="配置数据源">配置数据源</h3>
+
+<p>点击 ⚙ 图标进入 Configuration，选择 DataSources，点击 “Add data source”，选择 Prometheus，配置界面如下：</p>
+
+<p><img src="/assets/posts/observability/data-source.png" alt="配置数据源" />
+​
+配置完成后，点击 “Save &amp; test”。</p>
+
+<h3 id="explore-数据">Explore 数据</h3>
+
+<p>点击 Explore 图标，展示 Explore 界面，更换数据源为 “价格波动”。</p>
+
+<p>在 Metrics browser 选择 price{}，点击按钮 “Use query” 之后，就可以看到曲线了：</p>
+
+<p><img src="/assets/posts/observability/data-explore.png" alt="explore 数据" /></p>
+
+<h3 id="配置显示面板">配置显示面板</h3>
+
+<p>先进入之前的仪表盘“模拟面板”，点击顶部菜单 “Add panel”，然后，进行各种配置。</p>
+
+<p>在图表的下方配置：Data source 选择刚刚配置的“价格波动”，其他部分与 Explore 的类似。</p>
+
+<p>在右侧配置显示样式等。</p>
+
+<p>一顿操作后：​</p>
+
+<p><img src="/assets/posts/observability/data-panel.png" alt="价格面板" /></p>
+
+<p>​</p>
+
+<p>还挺好玩的！</p>
+
+<p>​</p>
+
   </div>
+
+  <a class="u-url" href="/2021/10/prometheus-3-grafana.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
     </div>
   </main><footer class="site-footer h-card">
   <data class="u-url" href="/"></data>

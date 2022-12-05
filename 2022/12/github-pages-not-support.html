@@ -87,9 +87,20 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
   pre.highlight>button:focus {
     opacity: 1;
   }
+
+  article {
+    position: relative;
+  }
+
+  #markdown-toc {
+    position: fixed;
+    top: 80px;
+    right: 10px;
+    height: 10px;
+    list-style-type: none;
+  }
 </style>
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
-
   <header class="post-header">
     <h1 class="post-title p-name" itemprop="name headline">Github pages jekyll 插件不支持怎么办</h1>
     <p class="post-meta">
@@ -237,7 +248,9 @@ git push <span class="nt">-f</span> origin main
 
 <p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>
 
-  </div><a class="u-url" href="/2022/12/github-pages-not-support.html" hidden></a>
+  </div>
+
+  <a class="u-url" href="/2022/12/github-pages-not-support.html" hidden></a>
 </article>
 
 

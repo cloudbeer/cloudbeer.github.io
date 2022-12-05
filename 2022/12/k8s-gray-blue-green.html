@@ -87,9 +87,20 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
   pre.highlight>button:focus {
     opacity: 1;
   }
+
+  article {
+    position: relative;
+  }
+
+  #markdown-toc {
+    position: fixed;
+    top: 80px;
+    right: 10px;
+    height: 10px;
+    list-style-type: none;
+  }
 </style>
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
-
   <header class="post-header">
     <h1 class="post-title p-name" itemprop="name headline">在 K8S 中实现 灰度，蓝绿 发布</h1>
     <p class="post-meta">
@@ -266,7 +277,9 @@ spec:
 
 <p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>
 
-  </div><a class="u-url" href="/2022/12/k8s-gray-blue-green.html" hidden></a>
+  </div>
+
+  <a class="u-url" href="/2022/12/k8s-gray-blue-green.html" hidden></a>
 </article>
 
 

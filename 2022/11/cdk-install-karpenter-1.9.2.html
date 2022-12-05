@@ -87,9 +87,20 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
   pre.highlight>button:focus {
     opacity: 1;
   }
+
+  article {
+    position: relative;
+  }
+
+  #markdown-toc {
+    position: fixed;
+    top: 80px;
+    right: 10px;
+    height: 10px;
+    list-style-type: none;
+  }
 </style>
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
-
   <header class="post-header">
     <h1 class="post-title p-name" itemprop="name headline">使用 CDK 安装 Karpenter 新版</h1>
     <p class="post-meta">
@@ -280,7 +291,9 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
   <li>Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是：”settings.aws.clusterEndpoint”，而这里的写法<strong>必须是</strong> JSON 格式。</li>
 </ol>
 
-  </div><a class="u-url" href="/2022/11/cdk-install-karpenter-1.9.2.html" hidden></a>
+  </div>
+
+  <a class="u-url" href="/2022/11/cdk-install-karpenter-1.9.2.html" hidden></a>
 </article>
 
 

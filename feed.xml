@@ -1,4 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://cloudbeer.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://cloudbeer.github.io/" rel="alternate" type="text/html" /><updated>2022-12-05T08:35:48+00:00</updated><id>https://cloudbeer.github.io/feed.xml</id><title type="html">啤酒云</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Argo CD 入门</title><link href="https://cloudbeer.github.io/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://cloudbeer.github.io/2022/12/argocd-start</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://cloudbeer.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://cloudbeer.github.io/" rel="alternate" type="text/html" /><updated>2022-12-05T10:41:58+00:00</updated><id>https://cloudbeer.github.io/feed.xml</id><title type="html">啤酒云</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Argo CD 入门</title><link href="https://cloudbeer.github.io/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://cloudbeer.github.io/2022/12/argocd-start</id><content type="html" xml:base="https://cloudbeer.github.io/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+
+<ul id="markdown-toc">
+  <li><a href="#gitops-和-argo-cd" id="markdown-toc-gitops-和-argo-cd">GitOps 和 Argo CD</a></li>
+  <li><a href="#简要安装测试模式" id="markdown-toc-简要安装测试模式">简要安装(测试模式)</a></li>
+  <li><a href="#部署第一个-cd-应用" id="markdown-toc-部署第一个-cd-应用">部署第一个 CD 应用</a>    <ul>
+      <li><a href="#代码说明" id="markdown-toc-代码说明">代码说明</a></li>
+      <li><a href="#部署" id="markdown-toc-部署">部署</a></li>
+      <li><a href="#使用-web-ui" id="markdown-toc-使用-web-ui">使用 Web UI</a></li>
+    </ul>
+  </li>
+</ul>
 
 <h2 id="gitops-和-argo-cd">GitOps 和 Argo CD</h2>
 

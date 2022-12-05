@@ -7,6 +7,9 @@ categories: devops, argocd, container, gitops
 
 在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。
 
+* toc
+{:toc}
+
 ## GitOps 和 Argo CD
 
 GitOps 的基本概念:
@@ -158,13 +161,13 @@ spec:
 
 拆解一下上面的代码：
 
-- `kind: Application` 是 Argo CD 扩展的 CRD。
-- `project: default` project 是 argocde 的逻辑组织单元，他可以按照 project 去分类维护 Application。
-- `destination` 部分描述了我们需要部署的目标为当前集群的 default 命名空间。(如果部署到其他命名空间，请先创建 ns，或者在 yaml 指定)。
-- `source` 表示部署文件所在的 git 地址。本例中是这个 git 仓库的 nginx 目录。
-- `syncPolicy` 是同步策略，自动策略中包括开关：
-  - `automated.prune`: 字面意思是 修剪，如果设置为 true，他可以允许删除 yaml 里没有的资源以保持部署与描述一致。
-  - `automated.selfHeal`: 设置为 true 的时候，Argo CD 会定期检查当前集群的状态和 yaml 描述是否一致，如果不一致，则会触发部署。
+* `kind: Application` 是 Argo CD 扩展的 CRD。
+* `project: default` project 是 argocde 的逻辑组织单元，他可以按照 project 去分类维护 Application。
+* `destination` 部分描述了我们需要部署的目标为当前集群的 default 命名空间。(如果部署到其他命名空间，请先创建 ns，或者在 yaml 指定)。
+* `source` 表示部署文件所在的 git 地址。本例中是这个 git 仓库的 nginx 目录。
+* `syncPolicy` 是同步策略，自动策略中包括开关：
+  * `automated.prune`: 字面意思是 修剪，如果设置为 true，他可以允许删除 yaml 里没有的资源以保持部署与描述一致。
+  * `automated.selfHeal`: 设置为 true 的时候，Argo CD 会定期检查当前集群的状态和 yaml 描述是否一致，如果不一致，则会触发部署。
 
 ### 部署
 

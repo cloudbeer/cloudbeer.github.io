@@ -7,9 +7,6 @@ categories: devops, argocd, container, gitops
 
 在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。
 
-* toc
-{:toc}
-
 ## GitOps 和 Argo CD
 
 GitOps 的基本概念:

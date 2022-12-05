@@ -11,7 +11,6 @@ find . -maxdepth 1  ! -name '.'  ! -name '..' ! -name '_site' ! -name '.git' ! -
 mv _site/* .
 rm -R _site/
 
-
 echo "-----ls----"
 ls -la
 echo "--------------------------------"

@@ -133,29 +133,26 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
 <span class="na">jobs</span><span class="pi">:</span>
   <span class="na">deploy</span><span class="pi">:</span>
     <span class="na">docker</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">circleci/ruby:latest</span>
+      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">cimg/ruby:2.7.4</span>
         <span class="na">environment</span><span class="pi">:</span>
           <span class="na">USER_NAME</span><span class="pi">:</span> <span class="s">cloudbeer</span>
           <span class="na">USER_EMAIL</span><span class="pi">:</span> <span class="s">cloudbeer@gmail.com</span>
     <span class="na">steps</span><span class="pi">:</span>
       <span class="pi">-</span> <span class="s">checkout</span>
-      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span>
-          <span class="na">name</span><span class="pi">:</span> <span class="s">install dependencies</span>
-          <span class="na">command</span><span class="pi">:</span> <span class="pi">|</span>
-            <span class="s">gem update --system</span>
-            <span class="s">gem install bundler</span>
       <span class="pi">-</span> <span class="na">restore_cache</span><span class="pi">:</span>
-          <span class="na">keys</span><span class="pi">:</span> 
-            <span class="pi">-</span> <span class="s">v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}</span>
-            <span class="pi">-</span> <span class="s">v1-gem-cache-{{ arch }}-{{ .Branch }}-</span>
-            <span class="pi">-</span> <span class="s">v1-gem-cache-{{ arch }}-</span> 
-      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span> <span class="s">bundle install --path=vendor/bundle &amp;&amp; bundle clean</span>
+          <span class="na">keys</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="s">rubygems-v1-{{ checksum "Gemfile.lock" }}</span>
+            <span class="pi">-</span> <span class="s">rubygems-v1-fallback</span>
+      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span>
+          <span class="na">name</span><span class="pi">:</span> <span class="s">Bundle Install</span>
+          <span class="na">command</span><span class="pi">:</span> <span class="s">bundle install</span>
       <span class="pi">-</span> <span class="na">save_cache</span><span class="pi">:</span>
           <span class="na">paths</span><span class="pi">:</span>
             <span class="pi">-</span> <span class="s">vendor/bundle</span>
-          <span class="na">key</span><span class="pi">:</span> <span class="s">v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}</span>
-
-      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span> <span class="s">JEKYLL_ENV=production bundle exec jekyll build</span>
+          <span class="na">key</span><span class="pi">:</span> <span class="s">rubygems-v1-{{ checksum "Gemfile.lock" }}</span>
+      <span class="pi">-</span> <span class="na">run</span><span class="pi">:</span> 
+          <span class="na">name</span><span class="pi">:</span> <span class="s">Jekyll Build</span>
+          <span class="na">command</span><span class="pi">:</span> <span class="s">JEKYLL_ENV=production bundle exec jekyll build</span>
       <span class="pi">-</span> <span class="na">deploy</span><span class="pi">:</span>
           <span class="na">name</span><span class="pi">:</span> <span class="s">Deploy Release to GitHub</span>
           <span class="na">command</span><span class="pi">:</span> <span class="pi">|</span>
@@ -233,8 +230,12 @@ git push <span class="nt">-f</span> origin main
 
 <hr />
 
-<p>本文代码修改自这个文章：<a href="https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/">How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
+<p>本文代码参考了如下俩：</p>
+
+<p><a href="https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/">How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
 </a></p>
+
+<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>
 
   </div><a class="u-url" href="/2022/12/github-pages-not-support.html" hidden></a>
 </article>

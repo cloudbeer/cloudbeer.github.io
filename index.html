@@ -13,6 +13,7 @@
 <meta property="og:url" content="https://cloudbeer.github.io/" />
 <meta property="og:site_name" content="啤酒云" />
 <meta property="og:type" content="website" />
+<link rel="next" href="https://cloudbeer.github.io/page/2/" />
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="啤酒云" />
 <script type="application/ld+json">
@@ -76,7 +77,15 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
   }
 </style>
 
-<div class="home"><h1 class="page-heading">啤酒云</h1><ul class="post-list"><li><span class="post-meta">2022-12-04</span>
+<div class="home"><h1 class="page-heading">啤酒云</h1><ul class="post-list"><li><span class="post-meta">2022-12-05</span>
+      <h3>
+        <a class="post-link" href="/2022/12/argocd-start.html">
+          Argo CD 入门
+        </a>
+      </h3>
+      <div><p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+</div>
+    </li><li><span class="post-meta">2022-12-04</span>
       <h3>
         <a class="post-link" href="/2022/12/github-pages-not-support.html">
           Github pages jekyll 插件不支持怎么办
@@ -149,17 +158,18 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
       <div><p>​
 在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。</p>
 </div>
-    </li><li><span class="post-meta">2020-06-07</span>
-      <h3>
-        <a class="post-link" href="/2020/06/docker-as-web-server.html">
-          使用 docker 作为 Web 开发服务器
-        </a>
-      </h3>
-      <div><p>提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。</p>
-</div>
     </li></ul>
 
 
+  
+  <ul class="pager">
+    
+    
+    <li class="next">
+      <a href="/page/2/">更旧的 &rarr;</a>
+    </li>
+    
+  </ul>
   </div>
     </div>
   </main><footer class="site-footer h-card">

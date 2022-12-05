@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Argo CD 入门 | 啤酒云</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="Argo CD 入门" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。" />
+<meta property="og:description" content="在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。" />
+<link rel="canonical" href="https://cloudbeer.github.io/2022/12/argocd-start.html" />
+<meta property="og:url" content="https://cloudbeer.github.io/2022/12/argocd-start.html" />
+<meta property="og:site_name" content="啤酒云" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-05T08:20:01+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Argo CD 入门" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-12-05T08:20:01+00:00","datePublished":"2022-12-05T08:20:01+00:00","description":"在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。","headline":"Argo CD 入门","mainEntityOfPage":{"@type":"WebPage","@id":"https://cloudbeer.github.io/2022/12/argocd-start.html"},"url":"https://cloudbeer.github.io/2022/12/argocd-start.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://cloudbeer.github.io/feed.xml" title="啤酒云" /><script>
+if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1")) {
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'G-B4DC7SCVXM', 'auto');
+  ga('send', 'pageview');
+}
+</script>
+  
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">啤酒云</a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Argo CD 入门</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-05T08:20:01+00:00" itemprop="datePublished">2022-12-05
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+
+<h2 id="gitops-和-argo-cd">GitOps 和 Argo CD</h2>
+
+<p>GitOps 的基本概念:</p>
+
+<p>参考这个：<a href="https://www.weave.works/technologies/gitops/">https://www.weave.works/technologies/gitops/</a>。大概意思是：将 CI/CD 整个过程作为代码，存储在 git 仓库，基于 git 仓库中的代码和动作作为 CI/CD 的依据。CI/CD 系统会根据变动触发构建或部署过程。</p>
+
+<p>Argo CD 的定义是：</p>
+
+<p>在 Kubernetes 中声明式 GitOps 的持续交付工具。Argo CD is a declarative, GitOps continuous delivery tool for Kubernetes.</p>
+
+<p>下面的示例中，将演示一下一个 CD 的过程。</p>
+
+<h2 id="简要安装测试模式">简要安装(测试模式)</h2>
+
+<p>安装非常简单，过程如下：</p>
+
+<p>创建 命名空间：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create namespace argocd
+</code></pre></div></div>
+
+<p>安装：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-n</span> argocd <span class="nt">-f</span> https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+</code></pre></div></div>
+
+<p>这样就可以了。</p>
+
+<p>使用下面的命令验证安装结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get po <span class="nt">-nargocd</span>
+</code></pre></div></div>
+
+<p>显示结果如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                                                READY   STATUS    RESTARTS      AGE
+argocd-application-controller-0                     1/1     Running   0             64s
+argocd-applicationset-controller-6779fd5cf5-ct5ck   1/1     Running   0             78s
+argocd-dex-server-68f86575b6-xcrx6                  1/1     Running   2 <span class="o">(</span>65s ago<span class="o">)</span>   76s
+argocd-notifications-controller-769b876844-wj6ck    1/1     Running   0             74s
+argocd-redis-547f5d94cd-9rb94                       1/1     Running   0             72s
+argocd-repo-server-77b686784d-2bkjp                 1/1     Running   0             69s
+argocd-server-6f497ddb95-l4sxv                      1/1     Running   0             66s
+</code></pre></div></div>
+
+<p>如果在生产环境，请参考高可用模式安装: <a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/">https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/</a></p>
+
+<h2 id="部署第一个-cd-应用">部署第一个 CD 应用</h2>
+
+<p>请 clone 这个 github 仓库 ，这里包含了应用部署脚本和 Argo CD 的脚本。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/cloudbeer/cd-script.git
+</code></pre></div></div>
+
+<p>下面我们尝试使用 argocd 持续升级 nginx 应用。</p>
+
+<p>为此，我们需要编写 nginx 的 k8s 部署脚本。</p>
+
+<h3 id="代码说明">代码说明</h3>
+
+<p>部署 nginx 应用：deployment.yaml</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+          <span class="na">image</span><span class="pi">:</span> <span class="s">nginx</span>
+          <span class="na">ports</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">80</span>
+              <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+</code></pre></div></div>
+
+<p>暴露 nginx 服务: service.yaml</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ports</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">http-nginx</span>
+      <span class="na">port</span><span class="pi">:</span> <span class="m">80</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+</code></pre></div></div>
+
+<p>kustomization.yaml</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">kustomize.config.k8s.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Kustomization</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">commonLabels</span><span class="pi">:</span>
+  <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">resources</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">deployment.yaml</span>
+  <span class="pi">-</span> <span class="s">service.yaml</span>
+<span class="na">images</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+    <span class="na">newTag</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1.16"</span>
+</code></pre></div></div>
+
+<p>上面编写的部署脚本，现在无须执行，先放到 git 仓库，
+本示例的代码位于： <a href="https://github.com/cloudbeer/cd-script/tree/main/nginx">https://github.com/cloudbeer/cd-script/tree/main/nginx</a></p>
+
+<p>现在编写 Argo CD 的应用，此部分可以在 Web 界面配置（稍后我们去查看 Web UI），
+Argo CD 的 Application 其实是在 K8S 中以 CRD 形式存在，就象下面的代码：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">argoproj.io/v1alpha1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Application</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">project</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="na">destination</span><span class="pi">:</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
+    <span class="na">server</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://kubernetes.default.svc"</span>
+  <span class="na">source</span><span class="pi">:</span>
+    <span class="na">repoURL</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://github.com/cloudbeer/cd-script.git"</span>
+    <span class="na">targetRevision</span><span class="pi">:</span> <span class="s">HEAD</span>
+    <span class="na">path</span><span class="pi">:</span> <span class="s">nginx</span>
+  <span class="na">syncPolicy</span><span class="pi">:</span>
+    <span class="na">automated</span><span class="pi">:</span> 
+      <span class="na">prune</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">selfHeal</span><span class="pi">:</span> <span class="no">true</span>
+</code></pre></div></div>
+
+<p>拆解一下上面的代码：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">kind: Application</code> 是 Argo CD 扩展的 CRD。</li>
+  <li><code class="language-plaintext highlighter-rouge">project: default</code> project 是 argocde 的逻辑组织单元，他可以按照 project 去分类维护 Application。</li>
+  <li><code class="language-plaintext highlighter-rouge">destination</code> 部分描述了我们需要部署的目标为当前集群的 default 命名空间。(如果部署到其他命名空间，请先创建 ns，或者在 yaml 指定)。</li>
+  <li><code class="language-plaintext highlighter-rouge">source</code> 表示部署文件所在的 git 地址。本例中是这个 git 仓库的 nginx 目录。</li>
+  <li><code class="language-plaintext highlighter-rouge">syncPolicy</code> 是同步策略，自动策略中包括开关：
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">automated.prune</code>: 字面意思是 修剪，如果设置为 true，他可以允许删除 yaml 里没有的资源以保持部署与描述一致。</li>
+      <li><code class="language-plaintext highlighter-rouge">automated.selfHeal</code>: 设置为 true 的时候，Argo CD 会定期检查当前集群的状态和 yaml 描述是否一致，如果不一致，则会触发部署。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="部署">部署</h3>
+
+<p>现在请将上述 Application 部署到 K8S 集群 中。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">kubectl apply -f applications/nginx.yaml</span>
+</code></pre></div></div>
+
+<p>检查部署结果:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">kubectl get app -nargocd</span>
+</code></pre></div></div>
+
+<p>可以看到应用已经同步了：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME    SYNC STATUS   HEALTH STATUS
+nginx   Synced        Healthy
+</code></pre></div></div>
+
+<p>同时检查一下业务应用部署结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get po <span class="nt">-ndefault</span>
+</code></pre></div></div>
+
+<p>查看一下当前部署的版本：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get deploy nginx <span class="nt">-oyaml</span> | <span class="nb">grep </span>image:
+</code></pre></div></div>
+
+<p>现在我们尝试更新一下 nginx 的版本号，修改一下 kustomization.yaml 文件中的版本号。然后持续观察部署结果。</p>
+
+<blockquote>
+  <p>通常修改 kustomization 的动作是由 CI 系统来完成的，在上一章文章 <a href="/2022/12/k8s-devops-gitlab-ci.html">Gitlab CI</a> 里我们已经演示了如何 修改  kustomization.yaml 这个文件了。</p>
+</blockquote>
+
+<h3 id="使用-web-ui">使用 Web UI</h3>
+
+<p>先查询一下密码：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nt">-n</span> argocd get secret argocd-initial-admin-secret <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.password}"</span> | <span class="nb">base64</span> <span class="nt">-d</span><span class="p">;</span> <span class="nb">echo</span>
+</code></pre></div></div>
+
+<p>映射端口：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl port-forward svc/argocd-server <span class="nt">-n</span> argocd 8080:80
+</code></pre></div></div>
+
+<p>然后访问 <a href="http://localhost:8080">http://localhost:8080</a>，登录用户名 admin，密码为刚刚查询的密码。</p>
+
+<p>登录进去之后，就可以看到 Web 界面了，在 Web 里，可以看到很多绚烂的内容。</p>
+
+  </div><a class="u-url" href="/2022/12/argocd-start.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

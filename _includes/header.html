@@ -4,7 +4,7 @@
     {%- assign default_paths = site.pages | map: "path" -%}
     {%- assign page_paths = site.header_pages | default: default_paths -%}
     {%- assign titles_size = site.pages | map: 'title' | join: '' | size -%}
-    <a class="site-title" rel="author" href="/">啤酒云</a>
+    <a class="site-title" rel="author" href="/">☞🐞 YouBug </a>
 
     {%- if titles_size > 0 -%}
     <nav class="site-nav">
@@ -22,6 +22,7 @@
 
         <a class="page-link" href="/container/">容器</a>
         <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
         <a class="page-link" href="/iac/">IaC</a>
         <a class="page-link" href="/aws/">AWS</a>
         <a class="page-link" href="/data/">数据</a>

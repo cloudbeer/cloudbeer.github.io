@@ -1,9 +1,9 @@
-title: 啤酒云
+title: YouBug 
 email: cloudbeer@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   分享，记录而已
 baseurl: ""
-url: "https://cloudbeer.github.io"
+url: "https://youbug.cn"
 github_username: cloudbeer
 show_excerpts: true
 

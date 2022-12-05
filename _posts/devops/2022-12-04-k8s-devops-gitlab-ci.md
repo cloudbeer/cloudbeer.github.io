@@ -2,6 +2,7 @@
 layout: post
 title:  "容器 DevOps：Gitlab CI"
 date:   2022-12-04 14:32:01 +0800
+author: 啤酒云
 categories: devops, gitops, gitlab
 ---
 

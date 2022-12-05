@@ -2,6 +2,7 @@
 layout: post
 title:  "php应用容器化部署实践"
 date:   2022-01-21 10:56:53 +0800
+author: 啤酒云
 categories: container, language
 ---
 

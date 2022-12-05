@@ -2,6 +2,7 @@
 layout: post
 title:  "生产有权限控制的 kubeconfig"
 date:   2021-07-16 09:53:06 +0800
+author: 啤酒云
 categories: container
 ---
 ​

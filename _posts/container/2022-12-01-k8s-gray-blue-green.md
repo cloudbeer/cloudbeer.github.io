@@ -2,6 +2,7 @@
 layout: post
 title:  在 K8S 中实现 灰度，蓝绿 发布
 date:   2022-12-01 16:09:00 +0800
+author: 啤酒云
 categories: container, devops
 ---
 

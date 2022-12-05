@@ -2,6 +2,7 @@
 layout: post
 title:  使用 CDK 安装 Karpenter 新版
 date:   2022-11-30 21:49:06 +0800
+author: 啤酒云
 categories: container, iac, aws, cloud-provider
 ---
 

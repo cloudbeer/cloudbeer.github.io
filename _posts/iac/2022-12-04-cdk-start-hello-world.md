@@ -2,6 +2,7 @@
 layout: post
 title:  "AWS CDK 入门：Hello World"
 date:   2022-12-04 19:54:44 +0800
+author: 啤酒云
 categories: iac, aws, cloud-provider
 ---
 

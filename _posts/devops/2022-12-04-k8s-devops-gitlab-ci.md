@@ -2,17 +2,16 @@
 layout: post
 title:  "容器 DevOps：Gitlab CI"
 date:   2022-12-04 14:32:01 +0800
-categories: devops
+categories: devops, gitops, gitlab
 ---
 
 当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。
-
 
 ## 示例描述
 
 本文使用了 gitlab saas 版本。使用 saas 版本的 ci 功能，需要填写信用卡，每个月有 400min 的免费的额度。
 
-本文的源代码在：<https://gitlab.com/cloudbeer/gateway>，这是一个 springcloud gateway 应用。 
+本文的源代码在：<https://gitlab.com/cloudbeer/gateway>，这是一个 springcloud gateway 应用。
 
 ci 的过程包括：
 
@@ -22,12 +21,12 @@ ci 的过程包括：
 
 完成这几个步骤之后，argocd 会接手 cd 的工作。
 
-
 ## .gitlab-ci.yml 代码拆解
 
 ### 环境变量
 
 环境变量的定义有三种方式：
+
 - 全局定义：左侧菜单 Settings -> CI/CD, 页面上 Variables 部分，展开 Expand。
 - 在 yaml 文件里直接定义：参见下面的代码。
 - 手工指定：在每次手工启动流水线时，可以填写变量。
@@ -60,7 +59,6 @@ do-something:
   script: "sleep 300"
 ```
 
-
 ### 源码编译
 
 对于编译型语言，需要将源代码进行编译，本示例中就是需要将 java 源代码编译打包成 jar 包。
@@ -78,7 +76,6 @@ maven-build:
 - 编译时使用 maven 这个镜像
 - 运行的指令是 `mvn package`
 - 编译的结果指定为 target 目录下的所有 jar 文件，gitlab 会将 artifacts 上传，供给后面的步骤使用。
-
 
 ### Docker 镜像打包上传
 
@@ -102,7 +99,6 @@ docker-build:
 - 打包完成后需要上传到 ecr，而 ecr 依赖了 aws cli，所以使用了 aws_cli 的镜像包。在执行过程中，还需要将 AWS 的 AKSK 配置到环境变量。
 - 在 before_script 里，在 aws_cli 镜像里安装 docker，此时使用了 dind (docker in docker) 模式。
 - 在 docker build 的过程中，使用了 git 的 commiot sha 作为版本号。 CI_COMMIT_SHORT_SHA 是 gitlab 的内置环境变量。
-
 
 > gitlab 的 dind 可以参考这个：<https://docs.gitlab.com/ee/ci/docker/using_docker_build.html>
 
@@ -192,7 +188,6 @@ yaml-change:
 
 完整代码与文章正文会稍有出入，改用了公开的 github 和 docker hub 来存储 部署文件 和 镜像。
 
-
 ### 本项目的运行和测试过程
 
 克隆项目
@@ -213,9 +208,8 @@ git clone https://gitlab.com/cloudbeer/gateway.git
 
 本文涉及的三个外部仓库，这三个仓库均为 public：
 
-业务源代码：<https://gitlab.com/cloudbeer/gateway> 
+业务源代码：<https://gitlab.com/cloudbeer/gateway>
 
 部署仓库：<https://github.com/cloudbeer/cd-script>
 
 镜像仓库：<https://hub.docker.com/r/cloudbeer/gateway/tags>
-

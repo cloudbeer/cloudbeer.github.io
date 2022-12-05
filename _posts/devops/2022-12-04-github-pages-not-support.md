@@ -5,7 +5,7 @@ date:   2022-12-04 22:13:33 +0800
 categories: devops, tucao, circleci
 ---
 
-花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。 
+花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。
 
 这片文章记录了如何解决这个麻烦。
 
@@ -32,7 +32,7 @@ Actions 也都正常，调查半天才发现，github pages 不支持 jekyll-pag
 创建 cloudbeer.github.io 新分支：soruce。
 
 ### step 2. 添加 circleci config 文件
- 
+
 在新分支里添加文件：`.circleci/config.yml`，内容如下：
 
 ```yaml
@@ -41,29 +41,26 @@ version: 2
 jobs:
   deploy:
     docker:
-      - image: circleci/ruby:latest
+      - image: cimg/ruby:2.7.4
         environment:
           USER_NAME: cloudbeer
           USER_EMAIL: cloudbeer@gmail.com
     steps:
       - checkout
-      - run:
-          name: install dependencies
-          command: |
-            gem update --system
-            gem install bundler
       - restore_cache:
-          keys: 
-            - v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-            - v1-gem-cache-{{ arch }}-{{ .Branch }}-
-            - v1-gem-cache-{{ arch }}- 
-      - run: bundle install --path=vendor/bundle && bundle clean
+          keys:
+            - rubygems-v1-{{ checksum "Gemfile.lock" }}
+            - rubygems-v1-fallback
+      - run:
+          name: Bundle Install
+          command: bundle install
       - save_cache:
           paths:
             - vendor/bundle
-          key: v1-gem-cache-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-
-      - run: JEKYLL_ENV=production bundle exec jekyll build
+          key: rubygems-v1-{{ checksum "Gemfile.lock" }}
+      - run: 
+          name: Jekyll Build
+          command: JEKYLL_ENV=production bundle exec jekyll build
       - deploy:
           name: Deploy Release to GitHub
           command: |
@@ -131,14 +128,17 @@ git remote set-url origin https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/c
 
 github 在发现有新的 push 之后 还是在运行 jekyll build，在此种情况下，应该直接部署就好。后面再看看咋搞。
 
-
 ## github pages 随便搞
 
 了解了 github pages 的规则，就可以用任意支持 markdown 的框架来做你的博客了，前提是他静态页面生产器。
 
 发现 circleci 在第二次 build 的时候很快啊，比 gitlab 快很多。可能是一个默认缓存，一个没默认缓存的缘故吧。
 
---- 
+---
 
-本文代码修改自这个文章：[How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
+本文代码参考了如下俩：
+
+[How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
 ](https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/)
+
+[Jekyll - CircleCI](https://jekyllrb.com/docs/continuous-integration/circleci/)

@@ -1,4 +1,104 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-05T15:19:01+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Argo CD 入门</title><link href="https://youbug.cn/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://youbug.cn/2022/12/argocd-start</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-06T09:42:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 K8S 中配置域名解析</title><link href="https://youbug.cn/2022/12/dns-in-k8s.html" rel="alternate" type="text/html" title="在 K8S 中配置域名解析" /><published>2022-12-06T08:09:00+00:00</published><updated>2022-12-06T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/dns-in-k8s</id><content type="html" xml:base="https://youbug.cn/2022/12/dns-in-k8s.html"><![CDATA[<p>在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？</p>
+
+<p>此文拷贝自自己的旧文章，为防止知识过期，在 aws eks 上重新验证成功。</p>
+
+<h2 id="方法1修改容器实例的-hosts">方法1：修改容器实例的 hosts</h2>
+
+<p>设想：把 hosts 文件内容存储在 ConfigMap 中，通过 volume 绑定到 /etc/hosts。但很不幸，/etc/hosts 被 k8s 征用了，无法修改。</p>
+
+<p>但 K8S 给我们提供了 hostAliases 来解决此问题。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">hosts-append</span>
+  <span class="na">labels</span><span class="pi">:</span> 
+    <span class="na">app</span><span class="pi">:</span> <span class="s">hosts-append</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">hosts-append</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">hosts-append</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">hostAliases</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s2">"</span><span class="s">127.0.0.1"</span>
+        <span class="na">hostnames</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s2">"</span><span class="s">foo.local"</span>
+        <span class="pi">-</span> <span class="s2">"</span><span class="s">bar.local"</span>
+      <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s2">"</span><span class="s">10.1.2.3"</span>
+        <span class="na">hostnames</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s2">"</span><span class="s">foo.remote"</span>
+        <span class="pi">-</span> <span class="s2">"</span><span class="s">bar.remote"</span>
+      <span class="na">containers</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+        <span class="na">name</span><span class="pi">:</span> <span class="s">hosts-append</span>
+        <span class="na">ports</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">80</span>
+          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
+</code></pre></div></div>
+
+<p>部署后，pod 里面的 hosts 文件已经追加了解析记录。查看结果如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec </span>hosts-append-&lt;your-id&gt; <span class="nt">--</span> <span class="nb">cat</span> /etc/hosts
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Kubernetes-managed hosts file.</span>
+127.0.0.1 localhost
+::1 localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+fe00::0 ip6-mcastprefix
+fe00::1 ip6-allnodes
+fe00::2 ip6-allrouters
+10.10.6.23 hosts-append-6f96d5449f-rldxr
+
+<span class="c"># Entries added by HostAliases.</span>
+127.0.0.1 foo.local bar.local
+10.1.2.3 foo.remote bar.remote
+</code></pre></div></div>
+
+<p>此方法的缺点是：不同环境下的域名映射是不一样的，必须为环境编写不同的 yaml 部署文件，并且给每一个 deployment 编写 hostAliases 会有点“侵入”。</p>
+
+<h2 id="方法2使用内置-coredns-解析">方法2：使用内置 coredns 解析</h2>
+
+<p>K8S 内部默认已经安装了 coredns 服务，可以通过修改 coredns 的配置来达到内部解析的目的。</p>
+
+<p>coredns 的配置写在了 configmap 的 kube-system 命名空间下的 coredns 配置节点了。只需要修改 hosts 配置节点内容就好。</p>
+
+<p>编辑他：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl edit cm <span class="nt">-n</span> kube-system coredns
+</code></pre></div></div>
+
+<p>配置示例(其中 hosts 节点是自定义的解析节点，如果没有 hosts 节点，可以增加一个)：</p>
+
+<pre><code class="language-configmap">    .:53 {
+        errors
+        health
+        kubernetes cluster.local. in-addr.arpa ip6.arpa {
+            pods insecure
+            upstream
+            fallthrough in-addr.arpa ip6.arpa
+        }
+        hosts {
+          127.0.0.1 foo.local
+          8.8.8.8 foo.remote
+          fallthrough
+        }
+        prometheus :9153
+        proxy . /etc/resolv.conf
+        cache 30
+        reload
+        loadbalance
+    }
+</code></pre>
+
+<p>修改完成后，要等等。配置下发完成即可生效。可以进入 pod 内部 ping 一下域名看看。</p>
+
+<p>当然，更好的做法是把 <strong>配置文件与应用解耦，所有的配置，包括远程服务的域名或 ip 都可以被远程修改</strong>。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="aws," /><category term="dns" /><summary type="html"><![CDATA[在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？]]></summary></entry><entry><title type="html">Argo CD 入门</title><link href="https://youbug.cn/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://youbug.cn/2022/12/argocd-start</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
 
 <h2 id="gitops-和-argo-cd">GitOps 和 Argo CD</h2>
 
@@ -1728,154 +1828,4 @@ curl http://localhost:8000/cpu
   <li>lumen.Dockerfile：包含 lumen 框架的运行环境</li>
   <li>runtime.Dockerfile：php 基础运行环境</li>
   <li>业务代码的 Dockerfile 位于 src/lumen-app/Dockerfile 和 src/lumen-app/purecode.Dockerfile</li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="language" /><summary type="html"><![CDATA[目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。]]></summary></entry><entry><title type="html">Prometheus 入门 ① Hello World</title><link href="https://youbug.cn/2021/10/prometheus-1-start.html" rel="alternate" type="text/html" title="Prometheus 入门 ① Hello World" /><published>2021-10-09T13:08:14+00:00</published><updated>2021-10-09T13:08:14+00:00</updated><id>https://youbug.cn/2021/10/prometheus-1-start</id><content type="html" xml:base="https://youbug.cn/2021/10/prometheus-1-start.html"><![CDATA[<p>此入门文档是依据官网文档参考而来。没有理论，没有架构，直接实战。现在开始。</p>
-
-<h2 id="小试牛刀">小试牛刀</h2>
-
-<p>创建一个目录，写一个配置 (config/prom.yaml)：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
-  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span> 
-  <span class="na">external_labels</span><span class="pi">:</span>
-    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">codelab-monitor'</span>
-<span class="na">scrape_configs</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prometheus'</span>
-    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
-    <span class="na">static_configs</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span> <span class="pi">[</span><span class="s1">'</span><span class="s">localhost:9090'</span><span class="pi">]</span>
-</code></pre></div></div>
-
-<p>然后启动普罗米修斯：</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
-    <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
-    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/config/prom.yaml:/etc/prometheus/prometheus.yml <span class="se">\</span>
-    prom/prometheus
-</code></pre></div></div>
-
-<p>搞定！现在检验一下：</p>
-
-<p>在浏览器里看看这俩 url：</p>
-
-<p>数据：<a href="http://localhost:9090/metrics">http://localhost:9090/metrics</a></p>
-
-<p>UI：<a href="http://localhost:9090/graph">http://localhost:9090/graph</a></p>
-
-<p>在 metrics 这个地址里，第一个指标是 <code class="language-plaintext highlighter-rouge">go_gc_duration_seconds</code></p>
-
-<p>我们把在 UI 里查询一下这个指标，可以显示如下的图表。</p>
-
-<p><img src="/assets/posts/observability/prom01.png" alt="Prom UI" /></p>
-
-<p>​</p>
-
-<p>万里长征开始迈出了第一步了。</p>
-
-<h2 id="增加-exporter">增加 exporter</h2>
-
-<p>这里直接使用官方的 node exporter 来输出指标。</p>
-
-<p>分别启动 3 个 node exporter：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-d</span> <span class="nt">-p</span> 9100:9100 prom/node-exporter
-docker run <span class="nt">--rm</span> <span class="nt">-d</span> <span class="nt">-p</span> 9101:9100 prom/node-exporter
-docker run <span class="nt">--rm</span> <span class="nt">-d</span> <span class="nt">-p</span> 9102:9100 prom/node-exporter
-</code></pre></div></div>
-
-<p>这些 exporter 暴露了metrics 信息，可以访问试试：<a href="http://localhost:9100/metrics">http://localhost:9100/metrics</a></p>
-
-<p>编写 config 配置(config/nodes.yaml)：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
-  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span>
-  <span class="na">external_labels</span><span class="pi">:</span>
-    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes-monitor'</span>
-<span class="na">scrape_configs</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prometheus'</span>
-    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
-    <span class="na">static_configs</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span> <span class="pi">[</span><span class="s1">'</span><span class="s">localhost:9090'</span><span class="pi">]</span>
-  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes'</span>
-    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
-    <span class="na">static_configs</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="s">host.docker.internal:9100</span>
-        <span class="pi">-</span> <span class="s">host.docker.internal:9101</span>
-        <span class="na">labels</span><span class="pi">:</span>
-          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prod'</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="s">host.docker.internal:9102</span>
-        <span class="na">labels</span><span class="pi">:</span>
-          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">dev'</span>
-</code></pre></div></div>
-
-<ul>
-  <li>host.docker.internal 这个是宿主机的地址。这里是从容器内访问，所以使用了这个域名。</li>
-</ul>
-
-<p>启动普罗米修斯：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
-    <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
-    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/config/nodes.yaml:/etc/prometheus/prometheus.yml <span class="se">\</span>
-    prom/prometheus
-</code></pre></div></div>
-
-<p>现在 普罗米修斯的 UI 中查询 <code class="language-plaintext highlighter-rouge">node_cpu_seconds_total</code> 试试。</p>
-
-<h2 id="聚合指标">聚合指标</h2>
-
-<p>现在加入一个聚合规则（config/nodes-rule.yaml）：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">groups</span><span class="pi">:</span>
-<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">cpu-node</span>
-  <span class="na">rules</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">record</span><span class="pi">:</span> <span class="s">job_instance_mode:node_cpu_seconds:avg_rate5m</span>
-    <span class="na">expr</span><span class="pi">:</span> <span class="s">avg by (job, instance, mode) (rate(node_cpu_seconds_total[5m]))</span>
-</code></pre></div></div>
-
-<ul>
-  <li>定义了一个记录，名字是 <code class="language-plaintext highlighter-rouge">job_instance_mode:node_cpu_seconds:avg_rate5m</code></li>
-  <li>prom 表达式是：<code class="language-plaintext highlighter-rouge">avg by (job, instance, mode) (rate(node_cpu_seconds_total[5m]))</code></li>
-</ul>
-
-<p>重新写一个启动配置，加入这个聚合规则（config/prometheus.yml）：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">global</span><span class="pi">:</span>
-  <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">15s</span>
-  <span class="na">external_labels</span><span class="pi">:</span>
-    <span class="na">monitor</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes-monitor'</span>
-<span class="na">rule_files</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s1">'</span><span class="s">nodes-rule.yaml'</span>
-<span class="na">scrape_configs</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prometheus'</span>
-    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
-    <span class="na">static_configs</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span> <span class="pi">[</span><span class="s1">'</span><span class="s">localhost:9090'</span><span class="pi">]</span>
-  <span class="pi">-</span> <span class="na">job_name</span><span class="pi">:</span> <span class="s1">'</span><span class="s">nodes'</span>
-    <span class="na">scrape_interval</span><span class="pi">:</span> <span class="s">5s</span>
-    <span class="na">static_configs</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="s">host.docker.internal:9100</span>
-        <span class="pi">-</span> <span class="s">host.docker.internal:9101</span>
-        <span class="na">labels</span><span class="pi">:</span>
-          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">prod'</span>
-      <span class="pi">-</span> <span class="na">targets</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="s">host.docker.internal:9102</span>
-        <span class="na">labels</span><span class="pi">:</span>
-          <span class="na">group</span><span class="pi">:</span> <span class="s1">'</span><span class="s">dev'</span>
-</code></pre></div></div>
-
-<p>启动普罗米修斯：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
-    <span class="nt">-p</span> 9090:9090 <span class="se">\</span>
-    <span class="nt">-v</span> <span class="si">$(</span><span class="nb">pwd</span><span class="si">)</span>/config:/etc/prometheus <span class="se">\</span>
-    prom/prometheus
-</code></pre></div></div>
-
-<p>启动后，在 UI 里查一下 <code class="language-plaintext highlighter-rouge">job_instance_mode:node_cpu_seconds:avg_rate5m</code></p>
-
-<p>现在，咱们的监控之路迈出了第一步！</p>
-
-<p>​</p>]]></content><author><name>啤酒云</name></author><category term="observability," /><category term="prometheus" /><summary type="html"><![CDATA[此入门文档是依据官网文档参考而来。没有理论，没有架构，直接实战。现在开始。]]></summary></entry></feed>
+</ul>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="language" /><summary type="html"><![CDATA[目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。]]></summary></entry></feed>

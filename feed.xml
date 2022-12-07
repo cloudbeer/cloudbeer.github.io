@@ -1,4 +1,176 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-07T03:11:31+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 K8S 中配置域名解析</title><link href="https://youbug.cn/2022/12/dns-in-k8s.html" rel="alternate" type="text/html" title="在 K8S 中配置域名解析" /><published>2022-12-06T08:09:00+00:00</published><updated>2022-12-06T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/dns-in-k8s</id><content type="html" xml:base="https://youbug.cn/2022/12/dns-in-k8s.html"><![CDATA[<p>在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-07T15:22:39+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 terraform 增加 EKS 组件</title><link href="https://youbug.cn/2022/12/modify-eks-by-terraform.html" rel="alternate" type="text/html" title="使用 terraform 增加 EKS 组件" /><published>2022-12-07T12:54:44+00:00</published><updated>2022-12-07T12:54:44+00:00</updated><id>https://youbug.cn/2022/12/modify-eks-by-terraform</id><content type="html" xml:base="https://youbug.cn/2022/12/modify-eks-by-terraform.html"><![CDATA[<p>在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。</p>
+
+<h2 id="常用-sdk">常用 SDK</h2>
+
+<p>操作 EKS 的常用 SDK 如下：</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">terraform</span> <span class="p">{</span>
+  <span class="nx">required_providers</span> <span class="p">{</span>
+    <span class="nx">aws</span> <span class="p">=</span> <span class="p">{</span>
+      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"hashicorp/aws"</span>
+      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"~&gt; 4.40.0"</span>
+    <span class="p">}</span>
+    <span class="nx">kubernetes</span> <span class="p">=</span> <span class="p">{</span>
+      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"hashicorp/kubernetes"</span>
+      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"&gt;= 2.15.0"</span>
+    <span class="p">}</span>
+    <span class="nx">helm</span> <span class="p">=</span> <span class="p">{</span>
+      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"hashicorp/helm"</span>
+      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"~&gt; 2.7.1"</span>
+    <span class="p">}</span>
+    <span class="nx">kubectl</span> <span class="p">=</span> <span class="p">{</span>
+      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"gavinbunney/kubectl"</span>
+      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"&gt;= 1.14.0"</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>hashicorp/aws: 操作 aws 资源</li>
+  <li>hashicorp/kubernetes: 操作 k8s 资源</li>
+  <li>hashicorp/helm: 操作 helm 图样</li>
+  <li>gavinbunney/kubectl: 被广泛采用的个人工具，可以支持单资源 kubectl 操作</li>
+</ul>
+
+<h2 id="先决条件">先决条件</h2>
+
+<p>对于已经创建资源，在 terraform 中，通常使用 data 去查询，如下代码，只需要指定 集群的 名字就可以查询到集群的信息：</p>
+
+<div class="language-hcl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">data</span> <span class="s2">"aws_eks_cluster"</span> <span class="s2">"main"</span> <span class="p">{</span>
+  <span class="nx">name</span> <span class="p">=</span> <span class="nx">var</span><span class="err">.</span><span class="nx">cluster_name</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>对于 helm 和 kubectl 工具，我们需要为其配置相应的权限：</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">provider</span> <span class="s2">"helm"</span> <span class="p">{</span>
+  <span class="nx">kubernetes</span> <span class="p">{</span>
+    <span class="nx">host</span>                   <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">endpoint</span>
+    <span class="nx">cluster_ca_certificate</span> <span class="p">=</span> <span class="nx">base64decode</span><span class="p">(</span><span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">certificate_authority</span><span class="p">.</span><span class="mi">0</span><span class="p">.</span><span class="k">data</span><span class="p">)</span>
+    <span class="nx">exec</span> <span class="p">{</span>
+      <span class="nx">api_version</span> <span class="p">=</span> <span class="s2">"client.authentication.k8s.io/v1beta1"</span>
+      <span class="nx">args</span>        <span class="p">=</span> <span class="p">[</span><span class="s2">"eks"</span><span class="p">,</span> <span class="s2">"get-token"</span><span class="p">,</span> <span class="s2">"--cluster-name"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span><span class="p">,</span> <span class="s2">"--region"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">region</span><span class="p">]</span>
+      <span class="nx">command</span>     <span class="p">=</span> <span class="s2">"aws"</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">provider</span> <span class="s2">"kubectl"</span> <span class="p">{</span>
+  <span class="nx">host</span>                   <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">endpoint</span>
+  <span class="nx">cluster_ca_certificate</span> <span class="p">=</span> <span class="nx">base64decode</span><span class="p">(</span><span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">certificate_authority</span><span class="p">.</span><span class="mi">0</span><span class="p">.</span><span class="k">data</span><span class="p">)</span>
+  <span class="nx">exec</span> <span class="p">{</span>
+    <span class="nx">api_version</span> <span class="p">=</span> <span class="s2">"client.authentication.k8s.io/v1beta1"</span>
+    <span class="nx">args</span>        <span class="p">=</span> <span class="p">[</span><span class="s2">"eks"</span><span class="p">,</span> <span class="s2">"get-token"</span><span class="p">,</span> <span class="s2">"--cluster-name"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span><span class="p">,</span> <span class="s2">"--region"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">region</span><span class="p">]</span>
+    <span class="nx">command</span>     <span class="p">=</span> <span class="s2">"aws"</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="使用-helm-安装组件">使用 helm 安装组件</h2>
+
+<p>使用 helm 安装非常简单，参照 helm 图样的说明即可，传入相应的参数.</p>
+
+<p>下面的代码是在集群内安装 Gitlab 的示例：</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">variable</span> <span class="s2">"namespace"</span> <span class="p">{</span>
+  <span class="nx">type</span>    <span class="p">=</span> <span class="nx">string</span>
+  <span class="nx">default</span> <span class="p">=</span> <span class="s2">"gitlab"</span>
+<span class="p">}</span>
+
+<span class="k">variable</span> <span class="s2">"name"</span> <span class="p">{</span>
+  <span class="nx">type</span>    <span class="p">=</span> <span class="nx">string</span>
+  <span class="nx">default</span> <span class="p">=</span> <span class="s2">"gitlab"</span>
+<span class="p">}</span>
+
+<span class="k">variable</span> <span class="s2">"domain"</span> <span class="p">{</span>
+  <span class="nx">type</span> <span class="p">=</span> <span class="nx">string</span>
+<span class="p">}</span>
+
+<span class="k">resource</span> <span class="s2">"helm_release"</span> <span class="s2">"gitlab"</span> <span class="p">{</span>
+  <span class="nx">namespace</span>        <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">namespace</span>
+  <span class="nx">create_namespace</span> <span class="p">=</span> <span class="kc">true</span>
+  <span class="nx">name</span>             <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">name</span>
+  <span class="nx">repository</span>       <span class="p">=</span> <span class="s2">"https://charts.gitlab.io/"</span>
+  <span class="nx">chart</span>            <span class="p">=</span> <span class="s2">"gitlab"</span>
+  <span class="nx">version</span>          <span class="p">=</span> <span class="s2">"6.5.5"</span>
+
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"global.ingress.enabled"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"global.ingress.configureCertmanager"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab.certmanager.install"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab.prometheus.install"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab.grafana.install"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"nginx-ingress.enabled"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab-runner.enabled"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
+  <span class="p">}</span>
+  <span class="nx">set</span> <span class="p">{</span>
+    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"global.hosts.domain"</span>
+    <span class="nx">value</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">domain</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="使用-kubectl-安装组件">使用 kubectl 安装组件</h2>
+
+<p>下面的示例安装了 argocd，使用了官网的默认安装方法，使用 kubectl 直接执行 yaml 文件。</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">variable</span> <span class="s2">"namespace"</span> <span class="p">{</span>
+  <span class="nx">type</span>    <span class="p">=</span> <span class="nx">string</span>
+  <span class="nx">default</span> <span class="p">=</span> <span class="s2">"argocd"</span>
+<span class="p">}</span>
+
+<span class="k">resource</span> <span class="s2">"kubectl_manifest"</span> <span class="s2">"argocd_namepsace"</span> <span class="p">{</span>
+  <span class="nx">yaml_body</span> <span class="p">=</span> <span class="o">&lt;&lt;</span><span class="no">YAML</span><span class="sh">
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${var.namespace}
+</span><span class="no">YAML
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>在集群内创建了一个 namespace。</p>
+
+<p>由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 <code class="language-plaintext highlighter-rouge">kubectl_file_documents</code> 将一大段资源结构成单个资源数组。</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="k">data</span> <span class="s2">"http"</span> <span class="s2">"argocd_yaml"</span> <span class="p">{</span>
+  <span class="nx">url</span> <span class="p">=</span> <span class="s2">"https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"</span>
+<span class="p">}</span>
+
+<span class="k">data</span> <span class="s2">"kubectl_file_documents"</span> <span class="s2">"argocd_docs"</span> <span class="p">{</span>
+  <span class="nx">content</span> <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">http</span><span class="p">.</span><span class="nx">argocd_yaml</span><span class="p">.</span><span class="nx">response_body</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>然后循环执行即可：</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">resource</span> <span class="s2">"kubectl_manifest"</span> <span class="s2">"argocd"</span> <span class="p">{</span>
+  <span class="nx">for_each</span>           <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">kubectl_file_documents</span><span class="p">.</span><span class="nx">argocd_docs</span><span class="p">.</span><span class="nx">manifests</span>
+  <span class="nx">yaml_body</span>          <span class="p">=</span> <span class="nx">each</span><span class="p">.</span><span class="nx">value</span>
+  <span class="nx">override_namespace</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">namespace</span>
+<span class="p">}</span>
+</code></pre></div></div>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws," /><category term="container" /><category term="iac," /><category term="container," /><category term="aws," /><category term="terraform" /><summary type="html"><![CDATA[在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。]]></summary></entry><entry><title type="html">在 K8S 中配置域名解析</title><link href="https://youbug.cn/2022/12/dns-in-k8s.html" rel="alternate" type="text/html" title="在 K8S 中配置域名解析" /><published>2022-12-06T08:09:00+00:00</published><updated>2022-12-06T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/dns-in-k8s</id><content type="html" xml:base="https://youbug.cn/2022/12/dns-in-k8s.html"><![CDATA[<p>在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？</p>
 
 <p>此文拷贝自自己的旧文章，为防止知识过期，在 aws eks 上重新验证成功。</p>
 
@@ -222,7 +394,7 @@ www.youbug.cn.  30 IN A 192.168.0.1
   </tbody>
 </table>
 
-<p>当然，更好的做法是把 <strong>配置文件与应用解耦，所有的配置，包括远程服务的域名或 ip 都可以被远程修改</strong>。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="aws," /><category term="dns" /><category term="容器," /><category term="aws," /><category term="dns," /><category term="kubernetes" /><summary type="html"><![CDATA[在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？]]></summary></entry><entry><title type="html">Argo CD 入门</title><link href="https://youbug.cn/2022/12/argocd-start.html" rel="alternate" type="text/html" title="Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://youbug.cn/2022/12/argocd-start</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
+<p>当然，更好的做法是把 <strong>配置文件与应用解耦，所有的配置，包括远程服务的域名或 ip 都可以被远程修改</strong>。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="aws" /><category term="容器," /><category term="aws," /><category term="dns," /><category term="kubernetes" /><summary type="html"><![CDATA[在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？]]></summary></entry><entry><title type="html">容器 DevOps: Argo CD 入门</title><link href="https://youbug.cn/2022/12/argocd-start.html" rel="alternate" type="text/html" title="容器 DevOps: Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://youbug.cn/2022/12/argocd-start</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
 
 <h2 id="gitops-和-argo-cd">GitOps 和 Argo CD</h2>
 
@@ -427,7 +599,7 @@ nginx   Synced        Healthy
 
 <p>然后访问 <a href="http://localhost:8080">http://localhost:8080</a>，登录用户名 admin，密码为刚刚查询的密码。</p>
 
-<p>登录进去之后，就可以看到 Web 界面了，在 Web 里，可以看到很多绚烂的内容。</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="argocd," /><category term="container," /><category term="gitops" /><summary type="html"><![CDATA[在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。]]></summary></entry><entry><title type="html">Github pages jekyll 插件不支持怎么办</title><link href="https://youbug.cn/2022/12/github-pages-not-support.html" rel="alternate" type="text/html" title="Github pages jekyll 插件不支持怎么办" /><published>2022-12-04T14:13:33+00:00</published><updated>2022-12-04T14:13:33+00:00</updated><id>https://youbug.cn/2022/12/github-pages-not-support</id><content type="html" xml:base="https://youbug.cn/2022/12/github-pages-not-support.html"><![CDATA[<p>花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。</p>
+<p>登录进去之后，就可以看到 Web 界面了，在 Web 里，可以看到很多绚烂的内容。</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container" /><category term="gitops," /><category term="argocd" /><summary type="html"><![CDATA[在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。]]></summary></entry><entry><title type="html">Github pages jekyll 插件不支持怎么办</title><link href="https://youbug.cn/2022/12/github-pages-not-support.html" rel="alternate" type="text/html" title="Github pages jekyll 插件不支持怎么办" /><published>2022-12-04T14:13:33+00:00</published><updated>2022-12-04T14:13:33+00:00</updated><id>https://youbug.cn/2022/12/github-pages-not-support</id><content type="html" xml:base="https://youbug.cn/2022/12/github-pages-not-support.html"><![CDATA[<p>花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。</p>
 
 <p>这片文章记录了如何解决这个麻烦。</p>
 
@@ -564,7 +736,7 @@ git push <span class="nt">-f</span> origin main
 <p><a href="https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/">How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
 </a></p>
 
-<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="tucao," /><category term="circleci" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://youbug.cn/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://youbug.cn/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://youbug.cn/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
+<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="tucao," /><category term="circleci," /><category term="github," /><category term="jekyll" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://youbug.cn/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://youbug.cn/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://youbug.cn/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
 
 <h2 id="iac-和-cdk-简介">IaC 和 CDK 简介</h2>
 
@@ -687,13 +859,13 @@ git push <span class="nt">-f</span> origin main
 
 <p>验证完成之后，请及时使用 cdk destroy 清理资源，否则会<strong>产生费用</strong>。</p>
 
-<p>使用 cdk destroy 删除更干净。</p>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry><entry><title type="html">容器 DevOps：Gitlab CI</title><link href="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html" rel="alternate" type="text/html" title="容器 DevOps：Gitlab CI" /><published>2022-12-04T06:32:01+00:00</published><updated>2022-12-04T06:32:01+00:00</updated><id>https://youbug.cn/2022/12/k8s-devops-gitlab-ci</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html"><![CDATA[<p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。</p>
+<p>使用 cdk destroy 删除更干净。</p>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws" /><category term="cdk" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry><entry><title type="html">容器 DevOps: Gitlab CI</title><link href="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html" rel="alternate" type="text/html" title="容器 DevOps: Gitlab CI" /><published>2022-12-04T06:32:01+00:00</published><updated>2022-12-04T06:32:01+00:00</updated><id>https://youbug.cn/2022/12/k8s-devops-gitlab-ci</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html"><![CDATA[<p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。</p>
 
 <h2 id="示例描述">示例描述</h2>
 
-<p>本文使用了 gitlab saas 版本。使用 saas 版本的 ci 功能，需要填写信用卡，每个月有 400min 的免费的额度。</p>
+<p>本文使用了 Gitlab SaaS 版本。SaaS 版本的 CI 每个月有 400min 的免费的额度。</p>
 
-<p>本文的源代码在：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a>，这是一个 springcloud gateway 应用。</p>
+<p>本文的源代码在：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a>，这是一个 Spring Cloud gateway 应用。</p>
 
 <p>ci 的过程包括：</p>
 
@@ -902,7 +1074,7 @@ git push <span class="nt">-f</span> origin main
 
 <p>部署仓库：<a href="https://github.com/cloudbeer/cd-script">https://github.com/cloudbeer/cd-script</a></p>
 
-<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="gitops," /><category term="gitlab" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。]]></summary></entry><entry><title type="html">在 K8S 中实现 灰度，蓝绿 发布</title><link href="https://youbug.cn/2022/12/k8s-gray-blue-green.html" rel="alternate" type="text/html" title="在 K8S 中实现 灰度，蓝绿 发布" /><published>2022-12-01T08:09:00+00:00</published><updated>2022-12-01T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/k8s-gray-blue-green</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-gray-blue-green.html"><![CDATA[<p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
+<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name>啤酒云</name></author><category term="devops" /><category term="gitlab," /><category term="gitops," /><category term="持续集成" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。]]></summary></entry><entry><title type="html">在 K8S 中实现 灰度，蓝绿 发布</title><link href="https://youbug.cn/2022/12/k8s-gray-blue-green.html" rel="alternate" type="text/html" title="在 K8S 中实现 灰度，蓝绿 发布" /><published>2022-12-01T08:09:00+00:00</published><updated>2022-12-01T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/k8s-gray-blue-green</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-gray-blue-green.html"><![CDATA[<p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
 
 <h2 id="应用部署">应用部署</h2>
 
@@ -1068,7 +1240,7 @@ spec:
 
 <p>事实上，一些第三方的 ingress 产品，以及 Service Mesh 就都可以解决这些问题的。</p>
 
-<p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="devops" /><summary type="html"><![CDATA[在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。]]></summary></entry><entry><title type="html">Apache Airflow 入门</title><link href="https://youbug.cn/2022/12/airflow-start.html" rel="alternate" type="text/html" title="Apache Airflow 入门" /><published>2022-12-01T04:57:44+00:00</published><updated>2022-12-01T04:57:44+00:00</updated><id>https://youbug.cn/2022/12/airflow-start</id><content type="html" xml:base="https://youbug.cn/2022/12/airflow-start.html"><![CDATA[<p>从小白到略知一二。</p>
+<p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="devops" /><category term="kubernetes," /><category term="蓝绿," /><category term="灰度," /><category term="容器" /><summary type="html"><![CDATA[在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。]]></summary></entry><entry><title type="html">Apache Airflow 入门</title><link href="https://youbug.cn/2022/12/airflow-start.html" rel="alternate" type="text/html" title="Apache Airflow 入门" /><published>2022-12-01T04:57:44+00:00</published><updated>2022-12-01T04:57:44+00:00</updated><id>https://youbug.cn/2022/12/airflow-start</id><content type="html" xml:base="https://youbug.cn/2022/12/airflow-start.html"><![CDATA[<p>从小白到略知一二。</p>
 
 <h2 id="背景">背景</h2>
 
@@ -1264,7 +1436,7 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
     <span class="nt">--end-date</span> 2015-06-07
 </code></pre></div></div>
 
-<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name>啤酒云</name></author><category term="data," /><category term="airflow" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry><entry><title type="html">使用 CDK 安装 Karpenter 新版</title><link href="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html" rel="alternate" type="text/html" title="使用 CDK 安装 Karpenter 新版" /><published>2022-11-30T13:49:06+00:00</published><updated>2022-11-30T13:49:06+00:00</updated><id>https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2</id><content type="html" xml:base="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html"><![CDATA[<p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
+<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name>啤酒云</name></author><category term="data" /><category term="调度平台," /><category term="大数据," /><category term="airflow" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry><entry><title type="html">使用 CDK 安装 Karpenter 新版</title><link href="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html" rel="alternate" type="text/html" title="使用 CDK 安装 Karpenter 新版" /><published>2022-11-30T13:49:06+00:00</published><updated>2022-11-30T13:49:06+00:00</updated><id>https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2</id><content type="html" xml:base="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html"><![CDATA[<p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
 
 <h2 id="cdk-和-karpenter-分别是什么">CDK 和 Karpenter 分别是什么</h2>
 
@@ -1444,7 +1616,7 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
 <ol>
   <li>CDK 的 HelmChart 对于 oci 库的支持处于起步阶段，经过多次试验以及阅读相关源码，才确认写法：<code class="language-plaintext highlighter-rouge">chart: 'oci://public.ecr.aws/karpenter/karpenter'</code>，<code class="language-plaintext highlighter-rouge">repository: 'oci://public.ecr.aws/karpenter/karpenter'</code>。</li>
   <li>Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是：”settings.aws.clusterEndpoint”，而这里的写法<strong>必须是</strong> JSON 格式。</li>
-</ol>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="iac," /><category term="aws," /><category term="cloud-provider" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry><entry><title type="html">正式开张</title><link href="https://youbug.cn/2022/11/cloudbeer-first.html" rel="alternate" type="text/html" title="正式开张" /><published>2022-11-30T12:12:44+00:00</published><updated>2022-11-30T12:12:44+00:00</updated><id>https://youbug.cn/2022/11/cloudbeer-first</id><content type="html" xml:base="https://youbug.cn/2022/11/cloudbeer-first.html"><![CDATA[<p>—————-———— 开张咯，这里是分割线  这里更早的文章是以前写的 —————-————</p>
+</ol>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="iac," /><category term="aws" /><category term="kubernetes," /><category term="自动伸缩," /><category term="karpenter," /><category term="cdk," /><category term="iam" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry><entry><title type="html">正式开张</title><link href="https://youbug.cn/2022/11/cloudbeer-first.html" rel="alternate" type="text/html" title="正式开张" /><published>2022-11-30T12:12:44+00:00</published><updated>2022-11-30T12:12:44+00:00</updated><id>https://youbug.cn/2022/11/cloudbeer-first</id><content type="html" xml:base="https://youbug.cn/2022/11/cloudbeer-first.html"><![CDATA[<p>—————-———— 开张咯，这里是分割线  这里更早的文章是以前写的 —————-————</p>
 
 <h2 id="开张咯">开张咯</h2>
 
@@ -1461,495 +1633,4 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
 <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jekyll serve <span class="nt">--livereload</span>
 </code></pre></div></div>
 
-<p>我先推到 github 试试咯。</p>]]></content><author><name>啤酒云</name></author><category term="tucao" /><summary type="html"><![CDATA[—————-———— 开张咯，这里是分割线 这里更早的文章是以前写的 —————-————]]></summary></entry><entry><title type="html">php应用容器化部署实践</title><link href="https://youbug.cn/2022/01/deploy-php-in-k8s.html" rel="alternate" type="text/html" title="php应用容器化部署实践" /><published>2022-01-21T02:56:53+00:00</published><updated>2022-01-21T02:56:53+00:00</updated><id>https://youbug.cn/2022/01/deploy-php-in-k8s</id><content type="html" xml:base="https://youbug.cn/2022/01/deploy-php-in-k8s.html"><![CDATA[<p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
-
-<h2 id="php-应用镜像准备">php 应用镜像准备</h2>
-
-<p>镜像的层次：基础依赖镜像-&gt;运行框架-&gt;应用/代码镜像</p>
-
-<p>基于容器的单进程运行理念，下面的部署过程并未使用单体的 nginx+php-fpm 一体的容器运行方式，而是将 php-fpm 和 nginx 拆散。</p>
-
-<h3 id="基础镜像">基础镜像</h3>
-
-<p>安装基础系统依赖包和公司 php 应用中各个开发小组都会用到的扩展包。</p>
-
-<p>下面的示例基于官方 fpm，安装了通用系统级的依赖和 php 包管理器。</p>
-
-<p>如果可以，建议使用更基础的镜像从 php 源码进行编译。</p>
-
-<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># runtime.Dockerfile</span>
-<span class="k">FROM</span><span class="s"> php:8.0.3-fpm</span>
-
-<span class="c"># 自定义类库示例</span>
-<span class="k">RUN </span>apt-get update <span class="o">&amp;&amp;</span> <span class="se">\
-</span>    apt-get <span class="nb">install</span> <span class="nt">-y</span> git zlib1g-dev libpng-dev libicu-dev
-<span class="k">RUN </span>docker-php-ext-install <span class="se">\
-</span>    gd <span class="se">\
-</span>    intl
-<span class="k">RUN </span>docker-php-ext-configure intl
-
-
-<span class="c"># 安装 composer</span>
-<span class="k">RUN </span>curl <span class="nt">-sS</span> https://getcomposer.org/installer | php <span class="nt">--</span> <span class="se">\
-</span>    <span class="nt">--install-dir</span><span class="o">=</span>/usr/local/bin <span class="nt">--filename</span><span class="o">=</span>composer <span class="se">\
-</span>    <span class="o">&amp;&amp;</span> <span class="nb">chmod</span> +x /usr/local/bin/composer 
-</code></pre></div></div>
-
-<p>将上述文件编译成镜像，并 push 到仓库：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker build <span class="nt">-t</span> cloudbeer/php-runtime:1.0 <span class="nt">-f</span> runtime.Dockerfile <span class="nb">.</span>
-docker push cloudbeer/php-runtime:1.0
-</code></pre></div></div>
-
-<h3 id="应用层框架镜像">应用层框架镜像</h3>
-
-<p>如果开发框架比较稳定，建议直接把框架打包成基础镜像以避免后续部署过程中频繁安装依赖包，加速发布打包发布过程，如业务开发A组使用了 lumen 框架，我们可以专门为 lumen 打一个镜像。</p>
-
-<p>如下镜像，安装了 lumen web 框架。</p>
-
-<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># lumen.Dockerfile</span>
-<span class="k">FROM</span><span class="s"> cloudbeer/php-runtime:1.0</span>
-
-<span class="k">RUN </span><span class="nb">mkdir</span> /app
-<span class="k">WORKDIR</span><span class="s"> /app</span>
-
-<span class="k">RUN </span><span class="nb">echo</span> <span class="s1">'{</span><span class="se">\
-</span><span class="s1">    "require": {</span><span class="se">\
-</span><span class="s1">    "php": "^7.3|^8.0",</span><span class="se">\
-</span><span class="s1">    "laravel/lumen-framework": "^8.0"</span><span class="se">\
-</span><span class="s1">    }</span><span class="se">\
-</span><span class="s1"> }'</span> <span class="o">&gt;</span> composer.json
-
-<span class="k">RUN </span>composer i
-</code></pre></div></div>
-
-<p>上述镜像打包为：cloudbeer/my-lumen:1.0</p>
-
-<h3 id="应用层镜像">应用层镜像</h3>
-
-<p>由于我们在应用层框架里已经把 lumen 运行时都安装好了，所以这个镜像里，只需拷贝纯源码即可。记得创建 .gitignore 或者 .dockerignore 文件，排除 vender，test 等目录。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># .dockerignore</span>
-/vendor
-/tests
-/.idea
-/.git
-.gitignore
-Dockerfile
-Homestead.json
-Homestead.yaml
-.env
-.ent.example
-.phpunit.result.cache
-</code></pre></div></div>
-
-<p>应用镜像里只需要拷贝脚本文件即可。这个镜像包含了完整的 php 运行时和业务代码，启动后可以直接接收 fastcgi 调用。</p>
-
-<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">FROM</span><span class="s"> cloudbeer/my-lumen:1.0</span>
-<span class="k">COPY</span><span class="s"> ./ /app/</span>
-</code></pre></div></div>
-
-<p>上面的镜像打包为： cloudbeer/php-caculate:1.0</p>
-
-<p>另一种打包代码方式，我们使用纯的容器将源代码打包，后面会在 K8S 中部署时将文件拷贝到框架运行时容器中运行。</p>
-
-<div class="language-Dockerfile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">FROM</span><span class="s"> debian:buster-slim</span>
-<span class="k">RUN </span><span class="nb">mkdir</span> /app
-<span class="k">COPY</span><span class="s"> ./ /app/</span>
-</code></pre></div></div>
-
-<p>上面的镜像打包为： cloudbeer/php-caculate-purecode:1.0</p>
-
-<p>代码层在还可以有更多的打包方式，如上传到对象存储里，或者使用 NFS 存储，后期绑定到容器运行时运行。</p>
-
-<h3 id="本地测试">本地测试</h3>
-
-<p>启动镜像 cloudbeer/php-caculate:1.0</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> cloudbeer/php-caculate:1.0 sh
-
-<span class="c"># 容器内运行</span>
-<span class="c"># 启动 php 测试</span>
-php <span class="nt">-S</span> localhost:8000 <span class="nt">-t</span> public &amp;
-<span class="c"># 查看结果</span>
-curl http://localhost:8000/cpu
-</code></pre></div></div>
-
-<p>完美运行。</p>
-
-<p>目前已经完成了应用镜像打包。其中前两层镜像可以复用，真正的业务应用只需拷贝代码。</p>
-
-<p>上述代码中的镜像，我均已打包上传到 docker hub 官网，可以忽略 build 和 push 过程，直接进行测试。</p>
-
-<h2 id="部署到-k8s">部署到 K8S</h2>
-
-<p>php 应用部署到容器环境，最自然的一种方式是：直接将 php 的运行环境和 web server 以及业务源代码打包放在一个容器中运行。这个方式是最简单的方式，php 官方也提供了 php:nginx 这种镜像底包。</p>
-
-<p>但 php 运行时和 web server 是在两个进程中运行，这个不符合容器的最佳实践。一般建议将这两个进程分别运行在不同的容器中。</p>
-
-<h3 id="nginx-作为-sidecar-运行">nginx 作为 sidecar 运行</h3>
-
-<p>K8S 在同一个 pod 中，可以运行多个容器。我们将 php-fpm 的业务代码部署在一个容器中，与之相伴生的有一个 nginx 容器，nginx 作为fastcgi的调用方，并可以代理一些静态资源，这个模式类似 mesh 的sidecar 模式。架构图如下：</p>
-
-<p><img src="https://github.com/cloudbeer/php-best-practice/blob/main/readme-img/sidecar.jpg?raw=true" alt="nginx 作为 sidecar 部署" /></p>
-
-<h4 id="nginx-配置">nginx 配置</h4>
-
-<p>由于 nginx 和 php-fpm 在一个 pod 中，所以只需发起 localhost 调用即可。 nginx 的配置如下，我们将这个配置写到 cm 中，后面通过 volume 绑定到容器中。这个配置有几点需要注意的：</p>
-
-<ul>
-  <li>应用使用了 lumen 的 route 体系，所以需要将路由通过 try_files 全部指向 ./public/index.php 文件。</li>
-  <li>fastcgi_param  SCRIPT_FILENAME  /app/public/index.php 这里也将所有脚本指向这个文件。</li>
-</ul>
-
-<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># nginx config</span>
-<span class="k">apiVersion:</span> <span class="s">v1</span>
-<span class="s">kind:</span> <span class="s">ConfigMap</span>
-<span class="s">metadata:</span>
-    <span class="s">name:</span> <span class="s">caculate-sidecar-config</span>
-    <span class="s">namespace:</span> <span class="s">php-test</span>
-<span class="s">data:</span>
-    <span class="s">config:</span> <span class="s">|-</span>
-      <span class="s">server</span> <span class="p">{</span>
-          <span class="kn">listen</span>       <span class="mi">8081</span><span class="p">;</span>
-          <span class="kn">root</span>   <span class="n">/app/public</span><span class="p">;</span>
-          <span class="kn">index</span> <span class="s">index.php</span>
-          <span class="s">charset</span> <span class="s">utf-8</span><span class="p">;</span>
-
-          <span class="kn">location</span> <span class="n">/</span> <span class="p">{</span>
-            <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri</span><span class="n">/</span> <span class="n">/index.php?</span><span class="nv">$args</span><span class="p">;</span>
-          <span class="p">}</span>
-
-          <span class="kn">location</span> <span class="p">~</span> <span class="sr">\.php$</span>  <span class="p">{</span>
-            <span class="kn">fastcgi_pass</span>   <span class="nf">127.0.0.1</span><span class="p">:</span><span class="mi">9000</span><span class="p">;</span>
-            <span class="kn">fastcgi_index</span>  <span class="s">index.php</span><span class="p">;</span>
-            <span class="kn">fastcgi_param</span>  <span class="s">SCRIPT_FILENAME</span>  <span class="n">/app/public/index.php</span><span class="p">;</span>
-            <span class="kn">include</span>        <span class="s">fastcgi_params</span><span class="p">;</span>
-          <span class="p">}</span>
-      <span class="p">}</span>
-</code></pre></div></div>
-
-<h4 id="应用部署脚本">应用部署脚本</h4>
-
-<p>在下面的部署脚本中，有几点值得关注一下：</p>
-
-<ul>
-  <li>使用了 emptyDir:{} 作为容器的源代码存储介质，这样可以将应用读取到临时目录中，加速运行时 php 源码的加载。如果脚本文件不大，可以指定 emptyDir 使用内存运行，这个可以更加加速脚本加载。</li>
-  <li>pod 启动的时候使用了 2 个 初始化容器，使用的镜像分别是：极简源代码的镜像(php-caculate-purecode)和框架运行时镜像(my-lumen)，在启动的时候分别将 /app 的代码拷贝到了 emptyDir 卷中，分别拷贝了lumen的 vendor 依赖和业务源代码。这里拷贝业务源代码过程亦可以使用 cfs 或者 cos 来实现。由于使用了宿主机存储源代码，当源代码过于庞大的时候，请注意超出宿主机存储容量风险。</li>
-  <li>由于源码和依赖包都已经在 initContainers 组织好了，所以，只需要使用 php 基础容器来启动应用即可。</li>
-</ul>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-  <span class="na">labels</span><span class="pi">:</span> 
-    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">volumes</span><span class="pi">:</span>
-      <span class="c1"># web app 的工作目录</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
-        <span class="na">emptyDir</span><span class="pi">:</span> <span class="pi">{}</span>
-      <span class="c1"># nginx 的配置文件，从 cm 中绑定过来</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
-        <span class="na">configMap</span><span class="pi">:</span>
-          <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-sidecar-config</span>
-          <span class="na">items</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">config</span>
-            <span class="na">path</span><span class="pi">:</span> <span class="s">caculate-sidecar.conf</span>
-      <span class="c1"># 初始化，将镜像中的源文件拷贝到临时文件夹。</span>
-      <span class="na">initContainers</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">copy-code</span>
-        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-caculate-purecode:1.0</span>
-        <span class="na">volumeMounts</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
-          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/webapp</span>
-        <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">cp</span><span class="pi">,</span> <span class="nv">-R</span><span class="pi">,</span> <span class="nv">/app/</span><span class="pi">,</span> <span class="nv">/webapp</span><span class="pi">]</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">copy-lumen</span>
-        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/my-lumen:1.0</span>
-        <span class="na">volumeMounts</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
-          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/webapp</span>
-        <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">cp</span><span class="pi">,</span> <span class="nv">-R</span><span class="pi">,</span> <span class="nv">/app/</span><span class="pi">,</span> <span class="nv">/webapp</span><span class="pi">]</span>
-      <span class="na">containers</span><span class="pi">:</span>
-      <span class="c1"># fpm 应用运行环境</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">caculate</span>
-        <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-runtime:1.0</span>
-        <span class="na">resources</span><span class="pi">:</span>
-          <span class="na">requests</span><span class="pi">:</span>
-            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
-            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
-          <span class="na">limits</span><span class="pi">:</span>
-            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
-            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
-        <span class="na">ports</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">9000</span>
-          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
-        <span class="na">volumeMounts</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
-          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/app</span>
-          <span class="na">subPath</span><span class="pi">:</span> <span class="s">app</span>
-      <span class="c1"># nginx sidecar</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-sidecar</span>
-        <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
-        <span class="na">volumeMounts</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
-          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/etc/nginx/conf.d/caculate-sidecar.conf</span>
-          <span class="na">subPath</span><span class="pi">:</span> <span class="s">caculate-sidecar.conf</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">webapp-data</span>
-          <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/app</span>
-          <span class="na">subPath</span><span class="pi">:</span> <span class="s">app</span>
-<span class="nn">---</span>
-</code></pre></div></div>
-
-<p>挂一个 LoadBalancer 看看。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
-<span class="na">metadata</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-sidecar-service</span>
-    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-<span class="na">spec</span><span class="pi">:</span>
-    <span class="na">type</span><span class="pi">:</span> <span class="s">LoadBalancer</span>
-    <span class="na">selector</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-nginx-sidecar</span>
-    <span class="na">ports</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
-          <span class="na">port</span><span class="pi">:</span> <span class="m">8081</span>
-          <span class="na">targetPort</span><span class="pi">:</span> <span class="m">8081</span>
-</code></pre></div></div>
-
-<p>访问对应的 外部 ip:8081，完美运行。</p>
-
-<h3 id="nginx-独立部署">nginx 独立部署</h3>
-
-<p>通常情况下，运维部门希望将 web server 收敛并统一管理，开发也不太关心 nginx 的具体配置，将两者进行拆分众望所归，并且在微服务的横向扩展中，这种方式也更加“优雅”。</p>
-
-<p>部署架构图如下：</p>
-
-<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/separate.jpg?raw=true" alt="nginx 独立部署架构" /></p>
-
-<h4 id="部署-fpm-业务应用">部署 fpm 业务应用</h4>
-
-<ul>
-  <li>此处部署了 php-caculate 镜像，此镜像里包含了源代码，Web框架以及 php 运行时，是一个完整的 php-fpm 业务应用。</li>
-  <li>通过 service 发布应用，以便 nginx 能发现 fpm 服务，并解偶了 webserver 和 业务服务。后期可以做纯php 业务的横向扩展和 nginx 的集中管理。</li>
-</ul>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 为 php-fpm 部署 service</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-  <span class="na">labels</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">ports</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">9000</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">tcp</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-
-<span class="nn">---</span>   
-<span class="c1"># 部署具体应用</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-  <span class="na">labels</span><span class="pi">:</span> 
-    <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">containers</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/php-caculate:1.0</span>
-        <span class="na">name</span><span class="pi">:</span> <span class="s">caculate</span>
-        <span class="na">resources</span><span class="pi">:</span>
-          <span class="na">requests</span><span class="pi">:</span>
-            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
-            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
-          <span class="na">limits</span><span class="pi">:</span>
-            <span class="na">memory</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1Gi"</span>
-            <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">500m"</span>
-        <span class="na">ports</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">9000</span>
-          <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
-</code></pre></div></div>
-
-<h4 id="nginx-部署">nginx 部署</h4>
-
-<p>此部分的 nginx 配置基本和上面一样，唯一的区别就是 fastcgi_pass 的调用目标变成了 php 业务的 service：caculate-standalone 了。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
-<span class="na">metadata</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-config</span>
-    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-<span class="na">data</span><span class="pi">:</span>
-    <span class="na">config</span><span class="pi">:</span> <span class="pi">|-</span>
-      <span class="s">server {</span>
-          <span class="s">listen       8081;</span>
-          <span class="s">root   /app/public;</span>
-          <span class="s">index index.php</span>
-          <span class="s">charset utf-8;</span>
-
-          <span class="s">location / {</span>
-            <span class="s">try_files $uri $uri/ /index.php?$args;</span>
-          <span class="s">}</span>
-
-          <span class="s">location ~ \.php$  {</span>
-            <span class="s">fastcgi_pass   caculate-standalone:9000;</span>
-            <span class="s">fastcgi_index  index.php;</span>
-            <span class="s">fastcgi_param  SCRIPT_FILENAME  /app/public/index.php;</span>
-            <span class="s">include        fastcgi_params;</span>
-          <span class="s">}</span>
-      <span class="s">}</span>
-</code></pre></div></div>
-
-<p>下面为 nginx 配置单独 pod 启动。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span>  <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-nginx-deployment</span>
-    <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-<span class="na">spec</span><span class="pi">:</span>
-    <span class="na">selector</span><span class="pi">:</span>
-        <span class="na">matchLabels</span><span class="pi">:</span>
-          <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
-    <span class="na">template</span><span class="pi">:</span>
-        <span class="na">metadata</span><span class="pi">:</span>
-          <span class="na">labels</span><span class="pi">:</span>
-              <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
-        <span class="na">spec</span><span class="pi">:</span>
-          <span class="na">containers</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-            <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
-            <span class="na">volumeMounts</span><span class="pi">:</span>
-            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
-              <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/etc/nginx/conf.d/caculate-standalone.conf</span>
-              <span class="na">subPath</span><span class="pi">:</span> <span class="s">caculate-standalone.conf</span>
-          <span class="na">volumes</span><span class="pi">:</span>
-              <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx-php-config</span>
-                <span class="na">configMap</span><span class="pi">:</span>
-                  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-standalone-config</span>
-                  <span class="na">items</span><span class="pi">:</span>
-                  <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">config</span>
-                    <span class="na">path</span><span class="pi">:</span> <span class="s">caculate-standalone.conf</span>
-</code></pre></div></div>
-
-<p>现在，给 nginx 应用挂一个 LoadBalancer 测试一下，亦完美运行。</p>
-
-<h3 id="使用-nginx-ingress-部署">使用 nginx-ingress 部署</h3>
-
-<p>上面的部署架构图中，ingress 和 nginx 分别进行了部署，但  nginx-ingress 其实已经合并了这两个部分。现在，我们试试使用 nginx-ingress 部署。</p>
-
-<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/nginx-ingress.jpg?raw=true" alt="使用 nginx-ingress 部署" /></p>
-
-<p>使用上面的已经部署好的 fpm 业务的service: caculate-standalone 。</p>
-
-<p>部署脚本如下：</p>
-
-<ul>
-  <li>ingress.class 的值是创建 nginx-ingress 时候在控制台定义的。</li>
-  <li>与纯 nginx 配置不同，nginx-ingress 无需配置 try_files 节点，下面的配置其实已经将全部请求转发到了 public/index.php。</li>
-</ul>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-ingress-config</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-<span class="na">data</span><span class="pi">:</span>
-  <span class="na">SCRIPT_FILENAME</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/app/public/index.php"</span>
-<span class="nn">---</span>  
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">networking.k8s.io/v1beta1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Ingress</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">annotations</span><span class="pi">:</span>
-    <span class="na">kubernetes.io/ingress.class</span><span class="pi">:</span> <span class="s2">"</span><span class="s">your-ingress-class"</span>
-    <span class="na">nginx.ingress.kubernetes.io/backend-protocol</span><span class="pi">:</span> <span class="s2">"</span><span class="s">FCGI"</span>
-    <span class="na">nginx.ingress.kubernetes.io/fastcgi-index</span><span class="pi">:</span> <span class="s2">"</span><span class="s">index.php"</span>
-    <span class="na">nginx.ingress.kubernetes.io/fastcgi-params-configmap</span><span class="pi">:</span> <span class="s2">"</span><span class="s">caculate-nginx-ingress-config"</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">caculate-nginx-ingress</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">php-test</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">rules</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">http</span><span class="pi">:</span>
-      <span class="na">paths</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">backend</span><span class="pi">:</span>
-          <span class="na">serviceName</span><span class="pi">:</span> <span class="s">caculate-standalone</span>
-          <span class="na">servicePort</span><span class="pi">:</span> <span class="m">9000</span>
-</code></pre></div></div>
-
-<p>如果 nginx-ingress 提供了外网地址，可以访问一下试试，完美运行。</p>
-
-<h3 id="moremesh-化">MORE：mesh 化</h3>
-
-<p>在 php mesh 化中，需要考虑的问题如下：</p>
-
-<ul>
-  <li>fastcgi 使用 TCP 协议，并且有自己的序列化方法，此特性并未在 istio 和 envoy 中支持，无法进行精细的流量控制。</li>
-  <li>fpm + envoy sidecar 可以实现服务级别的流量控制。 fpm + nginx-sidecar + envoy sidecar 将 fastcgi 调用转化为 http 调用，可以实现基于 http 协议的精细流量控制。</li>
-  <li>实现调用链监控，需要使用 http 进行远程调用，有可能需要改造代码，在header 中封装 opentracing 。</li>
-</ul>
-
-<p>当下，php mesh 的部署模式建议采用 fpm 业务层，nginx-sidecar， envoy-sidecar 三个容器为一个pod 的部署模式。</p>
-
-<p>架构图如下：</p>
-
-<p><img src="https://github.com/cloudbeer/php-best-practice/raw/main/readme-img/mesh.jpg?raw=true" alt="php 应用的 mesh 部署架构" /></p>
-
-<p>此处的部署与第一部分的内容 - nginx 作为 sidecar 运行类似，在腾讯云中需要开通 TCM，并注入 envoy 的 sidecar。</p>
-
-<hr />
-
-<h2 id="本文相关的源代码说明">本文相关的源代码说明</h2>
-
-<p>位置：<a href="https://github.com/cloudbeer/php-best-practice">https://github.com/cloudbeer/php-best-practice</a></p>
-
-<h3 id="srclumen-app">src/lumen-app/</h3>
-
-<p>php 业务应用，映射了2个路径</p>
-
-<ul>
-  <li>/cpu： 两种方式计算了 pi</li>
-  <li>/mem: 在数组里塞了字符串为了撑爆内存</li>
-</ul>
-
-<h3 id="deployments">deployments/</h3>
-
-<p>部署代码</p>
-
-<ul>
-  <li>app-caculate-fpm-separate.yaml： nginx 和 fpm 分在不同的 pod 中部署</li>
-  <li>app-caculate-nginx-ingress.yaml： nginx-ingress 直接代理 fpm 服务</li>
-  <li>app-caculate-nginx-sidecar.yaml： nginx 和 fpm 部署在同一个pod中的两个容器</li>
-</ul>
-
-<h3 id="dockerfile">dockerfile/</h3>
-
-<ul>
-  <li>lumen.Dockerfile：包含 lumen 框架的运行环境</li>
-  <li>runtime.Dockerfile：php 基础运行环境</li>
-  <li>业务代码的 Dockerfile 位于 src/lumen-app/Dockerfile 和 src/lumen-app/purecode.Dockerfile</li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="language" /><summary type="html"><![CDATA[目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。]]></summary></entry></feed>
+<p>我先推到 github 试试咯。</p>]]></content><author><name>啤酒云</name></author><category term="tucao" /><summary type="html"><![CDATA[—————-———— 开张咯，这里是分割线 这里更早的文章是以前写的 —————-————]]></summary></entry></feed>

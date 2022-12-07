@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Argo CD 入门"
+title:  "容器 DevOps: Argo CD 入门"
 date:   2022-12-05 16:20:01 +0800
 author: 啤酒云
 categories: devops, container

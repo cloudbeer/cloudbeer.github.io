@@ -10,6 +10,8 @@ show_excerpts: true
 
 google_analytics: G-B4DC7SCVXM
 
+host: 0.0.0.0
+
 # markdown: kramdown
 theme: minima
 plugins:

@@ -1,19 +1,19 @@
 ---
 layout: post
-title:  "容器 DevOps：Gitlab CI"
+title:  "容器 DevOps: Gitlab CI"
 date:   2022-12-04 14:32:01 +0800
 author: 啤酒云
 categories: devops
 tags: gitlab, gitops, 持续集成
 ---
 
-当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 gitops 方式的 gitlab-ci 文件。
+当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。
 
 ## 示例描述
 
-本文使用了 gitlab saas 版本。使用 saas 版本的 ci 功能，需要填写信用卡，每个月有 400min 的免费的额度。
+本文使用了 Gitlab SaaS 版本。SaaS 版本的 CI 每个月有 400min 的免费的额度。
 
-本文的源代码在：<https://gitlab.com/cloudbeer/gateway>，这是一个 springcloud gateway 应用。
+本文的源代码在：<https://gitlab.com/cloudbeer/gateway>，这是一个 Spring Cloud gateway 应用。
 
 ci 的过程包括：
 

@@ -1,9 +1,3 @@
-FROM ubuntu:latest
-
-RUN apt-get update && apt-get install -y ruby-full build-essential zlib1g-dev \
-  && rm -rf /var/lib/dpkg
-
-RUN gem install jekyll bundler
-
-EXPOSE 35729
-EXPOSE 4000
+FROM ruby:3.1.3
+RUN gem install jekyll bundler jekyll-paginate-v2
+WORKDIR /svr/jekyll

@@ -9,7 +9,7 @@ if [ -z "$(docker ps -a | grep ${JEKYLL_NAME}-${JEKYLL_VERSION})" ]; then
     --volume="$PWD/vendor/bundle:/usr/local/bundle:Z" \
     -p 4000:4000 -p 35729:35729 \
     jekyll/jekyll \
-    jekyll serve --livereload --trace
+    jekyll serve --livereload --trace --drafts --future
 else
   # docker exec -it ${JEKYLL_NAME}-${JEKYLL_VERSION} jekyll serve --livereload --drafts --incremental
   docker stop ${JEKYLL_NAME}-${JEKYLL_VERSION}

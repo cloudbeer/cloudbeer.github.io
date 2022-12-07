@@ -195,6 +195,130 @@ fe00::2 ip6-allrouters
 
 <p>修改完成后，要等等。配置下发完成即可生效。可以进入 pod 内部 ping 一下域名看看。</p>
 
+<h2 id="方法3-使用自定义域名服务器解析">方法3. 使用自定义域名服务器解析</h2>
+
+<p>在 coredns 的 ConfigMap 中，还可以自定义 name server，配置类似：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">annotations</span><span class="pi">:</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">eks.amazonaws.com/component</span><span class="pi">:</span> <span class="s">coredns</span>
+    <span class="na">k8s-app</span><span class="pi">:</span> <span class="s">kube-dns</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">coredns</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">kube-system</span>
+<span class="na">data</span><span class="pi">:</span>
+  <span class="na">Corefile</span><span class="pi">:</span> <span class="pi">|</span>
+    <span class="s">.:53 {</span>
+        <span class="s">errors</span>
+        <span class="s">health</span>
+        <span class="s">kubernetes cluster.local in-addr.arpa ip6.arpa {</span>
+          <span class="s">pods insecure</span>
+          <span class="s">fallthrough in-addr.arpa ip6.arpa</span>
+        <span class="s">}</span>
+        <span class="s">prometheus :9153</span>
+        <span class="s">forward . /etc/resolv.conf</span>
+        <span class="s">cache 30</span>
+        <span class="s">loop</span>
+        <span class="s">reload</span>
+        <span class="s">loadbalance</span>
+    <span class="s">}</span>
+    <span class="s">domain-name:53 {</span>
+        <span class="s">errors</span>
+        <span class="s">cache 30</span>
+        <span class="s">forward . custom-dns-server</span>
+        <span class="s">reload</span>
+    <span class="s">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>在 <code class="language-plaintext highlighter-rouge">domain-name:53</code> 节点中可以定义 name server</li>
+  <li>如果没有这个节点，可以增加一个，此节点与 <code class="language-plaintext highlighter-rouge">.:53</code> 平级。</li>
+</ul>
+
+<p>下面以 aws route53 为例进行测试。</p>
+
+<p>首选进入 route53 控制台，进入 <a href="https://console.aws.amazon.com/route53/v2/hostedzones#CreateHostedZone">创建托管区</a>。如图：</p>
+
+<p><img src="/assets/posts/container/create-dns-zone.png" alt="Create 53 Private Zone" /></p>
+
+<p>创建完成可以看到解析记录里 name server，地址类似如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ns-1536.awsdns-00.co.uk.
+ns-0.awsdns-00.com.
+ns-1024.awsdns-00.org.
+ns-512.awsdns-00.net.
+</code></pre></div></div>
+
+<p>并添加一个新解析 A 记录，如下图：</p>
+
+<p><img src="/assets/posts/container/dns-res.png" alt="DNS result" /></p>
+
+<p>编辑 ConfigMap，参考上面的配置，修改 K8S/EKS 的 name server</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl edit cm <span class="nt">-n</span> kube-system coredns
+</code></pre></div></div>
+
+<p>在 <code class="language-plaintext highlighter-rouge">domain-name:53</code> 节点设置 <code class="language-plaintext highlighter-rouge">forward . ns-1536.awsdns-00.co.uk.</code> 即可。</p>
+
+<p>设置完成，进入 EKS 的 任意 pod 测试，ping 或者 dig 一下，结果如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># dig www.youbug.cn</span>
+
+<span class="p">;</span> &lt;&lt;<span class="o">&gt;&gt;</span> DiG 9.16.33-Debian &lt;&lt;<span class="o">&gt;&gt;</span> www.youbug.cn
+<span class="p">;;</span> global options: +cmd
+<span class="p">;;</span> Got answer:
+<span class="p">;;</span> -&gt;&gt;HEADER<span class="o">&lt;&lt;-</span> <span class="no">opcode</span><span class="sh">: QUERY, status: NOERROR, id: 42026
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; COOKIE: d032981648385382 (echoed)
+;; QUESTION SECTION:
+;www.youbug.cn.   IN A
+
+;; ANSWER SECTION:
+www.youbug.cn.  30 IN A 192.168.0.1
+
+;; Query time: 0 msec
+;; SERVER: 172.20.0.10#53(172.20.0.10)
+;; WHEN: Wed Dec 07 02:39:49 UTC 2022
+;; MSG SIZE  rcvd: 83
+
+</span></code></pre></div></div>
+
+<p>可以看到已经生效了。</p>
+
+<p>其他云厂商的或者自建域名服务器可以使用类似方法，不一一赘述了。</p>
+
+<h2 id="使用场景总结">使用场景总结</h2>
+
+<table>
+  <tbody>
+    <tr>
+      <td><strong>名称</strong></td>
+      <td><strong>方法</strong></td>
+      <td><strong>适用场景</strong></td>
+    </tr>
+    <tr>
+      <td>hostAliases</td>
+      <td>修改 pod 的 hosts 配置</td>
+      <td>K8S 集群内部分 workloads 需要单独解析。开发者临时测试没有 ConfigMap 权限等。A/B Test。</td>
+    </tr>
+    <tr>
+      <td>coredns 直接解析</td>
+      <td>修改 ConfigMap 直接解析</td>
+      <td>完整的 K8S 开发测试环境，UAT 环境等</td>
+    </tr>
+    <tr>
+      <td>自定义 dns server</td>
+      <td>修改 ConfigMap 配置以使用自定义域名服务器</td>
+      <td>多 K8S 集群，有非 K8S 负载，VPC 范围解析</td>
+    </tr>
+  </tbody>
+</table>
+
 <p>当然，更好的做法是把 <strong>配置文件与应用解耦，所有的配置，包括远程服务的域名或 ip 都可以被远程修改</strong>。</p>
 
   </div>

@@ -3,7 +3,8 @@ layout: post
 title:  "Github pages jekyll 插件不支持怎么办"
 date:   2022-12-04 22:13:33 +0800
 author: 啤酒云
-categories: devops, tucao, circleci
+categories: devops, tucao, 
+tags: circleci, github, jekyll
 ---
 
 花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。

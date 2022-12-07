@@ -4,6 +4,7 @@ title:  在 K8S 中实现 灰度，蓝绿 发布
 date:   2022-12-01 16:09:00 +0800
 author: 啤酒云
 categories: container, devops
+tags: kubernetes, 蓝绿, 灰度, 容器
 ---
 
 在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。

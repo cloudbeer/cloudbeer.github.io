@@ -3,7 +3,8 @@ layout: post
 title:  使用 CDK 安装 Karpenter 新版
 date:   2022-11-30 21:49:06 +0800
 author: 啤酒云
-categories: container, iac, aws, cloud-provider
+categories: container, iac, aws
+tags: kubernetes, 自动伸缩, karpenter, cdk, iam
 ---
 
 本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。

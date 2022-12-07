@@ -24,7 +24,7 @@ pagination:
   enabled: true
   per_page: 10
   permalink: '/page/:num/'
-  title: '更早的文章 | 第 :num 页，共 :max 页'
+  title: '旧 | 第 :num 页，共 :max 页'
   limit: 0
   sort_field: 'date'
   sort_reverse: true

@@ -3,7 +3,7 @@ export JEKYLL_NAME=jekyll
 
 
 if [ -z "$(docker ps -a | grep ${JEKYLL_NAME}-${JEKYLL_VERSION})" ]; then
-  docker run \
+  docker run --rm \
     --name=${JEKYLL_NAME}-${JEKYLL_VERSION} \
     --volume="$PWD:/srv/jekyll:Z" \
     --volume="$PWD/vendor/bundle:/usr/local/bundle:Z" \

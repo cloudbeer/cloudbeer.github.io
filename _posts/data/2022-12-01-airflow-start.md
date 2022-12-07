@@ -3,7 +3,8 @@ layout: post
 title:  "Apache Airflow 入门"
 date:   2022-12-01 12:57:44 +0800
 author: 啤酒云
-categories: data, airflow
+categories: data
+tags: 调度平台, 大数据, airflow
 ---
 
 从小白到略知一二。

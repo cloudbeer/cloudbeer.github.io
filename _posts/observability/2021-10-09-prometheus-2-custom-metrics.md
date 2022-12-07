@@ -3,7 +3,8 @@ layout: post
 title:  Prometheus 入门 ② 自定义数据源
 date:   2021-10-09 20:08:34 +0800
 author: 啤酒云
-categories: observability, prometheus, tencent
+categories: observability 
+tags: prometheus, 监控, tencent
 ---
 
 ​本文将介绍如何使用第三方的 exporter，并尝试自己编写一个业务度量接口。

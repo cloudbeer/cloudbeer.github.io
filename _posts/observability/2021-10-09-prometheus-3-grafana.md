@@ -3,7 +3,8 @@ layout: post
 title:  Prometheus 入门 ③ 使用 Grafana 美化
 date:   2021-10-09 18:08:34 +0800
 author: 啤酒云
-categories: observability, prometheus, granfana
+categories: observability, prometheus, 
+tags: prometheus, granfana, 监控
 ---
 ​
 Prometheus 本身带了一个简单的 UI，用于查询指标，并能显示简单的 chart。而 Grafana 是 Prometheus 好伴侣，能画出好看的图表。

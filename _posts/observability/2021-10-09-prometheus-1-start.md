@@ -3,7 +3,8 @@ layout: post
 title:  Prometheus 入门 ① Hello World
 date:   2021-10-09 21:08:14 +0800
 author: 啤酒云
-categories: observability, prometheus
+categories: observability
+tags: prometheus, 监控
 ---
 
 此入门文档是依据官网文档参考而来。没有理论，没有架构，直接实战。现在开始。

@@ -3,7 +3,8 @@ layout: post
 title:  "AWS CDK 入门：Hello World"
 date:   2022-12-04 19:54:44 +0800
 author: 啤酒云
-categories: iac, aws, cloud-provider
+categories: iac, aws
+tags: cdk
 ---
 
 本文是 AWS CDK 入门教程，将利用 "渐进" 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。
@@ -20,7 +21,7 @@ categories: iac, aws, cloud-provider
 
 > 版本控制是 IaC 的一个重要组成部分，就像其他任何软件源代码文件一样，配置文件也应该在源代码控制之下。以基础设施即代码方式部署还意味着您可以将基础架构划分为若干模块化组件，它们可通过自动化以不同的方式进行组合。
 
-> 借助 IaC 实现基础架构置备的自动化，意味着开发人员无需再在每次开发或部署应用时手动置备和管理服务器、操作系统、存储及其他基础架构组件。对基础架构编码即可创建一个置备用的模板，尽管置备过程仍然可以手动完成，但也可以由自动化工具（例如红帽® Ansible® 自动化平台）为您代劳。 
+> 借助 IaC 实现基础架构置备的自动化，意味着开发人员无需再在每次开发或部署应用时手动置备和管理服务器、操作系统、存储及其他基础架构组件。对基础架构编码即可创建一个置备用的模板，尽管置备过程仍然可以手动完成，但也可以由自动化工具（例如红帽® Ansible® 自动化平台）为您代劳。
 
 简要来说就是：使用描述性的代码管理您的基础设施。
 
@@ -51,7 +52,6 @@ CDK 同时要依赖 AWS CLI 以及 AWS 凭证。
 安装 AWS CLI 参考：<https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html>
 
 在开发环境配置凭证：<https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/cli-configure-quickstart.html>
-
 
 ## Hello World
 
@@ -120,18 +120,6 @@ cdk deploy
 cdk destroy
 ```
 
-
 验证完成之后，请及时使用 cdk destroy 清理资源，否则会**产生费用**。
 
 使用 cdk destroy 删除更干净。
-
-
-
-
-
-
-
-
-
-
-

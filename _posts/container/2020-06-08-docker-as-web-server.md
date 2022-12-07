@@ -4,6 +4,7 @@ title:  "使用 docker 作为 Web 开发服务器"
 date:   2020-06-08 00:10:49 +0800
 author: 啤酒云
 categories: container
+tags: docker, python
 ---
 
 提供一种思路，临时启动一个 nginx 容器作为服务器来开发前端应用，nginx 作为静态页面发布器，并可以代理远端 API。同时，我们也可以在 shell 中操作打开浏览器，并监控文件的改变并刷新浏览器。php，python 等脚本类的 web 开发也可以使用这个方法，只需要更换相应的 server 镜像作为容器运行的基础环境。

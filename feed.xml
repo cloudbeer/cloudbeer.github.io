@@ -1,4 +1,394 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-08T15:41:31+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 terraform 增加 EKS 组件</title><link href="https://youbug.cn/2022/12/modify-eks-by-terraform.html" rel="alternate" type="text/html" title="使用 terraform 增加 EKS 组件" /><published>2022-12-07T12:54:44+00:00</published><updated>2022-12-07T12:54:44+00:00</updated><id>https://youbug.cn/2022/12/modify-eks-by-terraform</id><content type="html" xml:base="https://youbug.cn/2022/12/modify-eks-by-terraform.html"><![CDATA[<p>在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-10T10:07:14+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS EKS 中部署 Gitlab</title><link href="https://youbug.cn/2022/12/gitlab-in-eks.html" rel="alternate" type="text/html" title="在 AWS EKS 中部署 Gitlab" /><published>2022-12-10T09:50:33+00:00</published><updated>2022-12-10T09:50:33+00:00</updated><id>https://youbug.cn/2022/12/gitlab-in-eks</id><content type="html" xml:base="https://youbug.cn/2022/12/gitlab-in-eks.html"><![CDATA[<p>本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。</p>
+
+<h2 id="在-aws-部署-gitlab-的前提条件">在 AWS 部署 Gitlab 的前提条件</h2>
+
+<p>首先需要创建出合适的集群，Gitlab 对 EKS 集群的需求基本需求如下：</p>
+
+<ul>
+  <li>Ingress: 需要安装 aws-load-balancer</li>
+  <li>PV 卷: 需要安装 ebs-csi-driver</li>
+  <li>HPA: 需要安装 metrics-server</li>
+</ul>
+
+<p>生产环境下：</p>
+
+<ul>
+  <li>PostgresSQL: 安装 RDS for Postgres。</li>
+  <li>Redis: 安装 ElasticCache for Reids。</li>
+</ul>
+
+<p>高级特性(非必须，这部分内容稍后探讨)：</p>
+
+<ul>
+  <li>CI 过程的优化: 创建 Karpenter Provisinor</li>
+  <li>CI 缓存: 创建 S3 存储桶</li>
+  <li>数据存储的高可用</li>
+</ul>
+
+<p>因为 Gitlab 不会创建数据库本身，<strong>需要首先在 Postgres 里创建一个数据库</strong> <code class="language-plaintext highlighter-rouge">gitlab</code>，这个库名可以自定义，稍后指定到安装配置里。</p>
+
+<h2 id="部署-gitlab">部署 Gitlab</h2>
+
+<p>首先在 EKS 中 创建命名空间 gitlab：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create ns gitlab
+</code></pre></div></div>
+
+<p>创建数据库和 SMTP Server 的密码 Secret:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-password
+  namespace: gitlab
+type: Opaque  
+stringData:
+  psql-password: &lt;your-psql-secret&gt;
+  smtp-password: &lt;your-smtp-password&gt;
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<ul>
+  <li>这里的 name 和 key 可以自定义，稍后需要定义到 HelmChart 的配置中。</li>
+  <li>用户名是直接明文写在 Gitlab 的配置中的。</li>
+  <li>Secret 需要配置到 Gitlab 的安装 namespace。</li>
+</ul>
+
+<p>下面是完整的 HelmChart 的配置，这里的格式是 CDK，如果您使用 Helm 直接安装，试着转换成 Values.yaml:</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">ClusterInfo</span><span class="p">,</span> <span class="nx">ClusterAddOn</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@aws-quickstart/eks-blueprints</span><span class="dl">'</span><span class="p">;</span>
+
+
+<span class="kd">const</span> <span class="nx">smtpEmail</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">cloudeer@gmail.com</span><span class="dl">"</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">psqlAddress</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">&lt;postgres-address&gt;</span><span class="dl">"</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">redisAddress</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">&lt;redis-address&gt;</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">GitlabAddon</span> <span class="k">implements</span> <span class="nx">ClusterAddOn</span> <span class="p">{</span>
+  <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">}</span>
+  <span class="nx">deploy</span><span class="p">(</span><span class="nx">clusterInfo</span><span class="p">:</span> <span class="nx">ClusterInfo</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">vpc</span> <span class="o">=</span> <span class="nx">clusterInfo</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">vpc</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">scope</span> <span class="o">=</span> <span class="nx">clusterInfo</span><span class="p">.</span><span class="nx">getResourceContext</span><span class="p">().</span><span class="nx">scope</span><span class="p">;</span>
+
+    <span class="nx">clusterInfo</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">6.6.2</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">abigfun</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">global</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">hosts</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">domain</span><span class="p">:</span> <span class="dl">"</span><span class="s2">abig.fun</span><span class="dl">"</span><span class="p">,</span>
+            <span class="na">https</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+          <span class="p">},</span>
+          <span class="na">shell</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">tcp</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">proxyProtocol</span><span class="p">:</span> <span class="kc">true</span>
+            <span class="p">}</span>
+          <span class="p">},</span>
+          <span class="na">email</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">display_name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">GitLab</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">from</span><span class="p">:</span> <span class="nx">smtpEmail</span><span class="p">,</span>
+            <span class="na">reply_to</span><span class="p">:</span> <span class="nx">smtpEmail</span>
+          <span class="p">},</span>
+          <span class="na">smtp</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">enabled</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="na">address</span><span class="p">:</span> <span class="dl">'</span><span class="s1">smtp.gmail.com</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">tls</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+            <span class="na">port</span><span class="p">:</span> <span class="mi">587</span><span class="p">,</span>
+            <span class="na">authentication</span><span class="p">:</span> <span class="dl">'</span><span class="s1">login</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">user_name</span><span class="p">:</span> <span class="nx">smtpEmail</span><span class="p">,</span>
+            <span class="na">starttls_auto</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="na">openssl_verify_mode</span><span class="p">:</span> <span class="dl">'</span><span class="s1">peer</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">password</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">secret</span><span class="p">:</span> <span class="dl">'</span><span class="s1">gitlab-password</span><span class="dl">'</span><span class="p">,</span>
+              <span class="na">key</span><span class="p">:</span> <span class="dl">'</span><span class="s1">smtp-password</span><span class="dl">'</span>
+            <span class="p">}</span>
+
+          <span class="p">},</span>
+          <span class="na">ingress</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">tls</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">enabled</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">},</span>
+            <span class="na">configureCertmanager</span><span class="p">:</span> <span class="kc">false</span>
+          <span class="p">},</span>
+          <span class="na">psql</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">host</span><span class="p">:</span> <span class="nx">psqlAddress</span><span class="p">,</span>
+            <span class="na">port</span><span class="p">:</span> <span class="mi">5432</span><span class="p">,</span>
+            <span class="na">username</span><span class="p">:</span> <span class="dl">"</span><span class="s2">postgres</span><span class="dl">"</span><span class="p">,</span>
+            <span class="na">database</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+            <span class="na">password</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">secret</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-password</span><span class="dl">"</span><span class="p">,</span>
+              <span class="na">key</span><span class="p">:</span> <span class="dl">"</span><span class="s2">psql-password</span><span class="dl">"</span>
+            <span class="p">},</span>
+          <span class="p">},</span>
+          <span class="na">redis</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">host</span><span class="p">:</span> <span class="nx">redisAddress</span><span class="p">,</span>
+            <span class="na">port</span><span class="p">:</span> <span class="mi">6379</span><span class="p">,</span>
+            <span class="na">password</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">enabled</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="na">redis</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">install</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="p">},</span>
+        <span class="na">postgresql</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">install</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="dl">"</span><span class="s2">nginx-ingress</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">controller</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">service</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">annotations</span><span class="p">:</span> <span class="p">{</span>
+                <span class="dl">"</span><span class="s2">service.beta.kubernetes.io/aws-load-balancer-backend-protocol</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">tcp</span><span class="dl">"</span><span class="p">,</span>
+                <span class="dl">"</span><span class="s2">service.beta.kubernetes.io/aws-load-balancer-proxy-protocol</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">*</span><span class="dl">"</span>
+              <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="na">config</span><span class="p">:</span> <span class="p">{</span>
+              <span class="dl">"</span><span class="s2">use-proxy-protocol</span><span class="dl">"</span><span class="p">:</span> <span class="kc">true</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="na">config</span><span class="p">:</span> <span class="s2">`
+[[runners]]
+  [runners.kubernetes]
+    image = "ubuntu:20.04"
+    privileged = true
+  [[runners.kubernetes.volumes.empty_dir]]
+    name = "docker-certs"
+    mount_path = "/certs/client"
+    medium = "Memory"
+  [[runners.kubernetes.volumes.empty_dir]]
+    name = "dind-storage"
+    mount_path = "/var/lib/docker"
+  [[runners.kubernetes.volumes.host_path]]
+    name = "hostpath-modules"
+    mount_path = "/lib/modules"
+    read_only = true
+    host_path = "/lib/modules"
+  [[runners.kubernetes.volumes.host_path]]
+    name = "hostpath-cgroup"
+    mount_path = "/sys/fs/cgroup"
+    host_path = "/sys/fs/cgroup"
+            `</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>代码解读：</p>
+
+<ul>
+  <li>需要配置一个域名，最好这个域名是真实的。本例中使用的是: abig.fun</li>
+  <li>Gitlab 安装了一个 NginxIngress Controller，所以 AWS 的 LB 只需要使用 TCP 即可。</li>
+  <li>在 K8S 里构建 docker 镜像，需要给 runner 提权，并配置一些 volumes 绑定，如上面的 gitlab-runner.runners.config 配置节点</li>
+</ul>
+
+<p>Gitlab 安装完成后，查看安装结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ kubectl get po <span class="nt">-n</span> gitlab
+NAME                                                READY   STATUS      RESTARTS       AGE
+abigfun-certmanager-7c98d5576b-64q2l                1/1     Running     0              139m
+abigfun-certmanager-cainjector-c74d89b67-w8gwj      1/1     Running     0              139m
+abigfun-certmanager-webhook-6c4fbb8c86-rkfl6        1/1     Running     0              139m
+abigfun-gitaly-0                                    1/1     Running     0              139m
+abigfun-gitlab-exporter-fb9dc9776-f5llm             1/1     Running     0              139m
+abigfun-gitlab-runner-6f75dd5f8f-snlx5              1/1     Running     8 <span class="o">(</span>109m ago<span class="o">)</span>   139m
+abigfun-gitlab-shell-77b9f4fcf9-2lxw8               1/1     Running     0              139m
+abigfun-gitlab-shell-77b9f4fcf9-h99gf               1/1     Running     0              139m
+abigfun-kas-6b4c6b9b7c-snjt5                        1/1     Running     0              140m
+abigfun-kas-6b4c6b9b7c-vrqmv                        1/1     Running     0              139m
+abigfun-migrations-2-2pxlh                          0/1     Completed   0              44m
+abigfun-minio-596cb868fd-g87wj                      1/1     Running     0              140m
+abigfun-minio-create-buckets-2-r4l75                0/1     Completed   0              44m
+abigfun-nginx-ingress-controller-59dc9b7959-7xlv2   1/1     Running     0              139m
+abigfun-nginx-ingress-controller-59dc9b7959-q96mn   1/1     Running     0              139m
+abigfun-prometheus-server-76944cc9cf-srptg          2/2     Running     0              139m
+abigfun-registry-864b87ccd8-hgcv6                   1/1     Running     0              139m
+abigfun-registry-864b87ccd8-qvvgl                   1/1     Running     0              139m
+abigfun-sidekiq-all-in-1-v2-7c98fb88fd-vkk9w        1/1     Running     0              44m
+abigfun-toolbox-89cd5c577-twctl                     1/1     Running     0              43m
+abigfun-webservice-default-849d958f64-nqfhr         2/2     Running     0              44m
+abigfun-webservice-default-849d958f64-rr9q7         2/2     Running     0              43m
+</code></pre></div></div>
+
+<h2 id="第一次运行-gitlab">第一次运行 Gitlab</h2>
+
+<p>运行前，需要进行域名解析：</p>
+
+<p>显示 ingress：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get ing <span class="nt">-n</span> gitlab
+</code></pre></div></div>
+
+<p>会看到所有的 ingress 都绑定到了一个经典 LB。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                         CLASS           HOSTS               ADDRESS                                                                        PORTS   AGE
+abigfun-kas                  abigfun-nginx   kas.abig.fun        xxxxxxxxxx.elb.amazonaws.com   80      58m
+abigfun-minio                abigfun-nginx   minio.abig.fun      xxxxxxxxxx.elb.amazonaws.com   80      58m
+abigfun-registry             abigfun-nginx   registry.abig.fun   xxxxxxxxxx.elb.amazonaws.com   80      58m
+abigfun-webservice-default   abigfun-nginx   gitlab.abig.fun     xxxxxxxxxx.elb.amazonaws.com   80      58m
+</code></pre></div></div>
+
+<p>现在去添加解析。分别将上述 HOSTS 中的域名 CNAME 到 <code class="language-plaintext highlighter-rouge">xxxxxxxxxx.elb.amazonaws.com</code>。</p>
+
+<p>等域名生效。访问 <a href="http://gitlab.abig.fun">http://gitlab.abig.fun</a></p>
+
+<p>首先注册一个用户。</p>
+
+<p>管理员账号：root</p>
+
+<p>初始密码：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get secret <span class="nt">--namespace</span> <span class="s2">"gitlab"</span> abigfun-gitlab-initial-root-password <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.password}"</span> | <span class="nb">base64</span> <span class="nt">-d</span>
+</code></pre></div></div>
+
+<p>使用管理账号进入之后，审批一下 刚刚注册的账号。</p>
+
+<h2 id="功能测试">功能测试</h2>
+
+<p>使用刚刚自己注册的账号登录，创建一个项目，并添加一个文件: <code class="language-plaintext highlighter-rouge">.gitlab-ci.yml</code>。 这部分可以测试 git 源代码管理功能。</p>
+
+<p>.gitlab-ci.yml 的内容如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
+  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay2</span>
+  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2376</span>
+  <span class="na">DOCKER_TLS_CERTDIR</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/certs"</span>
+  <span class="na">DOCKER_TLS_VERIFY</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">DOCKER_CERT_PATH</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/certs/client"</span>
+
+<span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">package</span>
+
+<span class="na">docker-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">sleep </span><span class="m">5</span>
+    <span class="pi">-</span> <span class="s">docker info</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">echo "Hehe"</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>上面的示例可以测试 docker dind 是否正常</li>
+  <li>sleep 5 是为了…我也说不清，新版本的 docker 加一下这个就正常了，我觉得是个坑，搞了很久才发现是这个原因。</li>
+</ul>
+
+<p>水一段文字记录一下成功结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Running with gitlab-runner 15.6.0 <span class="o">(</span>44a1c2be<span class="o">)</span>
+  on abigfun-gitlab-runner-8567dfbd8-bcg84 xJfSsxKi
+Preparing the <span class="s2">"kubernetes"</span> executor
+00:00
+Using Kubernetes namespace: gitlab
+Using Kubernetes executor with image docker:20 ...
+Using attach strategy to execute scripts...
+Preparing environment
+00:03
+Waiting <span class="k">for </span>pod gitlab/runner-xjfssxki-project-2-concurrent-0wrtsq to be running, status is Pending
+Running on runner-xjfssxki-project-2-concurrent-0wrtsq via abigfun-gitlab-runner-8567dfbd8-bcg84...
+Getting <span class="nb">source </span>from Git repository
+00:01
+Fetching changes with git depth <span class="nb">set </span>to 20...
+Initialized empty Git repository <span class="k">in</span> /builds/[MASKED]/gateway/.git/
+Created fresh repository.
+Checking out 7fb43706 as main...
+Skipping Git submodules setup
+Executing <span class="s2">"step_script"</span> stage of the job script
+00:06
+<span class="nv">$ </span><span class="nb">sleep </span>5
+<span class="nv">$ </span>docker info
+Client:
+ Context:    default
+ Debug Mode: <span class="nb">false
+ </span>Plugins:
+  buildx: Docker Buildx <span class="o">(</span>Docker Inc., v0.9.1<span class="o">)</span>
+  compose: Docker Compose <span class="o">(</span>Docker Inc., v2.14.0<span class="o">)</span>
+Server:
+ Containers: 0
+  Running: 0
+  Paused: 0
+  Stopped: 0
+ Images: 0
+ Server Version: 20.10.21
+ Storage Driver: overlay2
+  Backing Filesystem: extfs
+  Supports d_type: <span class="nb">true
+  </span>Native Overlay Diff: <span class="nb">true
+  </span>userxattr: <span class="nb">false
+ </span>Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 1
+ Plugins:
+  Volume: <span class="nb">local
+  </span>Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file <span class="nb">local </span>logentries splunk syslog
+ Swarm: inactive
+ Runtimes: io.containerd.runtime.v1.linux runc io.containerd.runc.v2
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 1c90a442489720eec95342e1789ee8a5e1b9536f
+ runc version: v1.1.4-0-g5fd4c4d1
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: default
+ Kernel Version: 5.10.135
+ Operating System: Alpine Linux v3.17 <span class="o">(</span>containerized<span class="o">)</span>
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 2
+ Total Memory: 7.655GiB
+ Name: runner-xjfssxki-project-2-concurrent-0wrtsq
+ ID: MS4S:WD6L:NYMX:Q2EK:AASW:ICI5:2PSL:DARY:5EZ5:FYNP:IPCK:3WVF
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: <span class="nb">false
+ </span>Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: <span class="nb">false
+ </span>Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: <span class="nb">false
+ </span>Product License: Community Engine
+<span class="nv">$ </span><span class="nb">echo</span> <span class="s2">"Hehe"</span>
+Hehe
+Job succeeded
+</code></pre></div></div>
+
+<h2 id="其他">其他</h2>
+
+<h3 id="创建内网-postgres-数据库">创建内网 Postgres 数据库</h3>
+
+<p>数据库没有公网，没有跳板机，我使用了如下方法：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl run psql-client <span class="nt">-ndefault</span> <span class="nt">--env</span><span class="o">=</span><span class="s2">"POSTGRES_PASSWORD=pAssw0rd"</span> <span class="nt">--image</span><span class="o">=</span>postgres 
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-ndefault</span> <span class="nt">-it</span> psql-client <span class="nt">--</span> sh
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>psql <span class="nt">-h</span> &lt;postgres-host&gt; <span class="nt">-U</span> postgres <span class="nt">-W</span> 
+</code></pre></div></div>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">gitlab</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>感觉好傻！</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="iac," /><category term="aws" /><category term="gitlab," /><category term="cdk," /><category term="eks" /><summary type="html"><![CDATA[本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。]]></summary></entry><entry><title type="html">使用 terraform 增加 EKS 组件</title><link href="https://youbug.cn/2022/12/modify-eks-by-terraform.html" rel="alternate" type="text/html" title="使用 terraform 增加 EKS 组件" /><published>2022-12-07T12:54:44+00:00</published><updated>2022-12-07T12:54:44+00:00</updated><id>https://youbug.cn/2022/12/modify-eks-by-terraform</id><content type="html" xml:base="https://youbug.cn/2022/12/modify-eks-by-terraform.html"><![CDATA[<p>在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。</p>
 
 <h2 id="常用-sdk">常用 SDK</h2>
 
@@ -1646,21 +2036,4 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
 <ol>
   <li>CDK 的 HelmChart 对于 oci 库的支持处于起步阶段，经过多次试验以及阅读相关源码，才确认写法：<code class="language-plaintext highlighter-rouge">chart: 'oci://public.ecr.aws/karpenter/karpenter'</code>，<code class="language-plaintext highlighter-rouge">repository: 'oci://public.ecr.aws/karpenter/karpenter'</code>。</li>
   <li>Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是：”settings.aws.clusterEndpoint”，而这里的写法<strong>必须是</strong> JSON 格式。</li>
-</ol>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="iac," /><category term="aws" /><category term="kubernetes," /><category term="自动伸缩," /><category term="karpenter," /><category term="cdk," /><category term="iam" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry><entry><title type="html">正式开张</title><link href="https://youbug.cn/2022/11/cloudbeer-first.html" rel="alternate" type="text/html" title="正式开张" /><published>2022-11-30T12:12:44+00:00</published><updated>2022-11-30T12:12:44+00:00</updated><id>https://youbug.cn/2022/11/cloudbeer-first</id><content type="html" xml:base="https://youbug.cn/2022/11/cloudbeer-first.html"><![CDATA[<p>—————-———— 开张咯，这里是分割线  这里更早的文章是以前写的 —————-————</p>
-
-<h2 id="开张咯">开张咯</h2>
-
-<p>说点啥呢，我也不知道。</p>
-
-<h2 id="关于-jekyll">关于 jekyll</h2>
-
-<p>ruby 有点蛋疼，gem 又是个啥，bundle 呢？</p>
-
-<p>能用就好！</p>
-
-<p>本地启动动态加载是:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jekyll serve <span class="nt">--livereload</span>
-</code></pre></div></div>
-
-<p>我先推到 github 试试咯。</p>]]></content><author><name>啤酒云</name></author><category term="tucao" /><summary type="html"><![CDATA[—————-———— 开张咯，这里是分割线 这里更早的文章是以前写的 —————-————]]></summary></entry></feed>
+</ol>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="iac," /><category term="aws" /><category term="kubernetes," /><category term="自动伸缩," /><category term="karpenter," /><category term="cdk," /><category term="iam" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry></feed>

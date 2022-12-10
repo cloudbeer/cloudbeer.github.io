@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>在 AWS EKS 中部署 Gitlab | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="在 AWS EKS 中部署 Gitlab" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。" />
+<meta property="og:description" content="本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。" />
+<link rel="canonical" href="https://youbug.cn/2022/12/gitlab-in-eks.html" />
+<meta property="og:url" content="https://youbug.cn/2022/12/gitlab-in-eks.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-10T09:50:33+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="在 AWS EKS 中部署 Gitlab" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2022-12-10T09:50:33+00:00","datePublished":"2022-12-10T09:50:33+00:00","description":"本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。","headline":"在 AWS EKS 中部署 Gitlab","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2022/12/gitlab-in-eks.html"},"url":"https://youbug.cn/2022/12/gitlab-in-eks.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">在 AWS EKS 中部署 Gitlab</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-10T09:50:33+00:00" itemprop="datePublished">2022-12-10
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。</p>
+
+<h2 id="在-aws-部署-gitlab-的前提条件">在 AWS 部署 Gitlab 的前提条件</h2>
+
+<p>首先需要创建出合适的集群，Gitlab 对 EKS 集群的需求基本需求如下：</p>
+
+<ul>
+  <li>Ingress: 需要安装 aws-load-balancer</li>
+  <li>PV 卷: 需要安装 ebs-csi-driver</li>
+  <li>HPA: 需要安装 metrics-server</li>
+</ul>
+
+<p>生产环境下：</p>
+
+<ul>
+  <li>PostgresSQL: 安装 RDS for Postgres。</li>
+  <li>Redis: 安装 ElasticCache for Reids。</li>
+</ul>
+
+<p>高级特性(非必须，这部分内容稍后探讨)：</p>
+
+<ul>
+  <li>CI 过程的优化: 创建 Karpenter Provisinor</li>
+  <li>CI 缓存: 创建 S3 存储桶</li>
+  <li>数据存储的高可用</li>
+</ul>
+
+<p>因为 Gitlab 不会创建数据库本身，<strong>需要首先在 Postgres 里创建一个数据库</strong> <code class="language-plaintext highlighter-rouge">gitlab</code>，这个库名可以自定义，稍后指定到安装配置里。</p>
+
+<h2 id="部署-gitlab">部署 Gitlab</h2>
+
+<p>首先在 EKS 中 创建命名空间 gitlab：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create ns gitlab
+</code></pre></div></div>
+
+<p>创建数据库和 SMTP Server 的密码 Secret:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-password
+  namespace: gitlab
+type: Opaque  
+stringData:
+  psql-password: &lt;your-psql-secret&gt;
+  smtp-password: &lt;your-smtp-password&gt;
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<ul>
+  <li>这里的 name 和 key 可以自定义，稍后需要定义到 HelmChart 的配置中。</li>
+  <li>用户名是直接明文写在 Gitlab 的配置中的。</li>
+  <li>Secret 需要配置到 Gitlab 的安装 namespace。</li>
+</ul>
+
+<p>下面是完整的 HelmChart 的配置，这里的格式是 CDK，如果您使用 Helm 直接安装，试着转换成 Values.yaml:</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">ClusterInfo</span><span class="p">,</span> <span class="nx">ClusterAddOn</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@aws-quickstart/eks-blueprints</span><span class="dl">'</span><span class="p">;</span>
+
+
+<span class="kd">const</span> <span class="nx">smtpEmail</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">cloudeer@gmail.com</span><span class="dl">"</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">psqlAddress</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">&lt;postgres-address&gt;</span><span class="dl">"</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">redisAddress</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">&lt;redis-address&gt;</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">GitlabAddon</span> <span class="k">implements</span> <span class="nx">ClusterAddOn</span> <span class="p">{</span>
+  <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+  <span class="p">}</span>
+  <span class="nx">deploy</span><span class="p">(</span><span class="nx">clusterInfo</span><span class="p">:</span> <span class="nx">ClusterInfo</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">vpc</span> <span class="o">=</span> <span class="nx">clusterInfo</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">vpc</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">scope</span> <span class="o">=</span> <span class="nx">clusterInfo</span><span class="p">.</span><span class="nx">getResourceContext</span><span class="p">().</span><span class="nx">scope</span><span class="p">;</span>
+
+    <span class="nx">clusterInfo</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">6.6.2</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">abigfun</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">global</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">hosts</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">domain</span><span class="p">:</span> <span class="dl">"</span><span class="s2">abig.fun</span><span class="dl">"</span><span class="p">,</span>
+            <span class="na">https</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+          <span class="p">},</span>
+          <span class="na">shell</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">tcp</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">proxyProtocol</span><span class="p">:</span> <span class="kc">true</span>
+            <span class="p">}</span>
+          <span class="p">},</span>
+          <span class="na">email</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">display_name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">GitLab</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">from</span><span class="p">:</span> <span class="nx">smtpEmail</span><span class="p">,</span>
+            <span class="na">reply_to</span><span class="p">:</span> <span class="nx">smtpEmail</span>
+          <span class="p">},</span>
+          <span class="na">smtp</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">enabled</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="na">address</span><span class="p">:</span> <span class="dl">'</span><span class="s1">smtp.gmail.com</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">tls</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+            <span class="na">port</span><span class="p">:</span> <span class="mi">587</span><span class="p">,</span>
+            <span class="na">authentication</span><span class="p">:</span> <span class="dl">'</span><span class="s1">login</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">user_name</span><span class="p">:</span> <span class="nx">smtpEmail</span><span class="p">,</span>
+            <span class="na">starttls_auto</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="na">openssl_verify_mode</span><span class="p">:</span> <span class="dl">'</span><span class="s1">peer</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">password</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">secret</span><span class="p">:</span> <span class="dl">'</span><span class="s1">gitlab-password</span><span class="dl">'</span><span class="p">,</span>
+              <span class="na">key</span><span class="p">:</span> <span class="dl">'</span><span class="s1">smtp-password</span><span class="dl">'</span>
+            <span class="p">}</span>
+
+          <span class="p">},</span>
+          <span class="na">ingress</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">tls</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">enabled</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">},</span>
+            <span class="na">configureCertmanager</span><span class="p">:</span> <span class="kc">false</span>
+          <span class="p">},</span>
+          <span class="na">psql</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">host</span><span class="p">:</span> <span class="nx">psqlAddress</span><span class="p">,</span>
+            <span class="na">port</span><span class="p">:</span> <span class="mi">5432</span><span class="p">,</span>
+            <span class="na">username</span><span class="p">:</span> <span class="dl">"</span><span class="s2">postgres</span><span class="dl">"</span><span class="p">,</span>
+            <span class="na">database</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+            <span class="na">password</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">secret</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-password</span><span class="dl">"</span><span class="p">,</span>
+              <span class="na">key</span><span class="p">:</span> <span class="dl">"</span><span class="s2">psql-password</span><span class="dl">"</span>
+            <span class="p">},</span>
+          <span class="p">},</span>
+          <span class="na">redis</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">host</span><span class="p">:</span> <span class="nx">redisAddress</span><span class="p">,</span>
+            <span class="na">port</span><span class="p">:</span> <span class="mi">6379</span><span class="p">,</span>
+            <span class="na">password</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">enabled</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="na">redis</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">install</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="p">},</span>
+        <span class="na">postgresql</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">install</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="dl">"</span><span class="s2">nginx-ingress</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">controller</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">service</span><span class="p">:</span> <span class="p">{</span>
+              <span class="na">annotations</span><span class="p">:</span> <span class="p">{</span>
+                <span class="dl">"</span><span class="s2">service.beta.kubernetes.io/aws-load-balancer-backend-protocol</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">tcp</span><span class="dl">"</span><span class="p">,</span>
+                <span class="dl">"</span><span class="s2">service.beta.kubernetes.io/aws-load-balancer-proxy-protocol</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">*</span><span class="dl">"</span>
+              <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="na">config</span><span class="p">:</span> <span class="p">{</span>
+              <span class="dl">"</span><span class="s2">use-proxy-protocol</span><span class="dl">"</span><span class="p">:</span> <span class="kc">true</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
+            <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="na">config</span><span class="p">:</span> <span class="s2">`
+[[runners]]
+  [runners.kubernetes]
+    image = "ubuntu:20.04"
+    privileged = true
+  [[runners.kubernetes.volumes.empty_dir]]
+    name = "docker-certs"
+    mount_path = "/certs/client"
+    medium = "Memory"
+  [[runners.kubernetes.volumes.empty_dir]]
+    name = "dind-storage"
+    mount_path = "/var/lib/docker"
+  [[runners.kubernetes.volumes.host_path]]
+    name = "hostpath-modules"
+    mount_path = "/lib/modules"
+    read_only = true
+    host_path = "/lib/modules"
+  [[runners.kubernetes.volumes.host_path]]
+    name = "hostpath-cgroup"
+    mount_path = "/sys/fs/cgroup"
+    host_path = "/sys/fs/cgroup"
+            `</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>代码解读：</p>
+
+<ul>
+  <li>需要配置一个域名，最好这个域名是真实的。本例中使用的是: abig.fun</li>
+  <li>Gitlab 安装了一个 NginxIngress Controller，所以 AWS 的 LB 只需要使用 TCP 即可。</li>
+  <li>在 K8S 里构建 docker 镜像，需要给 runner 提权，并配置一些 volumes 绑定，如上面的 gitlab-runner.runners.config 配置节点</li>
+</ul>
+
+<p>Gitlab 安装完成后，查看安装结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>❯ kubectl get po <span class="nt">-n</span> gitlab
+NAME                                                READY   STATUS      RESTARTS       AGE
+abigfun-certmanager-7c98d5576b-64q2l                1/1     Running     0              139m
+abigfun-certmanager-cainjector-c74d89b67-w8gwj      1/1     Running     0              139m
+abigfun-certmanager-webhook-6c4fbb8c86-rkfl6        1/1     Running     0              139m
+abigfun-gitaly-0                                    1/1     Running     0              139m
+abigfun-gitlab-exporter-fb9dc9776-f5llm             1/1     Running     0              139m
+abigfun-gitlab-runner-6f75dd5f8f-snlx5              1/1     Running     8 <span class="o">(</span>109m ago<span class="o">)</span>   139m
+abigfun-gitlab-shell-77b9f4fcf9-2lxw8               1/1     Running     0              139m
+abigfun-gitlab-shell-77b9f4fcf9-h99gf               1/1     Running     0              139m
+abigfun-kas-6b4c6b9b7c-snjt5                        1/1     Running     0              140m
+abigfun-kas-6b4c6b9b7c-vrqmv                        1/1     Running     0              139m
+abigfun-migrations-2-2pxlh                          0/1     Completed   0              44m
+abigfun-minio-596cb868fd-g87wj                      1/1     Running     0              140m
+abigfun-minio-create-buckets-2-r4l75                0/1     Completed   0              44m
+abigfun-nginx-ingress-controller-59dc9b7959-7xlv2   1/1     Running     0              139m
+abigfun-nginx-ingress-controller-59dc9b7959-q96mn   1/1     Running     0              139m
+abigfun-prometheus-server-76944cc9cf-srptg          2/2     Running     0              139m
+abigfun-registry-864b87ccd8-hgcv6                   1/1     Running     0              139m
+abigfun-registry-864b87ccd8-qvvgl                   1/1     Running     0              139m
+abigfun-sidekiq-all-in-1-v2-7c98fb88fd-vkk9w        1/1     Running     0              44m
+abigfun-toolbox-89cd5c577-twctl                     1/1     Running     0              43m
+abigfun-webservice-default-849d958f64-nqfhr         2/2     Running     0              44m
+abigfun-webservice-default-849d958f64-rr9q7         2/2     Running     0              43m
+</code></pre></div></div>
+
+<h2 id="第一次运行-gitlab">第一次运行 Gitlab</h2>
+
+<p>运行前，需要进行域名解析：</p>
+
+<p>显示 ingress：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get ing <span class="nt">-n</span> gitlab
+</code></pre></div></div>
+
+<p>会看到所有的 ingress 都绑定到了一个经典 LB。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                         CLASS           HOSTS               ADDRESS                                                                        PORTS   AGE
+abigfun-kas                  abigfun-nginx   kas.abig.fun        xxxxxxxxxx.elb.amazonaws.com   80      58m
+abigfun-minio                abigfun-nginx   minio.abig.fun      xxxxxxxxxx.elb.amazonaws.com   80      58m
+abigfun-registry             abigfun-nginx   registry.abig.fun   xxxxxxxxxx.elb.amazonaws.com   80      58m
+abigfun-webservice-default   abigfun-nginx   gitlab.abig.fun     xxxxxxxxxx.elb.amazonaws.com   80      58m
+</code></pre></div></div>
+
+<p>现在去添加解析。分别将上述 HOSTS 中的域名 CNAME 到 <code class="language-plaintext highlighter-rouge">xxxxxxxxxx.elb.amazonaws.com</code>。</p>
+
+<p>等域名生效。访问 <a href="http://gitlab.abig.fun">http://gitlab.abig.fun</a></p>
+
+<p>首先注册一个用户。</p>
+
+<p>管理员账号：root</p>
+
+<p>初始密码：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get secret <span class="nt">--namespace</span> <span class="s2">"gitlab"</span> abigfun-gitlab-initial-root-password <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.password}"</span> | <span class="nb">base64</span> <span class="nt">-d</span>
+</code></pre></div></div>
+
+<p>使用管理账号进入之后，审批一下 刚刚注册的账号。</p>
+
+<h2 id="功能测试">功能测试</h2>
+
+<p>使用刚刚自己注册的账号登录，创建一个项目，并添加一个文件: <code class="language-plaintext highlighter-rouge">.gitlab-ci.yml</code>。 这部分可以测试 git 源代码管理功能。</p>
+
+<p>.gitlab-ci.yml 的内容如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
+  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay2</span>
+  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2376</span>
+  <span class="na">DOCKER_TLS_CERTDIR</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/certs"</span>
+  <span class="na">DOCKER_TLS_VERIFY</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">DOCKER_CERT_PATH</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/certs/client"</span>
+
+<span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">package</span>
+
+<span class="na">docker-build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">sleep </span><span class="m">5</span>
+    <span class="pi">-</span> <span class="s">docker info</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">echo "Hehe"</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>上面的示例可以测试 docker dind 是否正常</li>
+  <li>sleep 5 是为了…我也说不清，新版本的 docker 加一下这个就正常了，我觉得是个坑，搞了很久才发现是这个原因。</li>
+</ul>
+
+<p>水一段文字记录一下成功结果：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Running with gitlab-runner 15.6.0 <span class="o">(</span>44a1c2be<span class="o">)</span>
+  on abigfun-gitlab-runner-8567dfbd8-bcg84 xJfSsxKi
+Preparing the <span class="s2">"kubernetes"</span> executor
+00:00
+Using Kubernetes namespace: gitlab
+Using Kubernetes executor with image docker:20 ...
+Using attach strategy to execute scripts...
+Preparing environment
+00:03
+Waiting <span class="k">for </span>pod gitlab/runner-xjfssxki-project-2-concurrent-0wrtsq to be running, status is Pending
+Running on runner-xjfssxki-project-2-concurrent-0wrtsq via abigfun-gitlab-runner-8567dfbd8-bcg84...
+Getting <span class="nb">source </span>from Git repository
+00:01
+Fetching changes with git depth <span class="nb">set </span>to 20...
+Initialized empty Git repository <span class="k">in</span> /builds/[MASKED]/gateway/.git/
+Created fresh repository.
+Checking out 7fb43706 as main...
+Skipping Git submodules setup
+Executing <span class="s2">"step_script"</span> stage of the job script
+00:06
+<span class="nv">$ </span><span class="nb">sleep </span>5
+<span class="nv">$ </span>docker info
+Client:
+ Context:    default
+ Debug Mode: <span class="nb">false
+ </span>Plugins:
+  buildx: Docker Buildx <span class="o">(</span>Docker Inc., v0.9.1<span class="o">)</span>
+  compose: Docker Compose <span class="o">(</span>Docker Inc., v2.14.0<span class="o">)</span>
+Server:
+ Containers: 0
+  Running: 0
+  Paused: 0
+  Stopped: 0
+ Images: 0
+ Server Version: 20.10.21
+ Storage Driver: overlay2
+  Backing Filesystem: extfs
+  Supports d_type: <span class="nb">true
+  </span>Native Overlay Diff: <span class="nb">true
+  </span>userxattr: <span class="nb">false
+ </span>Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 1
+ Plugins:
+  Volume: <span class="nb">local
+  </span>Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file <span class="nb">local </span>logentries splunk syslog
+ Swarm: inactive
+ Runtimes: io.containerd.runtime.v1.linux runc io.containerd.runc.v2
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 1c90a442489720eec95342e1789ee8a5e1b9536f
+ runc version: v1.1.4-0-g5fd4c4d1
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: default
+ Kernel Version: 5.10.135
+ Operating System: Alpine Linux v3.17 <span class="o">(</span>containerized<span class="o">)</span>
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 2
+ Total Memory: 7.655GiB
+ Name: runner-xjfssxki-project-2-concurrent-0wrtsq
+ ID: MS4S:WD6L:NYMX:Q2EK:AASW:ICI5:2PSL:DARY:5EZ5:FYNP:IPCK:3WVF
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: <span class="nb">false
+ </span>Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: <span class="nb">false
+ </span>Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: <span class="nb">false
+ </span>Product License: Community Engine
+<span class="nv">$ </span><span class="nb">echo</span> <span class="s2">"Hehe"</span>
+Hehe
+Job succeeded
+</code></pre></div></div>
+
+<h2 id="其他">其他</h2>
+
+<h3 id="创建内网-postgres-数据库">创建内网 Postgres 数据库</h3>
+
+<p>数据库没有公网，没有跳板机，我使用了如下方法：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl run psql-client <span class="nt">-ndefault</span> <span class="nt">--env</span><span class="o">=</span><span class="s2">"POSTGRES_PASSWORD=pAssw0rd"</span> <span class="nt">--image</span><span class="o">=</span>postgres 
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-ndefault</span> <span class="nt">-it</span> psql-client <span class="nt">--</span> sh
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>psql <span class="nt">-h</span> &lt;postgres-host&gt; <span class="nt">-U</span> postgres <span class="nt">-W</span> 
+</code></pre></div></div>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">gitlab</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>感觉好傻！</p>
+
+  </div>
+
+  <a class="u-url" href="/2022/12/gitlab-in-eks.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

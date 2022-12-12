@@ -10,7 +10,11 @@ categories: aws, gitlab, devops, container
 
 ## 创建 CodeArtifact
 
-打开控制台进行创建: <https://console.aws.amazon.com/codesuite/codeartifact/getting-started>，记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。
+打开控制台进行创建: <https://console.aws.amazon.com/codesuite/codeartifact/getting-started>，选择 maven-central-store。
+
+记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。
+
+![CodeArtifact Create](/assets/posts/devops/code-artifact.png)
 
 创建完成后，可以查看连接说明。
 
@@ -124,11 +128,13 @@ build:
     - mvn deploy "-Daether.checksums.algorithms=MD5"
 ```
 
-> 请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的 build。
+> 请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的构建过程。
 >
 > 这个可以修改，在项目的 Settings -> Repository -> Protected tags，可以将 tag 为 `v*` 或者 `*-release` 的保护起来。
 >
-> 您需要查询一下 `v*`，然后选择最底下的 create v* 才能创建匹配规则。
+> 比如：您需要查询一下 `*-release`，然后选择最底下的 Create wildcard 才能创建匹配规则。
+>
+> ![Protected tags](/assets/posts/devops/gitlab-protected-tags.png)
 
 同时 Java 项目的 pom.xml 可以写成这样：
 
@@ -159,8 +165,8 @@ build:
 
 ```
 
-- version 这个属性，取了 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。
-- 最后 deploy 的时候，版本号就会和 git 的 tag 保持一致。
+- version 这个属性取自环境变量 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。
+- 最后 deploy 的时候，会发现 release artifact 的版本号和 git 的 tag 保持一致。
 
 ---
 

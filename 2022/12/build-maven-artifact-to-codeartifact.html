@@ -102,7 +102,11 @@
 
 <h2 id="创建-codeartifact">创建 CodeArtifact</h2>
 
-<p>打开控制台进行创建: <a href="https://console.aws.amazon.com/codesuite/codeartifact/getting-started">https://console.aws.amazon.com/codesuite/codeartifact/getting-started</a>，记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。</p>
+<p>打开控制台进行创建: <a href="https://console.aws.amazon.com/codesuite/codeartifact/getting-started">https://console.aws.amazon.com/codesuite/codeartifact/getting-started</a>，选择 maven-central-store。</p>
+
+<p>记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。</p>
+
+<p><img src="/assets/posts/devops/code-artifact.png" alt="CodeArtifact Create" /></p>
 
 <p>创建完成后，可以查看连接说明。</p>
 
@@ -221,11 +225,13 @@ git push origin v1.0.0
 </code></pre></div></div>
 
 <blockquote>
-  <p>请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的 build。</p>
+  <p>请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的构建过程。</p>
 
   <p>这个可以修改，在项目的 Settings -&gt; Repository -&gt; Protected tags，可以将 tag 为 <code class="language-plaintext highlighter-rouge">v*</code> 或者 <code class="language-plaintext highlighter-rouge">*-release</code> 的保护起来。</p>
 
-  <p>您需要查询一下 <code class="language-plaintext highlighter-rouge">v*</code>，然后选择最底下的 create v* 才能创建匹配规则。</p>
+  <p>比如：您需要查询一下 <code class="language-plaintext highlighter-rouge">*-release</code>，然后选择最底下的 Create wildcard 才能创建匹配规则。</p>
+
+  <p><img src="/assets/posts/devops/gitlab-protected-tags.png" alt="Protected tags" /></p>
 </blockquote>
 
 <p>同时 Java 项目的 pom.xml 可以写成这样：</p>
@@ -257,8 +263,8 @@ git push origin v1.0.0
 </code></pre></div></div>
 
 <ul>
-  <li>version 这个属性，取了 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。</li>
-  <li>最后 deploy 的时候，版本号就会和 git 的 tag 保持一致。</li>
+  <li>version 这个属性取自环境变量 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。</li>
+  <li>最后 deploy 的时候，会发现 release artifact 的版本号和 git 的 tag 保持一致。</li>
 </ul>
 
 <hr />

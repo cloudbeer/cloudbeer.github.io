@@ -1,8 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-12T13:06:08+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact</title><link href="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html" rel="alternate" type="text/html" title="使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact" /><published>2022-12-12T12:59:33+00:00</published><updated>2022-12-12T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact</id><content type="html" xml:base="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html"><![CDATA[<p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-12T14:02:47+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact</title><link href="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html" rel="alternate" type="text/html" title="使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact" /><published>2022-12-12T12:59:33+00:00</published><updated>2022-12-12T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact</id><content type="html" xml:base="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html"><![CDATA[<p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
 
 <h2 id="创建-codeartifact">创建 CodeArtifact</h2>
 
-<p>打开控制台进行创建: <a href="https://console.aws.amazon.com/codesuite/codeartifact/getting-started">https://console.aws.amazon.com/codesuite/codeartifact/getting-started</a>，记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。</p>
+<p>打开控制台进行创建: <a href="https://console.aws.amazon.com/codesuite/codeartifact/getting-started">https://console.aws.amazon.com/codesuite/codeartifact/getting-started</a>，选择 maven-central-store。</p>
+
+<p>记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。</p>
+
+<p><img src="/assets/posts/devops/code-artifact.png" alt="CodeArtifact Create" /></p>
 
 <p>创建完成后，可以查看连接说明。</p>
 
@@ -121,11 +125,13 @@ git push origin v1.0.0
 </code></pre></div></div>
 
 <blockquote>
-  <p>请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的 build。</p>
+  <p>请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的构建过程。</p>
 
   <p>这个可以修改，在项目的 Settings -&gt; Repository -&gt; Protected tags，可以将 tag 为 <code class="language-plaintext highlighter-rouge">v*</code> 或者 <code class="language-plaintext highlighter-rouge">*-release</code> 的保护起来。</p>
 
-  <p>您需要查询一下 <code class="language-plaintext highlighter-rouge">v*</code>，然后选择最底下的 create v* 才能创建匹配规则。</p>
+  <p>比如：您需要查询一下 <code class="language-plaintext highlighter-rouge">*-release</code>，然后选择最底下的 Create wildcard 才能创建匹配规则。</p>
+
+  <p><img src="/assets/posts/devops/gitlab-protected-tags.png" alt="Protected tags" /></p>
 </blockquote>
 
 <p>同时 Java 项目的 pom.xml 可以写成这样：</p>
@@ -157,8 +163,8 @@ git push origin v1.0.0
 </code></pre></div></div>
 
 <ul>
-  <li>version 这个属性，取了 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。</li>
-  <li>最后 deploy 的时候，版本号就会和 git 的 tag 保持一致。</li>
+  <li>version 这个属性取自环境变量 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。</li>
+  <li>最后 deploy 的时候，会发现 release artifact 的版本号和 git 的 tag 保持一致。</li>
 </ul>
 
 <hr />

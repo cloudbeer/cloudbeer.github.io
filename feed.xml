@@ -1,4 +1,175 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-10T10:07:14+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS EKS 中部署 Gitlab</title><link href="https://youbug.cn/2022/12/gitlab-in-eks.html" rel="alternate" type="text/html" title="在 AWS EKS 中部署 Gitlab" /><published>2022-12-10T09:50:33+00:00</published><updated>2022-12-10T09:50:33+00:00</updated><id>https://youbug.cn/2022/12/gitlab-in-eks</id><content type="html" xml:base="https://youbug.cn/2022/12/gitlab-in-eks.html"><![CDATA[<p>本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-12T13:06:08+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact</title><link href="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html" rel="alternate" type="text/html" title="使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact" /><published>2022-12-12T12:59:33+00:00</published><updated>2022-12-12T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact</id><content type="html" xml:base="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html"><![CDATA[<p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
+
+<h2 id="创建-codeartifact">创建 CodeArtifact</h2>
+
+<p>打开控制台进行创建: <a href="https://console.aws.amazon.com/codesuite/codeartifact/getting-started">https://console.aws.amazon.com/codesuite/codeartifact/getting-started</a>，记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。</p>
+
+<p>创建完成后，可以查看连接说明。</p>
+
+<h2 id="配置-maven-的-settings">配置 Maven 的 settings</h2>
+
+<p>官方文档是将 settings.xml 配置到了宿主机，但在 k8s 中，可以考虑动态配置此文件。</p>
+
+<p>我们将 settings.xml 的内容先丢到 Gitlab 的变量中去。我存在 <code class="language-plaintext highlighter-rouge">M2_SETTINGS</code> 变量里了。</p>
+
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;settings&gt;</span>
+  <span class="nt">&lt;profiles&gt;</span>
+    <span class="nt">&lt;profile&gt;</span>
+      <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
+      <span class="nt">&lt;activation&gt;</span>
+        <span class="nt">&lt;activeByDefault&gt;</span>true<span class="nt">&lt;/activeByDefault&gt;</span>
+      <span class="nt">&lt;/activation&gt;</span>
+      <span class="nt">&lt;repositories&gt;</span>
+        <span class="nt">&lt;repository&gt;</span>
+          <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
+          <span class="nt">&lt;url&gt;</span>ARTIFACT_URL<span class="nt">&lt;/url&gt;</span>
+        <span class="nt">&lt;/repository&gt;</span>
+      <span class="nt">&lt;/repositories&gt;</span>
+    <span class="nt">&lt;/profile&gt;</span>
+  <span class="nt">&lt;/profiles&gt;</span>
+  <span class="nt">&lt;servers&gt;</span>
+    <span class="nt">&lt;server&gt;</span>
+      <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
+      <span class="nt">&lt;username&gt;</span>aws<span class="nt">&lt;/username&gt;</span>
+      <span class="nt">&lt;password&gt;</span>CODEARTIFACT_AUTH_TOKEN<span class="nt">&lt;/password&gt;</span>
+    <span class="nt">&lt;/server&gt;</span>
+  <span class="nt">&lt;/servers&gt;</span>
+<span class="nt">&lt;/settings&gt;</span>
+</code></pre></div></div>
+
+<ul>
+  <li>此变量会以环境变量 <code class="language-plaintext highlighter-rouge">M2_SETTINGS</code> 出现在 Pod 中。</li>
+  <li>这个 <code class="language-plaintext highlighter-rouge">&lt;password&gt;CODEARTIFACT_AUTH_TOKEN&lt;/password&gt;</code> 和 <code class="language-plaintext highlighter-rouge">&lt;url&gt;ARTIFACT_URL&lt;/url&gt;</code> 会在 CI 的过程中替换掉。</li>
+  <li>这里不能用 <code class="language-plaintext highlighter-rouge">${CODEARTIFACT_AUTH_TOKEN}</code> 这样方式，会被 CI 过程替提前换掉。</li>
+</ul>
+
+<h2 id="设置-gitlab-ci">设置 Gitlab CI</h2>
+
+<p>添加如下的 <code class="language-plaintext highlighter-rouge">.gitlab-ci.yml</code> 文件：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">mvn-deploy</span>
+
+<span class="na">build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">mvn-deploy</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">mkdir -p ~/.m2/repository</span>
+    <span class="pi">-</span> <span class="s">apt update</span>
+    <span class="pi">-</span> <span class="s">apt install unzip</span>
+    <span class="pi">-</span> <span class="s">cd /tmp</span>
+    <span class="pi">-</span> <span class="s">curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"</span>
+    <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
+    <span class="pi">-</span> <span class="s">./aws/install</span>
+    <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
+    <span class="pi">-</span> <span class="s">echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;" -e "s/ARTIFACT_URL/${ARTIFACT_URL}/g' &gt; ~/.m2/settings.xml</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
+    <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
+</code></pre></div></div>
+
+<ul>
+  <li>使用了 maven 作为编译镜像，并安装了 aws cli 命令行工具。</li>
+  <li>通过 shell 脚本将动态 CODEARTIFACT_AUTH_TOKEN 和仓库地址 ARTIFACT_URL 替换掉并写入 <code class="language-plaintext highlighter-rouge">.m2/settings.xml</code> 配置信息中。</li>
+  <li><code class="language-plaintext highlighter-rouge">-Daether.checksums.algorithms=MD5</code> 这个解决上传过程的 checksum 警告信息。</li>
+</ul>
+
+<blockquote>
+  <p>本文中，设置了如下的环境变量：</p>
+
+  <ul>
+    <li>ARTIFACT_URL: Maven / CodeArtifact 仓库地址</li>
+    <li>M2_SETTINGS: Maven 的 .m2/settings.xml 配置</li>
+    <li>AWS_ACCESS_KEY_ID</li>
+    <li>AWS_SECRET_ACCESS_KEY</li>
+    <li>AWS_REGION</li>
+    <li>AWS_ACCOUNT_ID</li>
+  </ul>
+</blockquote>
+
+<h2 id="build-by-tag">Build by Tag</h2>
+
+<p>正式版本类库我们只想被 tag 触发。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git tag v1.0.0
+git push origin v1.0.0
+</code></pre></div></div>
+
+<p>可以添加 <code class="language-plaintext highlighter-rouge">only: tags</code> 触发标记，整体如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">mvn-deploy</span>
+
+<span class="na">build</span><span class="pi">:</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">mvn-deploy</span>
+  <span class="na">only</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">tags</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">mkdir -p ~/.m2/repository</span>
+    <span class="pi">-</span> <span class="s">apt update</span>
+    <span class="pi">-</span> <span class="s">apt install unzip</span>
+    <span class="pi">-</span> <span class="s">cd /tmp</span>
+    <span class="pi">-</span> <span class="s">curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"</span>
+    <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
+    <span class="pi">-</span> <span class="s">./aws/install</span>
+    <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
+    <span class="pi">-</span> <span class="s">echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;s/ARTIFACT_URL/${ARTIFACT_URL}/g' &gt; ~/.m2/settings.xml</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
+    <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p>请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的 build。</p>
+
+  <p>这个可以修改，在项目的 Settings -&gt; Repository -&gt; Protected tags，可以将 tag 为 <code class="language-plaintext highlighter-rouge">v*</code> 或者 <code class="language-plaintext highlighter-rouge">*-release</code> 的保护起来。</p>
+
+  <p>您需要查询一下 <code class="language-plaintext highlighter-rouge">v*</code>，然后选择最底下的 create v* 才能创建匹配规则。</p>
+</blockquote>
+
+<p>同时 Java 项目的 pom.xml 可以写成这样：</p>
+
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="nt">&lt;project</span> <span class="na">xmlns=</span><span class="s">"http://maven.apache.org/POM/4.0.0"</span>
+    <span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span> <span class="na">xsi:schemaLocation=</span><span class="s">"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;modelVersion&gt;</span>4.0.0<span class="nt">&lt;/modelVersion&gt;</span>
+
+    <span class="nt">&lt;groupId&gt;</span>com.amazon.devax<span class="nt">&lt;/groupId&gt;</span>
+    <span class="nt">&lt;artifactId&gt;</span>eshop-commons<span class="nt">&lt;/artifactId&gt;</span>
+    <span class="nt">&lt;version&gt;</span>${version}<span class="nt">&lt;/version&gt;</span>
+
+    <span class="nt">&lt;packaging&gt;</span>jar<span class="nt">&lt;/packaging&gt;</span>
+    <span class="nt">&lt;properties&gt;</span>
+        <span class="nt">&lt;version</span> <span class="na">default-value=</span><span class="s">"1.0.0-SNAPSHOT"</span><span class="nt">&gt;</span>${env.CI_COMMIT_TAG}<span class="nt">&lt;/version&gt;</span>
+    <span class="nt">&lt;/properties&gt;</span>
+
+    <span class="nt">&lt;dependencies&gt;</span>
+    <span class="nt">&lt;/dependencies&gt;</span>
+    <span class="nt">&lt;distributionManagement&gt;</span>
+        <span class="nt">&lt;repository&gt;</span>
+            <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
+            <span class="nt">&lt;url&gt;</span>${env.ARTIFACT_URL}<span class="nt">&lt;/url&gt;</span>
+        <span class="nt">&lt;/repository&gt;</span>
+    <span class="nt">&lt;/distributionManagement&gt;</span>
+<span class="nt">&lt;/project&gt;</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>version 这个属性，取了 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。</li>
+  <li>最后 deploy 的时候，版本号就会和 git 的 tag 保持一致。</li>
+</ul>
+
+<hr />
+
+<p>参考文档：</p>
+
+<ul>
+  <li><a href="https://docs.gitlab.com/ee/user/packages/maven_repository/">Maven packages in the Package Repository</a></li>
+  <li><a href="https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html">安装或更新最新版本的 AWS CLI</a></li>
+  <li><a href="https://docs.aws.amazon.com/codeartifact/latest/ug/maven-mvn.html">Use CodeArtifact with mvn</a></li>
+</ul>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。]]></summary></entry><entry><title type="html">在 AWS EKS 中部署 Gitlab</title><link href="https://youbug.cn/2022/12/gitlab-in-eks.html" rel="alternate" type="text/html" title="在 AWS EKS 中部署 Gitlab" /><published>2022-12-10T09:50:33+00:00</published><updated>2022-12-10T09:50:33+00:00</updated><id>https://youbug.cn/2022/12/gitlab-in-eks</id><content type="html" xml:base="https://youbug.cn/2022/12/gitlab-in-eks.html"><![CDATA[<p>本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。</p>
 
 <h2 id="在-aws-部署-gitlab-的前提条件">在 AWS 部署 Gitlab 的前提条件</h2>
 
@@ -1856,184 +2027,4 @@ airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
     <span class="nt">--end-date</span> 2015-06-07
 </code></pre></div></div>
 
-<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name>啤酒云</name></author><category term="data" /><category term="调度平台," /><category term="大数据," /><category term="airflow" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry><entry><title type="html">使用 CDK 安装 Karpenter 新版</title><link href="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html" rel="alternate" type="text/html" title="使用 CDK 安装 Karpenter 新版" /><published>2022-11-30T13:49:06+00:00</published><updated>2022-11-30T13:49:06+00:00</updated><id>https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2</id><content type="html" xml:base="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html"><![CDATA[<p>本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。</p>
-
-<h2 id="cdk-和-karpenter-分别是什么">CDK 和 Karpenter 分别是什么</h2>
-
-<p>这个问题先不细说了吧，后面会发文章补。</p>
-
-<p>可以去相应官方网站查看：</p>
-
-<p><a href="https://aws.amazon.com/cn/cdk/">CDK</a></p>
-
-<p><a href="https://karpenter.sh/">Karpenter</a></p>
-
-<p>反正好有一比：</p>
-
-<ul>
-  <li>CDK 类似于 terraform。</li>
-  <li>Karpenter 就是 K8S 的节点伸缩器。</li>
-</ul>
-
-<h2 id="适用性">适用性</h2>
-
-<p>CDK 和 Karpenter 当下这个时间点正在以天为单位 <strong>疯狂发版</strong>，所以这篇文章具有时效性。</p>
-
-<p>当前最新版本为：</p>
-
-<p>CDK 的版本为：<strong>2.53.0</strong></p>
-
-<p>Karpenter 的版本为： <strong>v0.19.2</strong></p>
-
-<h2 id="show-me-the-code">Show me the code</h2>
-
-<p>先上代码为敬！</p>
-
-<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Cluster</span><span class="p">,</span> <span class="nx">HelmChart</span><span class="p">,</span> <span class="nx">KubernetesManifest</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">aws-cdk-lib/aws-eks</span><span class="dl">"</span><span class="p">;</span>
-<span class="k">import</span> <span class="p">{</span> <span class="nx">CfnInstanceProfile</span><span class="p">,</span> <span class="nx">CfnServiceLinkedRole</span><span class="p">,</span> <span class="nx">IRole</span><span class="p">,</span> <span class="nx">ManagedPolicy</span><span class="p">,</span> <span class="nx">PolicyDocument</span><span class="p">,</span> <span class="nx">Role</span><span class="p">,</span> <span class="nx">ServicePrincipal</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">aws-cdk-lib/aws-iam</span><span class="dl">"</span><span class="p">;</span>
-
-<span class="kd">const</span> <span class="nx">KarpenterControllerPolicy</span> <span class="o">=</span> <span class="p">{</span>
-  <span class="dl">"</span><span class="s2">Version</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">2012-10-17</span><span class="dl">"</span><span class="p">,</span>
-  <span class="dl">"</span><span class="s2">Statement</span><span class="dl">"</span><span class="p">:</span> <span class="p">[</span>
-    <span class="p">{</span>
-      <span class="dl">"</span><span class="s2">Effect</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Allow</span><span class="dl">"</span><span class="p">,</span>
-      <span class="dl">"</span><span class="s2">Action</span><span class="dl">"</span><span class="p">:</span> <span class="p">[</span>
-        <span class="dl">"</span><span class="s2">ec2:CreateLaunchTemplate</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:CreateFleet</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:RunInstances</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:CreateTags</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:TerminateInstances</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DeleteLaunchTemplate</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeLaunchTemplates</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeInstances</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeSecurityGroups</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeSubnets</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeImages</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeInstanceTypes</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeInstanceTypeOfferings</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeAvailabilityZones</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ssm:GetParameter</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">pricing:GetProducts</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">ec2:DescribeSpotPriceHistory</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">sqs:DeleteMessage</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">sqs:GetQueueUrl</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">sqs:GetQueueAttributes</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">sqs:ReceiveMessage</span><span class="dl">"</span><span class="p">,</span>
-        <span class="dl">"</span><span class="s2">iam:PassRole</span><span class="dl">"</span><span class="p">,</span>
-      <span class="p">],</span>
-      <span class="dl">"</span><span class="s2">Resource</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">*</span><span class="dl">"</span>
-    <span class="p">}</span>
-  <span class="p">]</span>
-<span class="p">};</span>
-
-
-<span class="k">export</span> <span class="kd">class</span> <span class="nx">KarpenterAddon</span> <span class="p">{</span>
-  <span class="nl">cluster</span><span class="p">:</span> <span class="nx">Cluster</span><span class="p">;</span>
-  <span class="kd">constructor</span><span class="p">(</span><span class="nx">cluster</span><span class="p">:</span> <span class="nx">Cluster</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span> <span class="o">=</span> <span class="nx">cluster</span><span class="p">;</span>
-
-
-    <span class="k">this</span><span class="p">.</span><span class="nx">createNodeRole</span><span class="p">();</span>
-    <span class="k">this</span><span class="p">.</span><span class="nx">createKarpeter</span><span class="p">();</span>
-  <span class="p">}</span>
-
-  <span class="nx">createNodeRole</span><span class="p">()</span> <span class="p">{</span>
-    <span class="k">new</span> <span class="nx">CfnServiceLinkedRole</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">SpotSLR</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">awsServiceName</span><span class="p">:</span> <span class="dl">'</span><span class="s1">spot.amazonaws.com</span><span class="dl">'</span><span class="p">,</span>
-    <span class="p">});</span>
-    <span class="kd">const</span> <span class="nx">karpenterNodeRole</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Role</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">karpenter-node-role</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">assumedBy</span><span class="p">:</span> <span class="k">new</span> <span class="nx">ServicePrincipal</span><span class="p">(</span><span class="s2">`ec2.</span><span class="p">${</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">stack</span><span class="p">.</span><span class="nx">urlSuffix</span><span class="p">}</span><span class="s2">`</span><span class="p">),</span>
-      <span class="na">managedPolicies</span><span class="p">:</span> <span class="p">[</span>
-        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonEKSWorkerNodePolicy</span><span class="dl">"</span><span class="p">),</span>
-        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonEKS_CNI_Policy</span><span class="dl">"</span><span class="p">),</span>
-        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonEC2ContainerRegistryReadOnly</span><span class="dl">"</span><span class="p">),</span>
-        <span class="nx">ManagedPolicy</span><span class="p">.</span><span class="nx">fromAwsManagedPolicyName</span><span class="p">(</span><span class="dl">"</span><span class="s2">AmazonSSMManagedInstanceCore</span><span class="dl">"</span><span class="p">),</span>
-      <span class="p">],</span>
-      <span class="na">roleName</span><span class="p">:</span> <span class="dl">'</span><span class="s1">KarpenterNodeRole-</span><span class="dl">'</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span>
-    <span class="p">});</span>
-
-    <span class="k">new</span> <span class="nx">CfnInstanceProfile</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">roles</span><span class="p">:</span> <span class="p">[</span><span class="nx">karpenterNodeRole</span><span class="p">.</span><span class="nx">roleName</span><span class="p">],</span>
-      <span class="na">instanceProfileName</span><span class="p">:</span> <span class="dl">'</span><span class="s1">KarpenterNodeInstanceProfile-</span><span class="dl">'</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span>
-    <span class="p">});</span>
-
-    <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">awsAuth</span><span class="p">.</span><span class="nx">addRoleMapping</span><span class="p">(</span><span class="nx">karpenterNodeRole</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">groups</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">system:bootstrapper</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">system:nodes</span><span class="dl">'</span><span class="p">],</span>
-      <span class="na">username</span><span class="p">:</span> <span class="dl">'</span><span class="s1">system:node:</span><span class="dl">'</span>
-    <span class="p">});</span>
-  <span class="p">}</span>
-
-  <span class="nx">createKarpeter</span><span class="p">()</span> <span class="p">{</span>
-
-    <span class="kd">const</span> <span class="nx">ns</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">KubernetesManifest</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">"</span><span class="s2">karpenter-ns</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">cluster</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span>
-      <span class="na">manifest</span><span class="p">:</span> <span class="p">[{</span>
-        <span class="na">apiVersion</span><span class="p">:</span> <span class="dl">'</span><span class="s1">v1</span><span class="dl">'</span><span class="p">,</span>
-        <span class="na">kind</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Namespace</span><span class="dl">'</span><span class="p">,</span>
-        <span class="na">metadata</span><span class="p">:</span> <span class="p">{</span>
-          <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span>
-        <span class="p">}</span>
-      <span class="p">}],</span>
-      <span class="na">overwrite</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-      <span class="na">prune</span><span class="p">:</span> <span class="kc">true</span>
-    <span class="p">});</span>
-
-    <span class="kd">const</span> <span class="nx">sa</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">addServiceAccount</span><span class="p">(</span><span class="dl">"</span><span class="s2">karpenter-sa</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span>
-      <span class="na">namespace</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span>
-    <span class="p">});</span>
-    <span class="nx">sa</span><span class="p">.</span><span class="nx">role</span><span class="p">.</span><span class="nx">addManagedPolicy</span><span class="p">(</span><span class="k">new</span> <span class="nx">ManagedPolicy</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">'</span><span class="s1">karpenter-node-policy</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">document</span><span class="p">:</span> <span class="nx">PolicyDocument</span><span class="p">.</span><span class="nx">fromJson</span><span class="p">(</span><span class="nx">KarpenterControllerPolicy</span><span class="p">),</span>
-    <span class="p">}))</span>
-    <span class="nx">sa</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">addDependency</span><span class="p">(</span><span class="nx">ns</span><span class="p">);</span>
-
-    <span class="kd">const</span> <span class="nx">helm</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">HelmChart</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span> <span class="dl">"</span><span class="s2">karpenter-chart</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">cluster</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">,</span>
-      <span class="na">namespace</span><span class="p">:</span> <span class="dl">'</span><span class="s1">karpenter</span><span class="dl">'</span><span class="p">,</span>
-      <span class="na">chart</span><span class="p">:</span> <span class="dl">'</span><span class="s1">oci://public.ecr.aws/karpenter/karpenter</span><span class="dl">'</span><span class="p">,</span>
-      <span class="na">repository</span><span class="p">:</span> <span class="dl">'</span><span class="s1">oci://public.ecr.aws/karpenter/karpenter</span><span class="dl">'</span><span class="p">,</span>
-      <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">karpenter</span><span class="dl">"</span><span class="p">,</span>
-      <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">v0.19.2</span><span class="dl">"</span><span class="p">,</span>
-      <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
-        <span class="na">serviceAccount</span><span class="p">:</span> <span class="p">{</span>
-          <span class="na">create</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-          <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">karpenter</span><span class="dl">"</span>
-        <span class="p">},</span>
-        <span class="dl">"</span><span class="s2">serviceAccount.annotations</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
-          <span class="dl">"</span><span class="s2">eks.amazonaws.com/role-arn</span><span class="dl">"</span><span class="p">:</span> <span class="nx">sa</span><span class="p">.</span><span class="nx">role</span><span class="p">.</span><span class="nx">roleArn</span>
-        <span class="p">},</span>
-        <span class="na">settings</span><span class="p">:</span> <span class="p">{</span>
-          <span class="na">aws</span><span class="p">:</span> <span class="p">{</span>
-            <span class="na">clusterEndpoint</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterEndpoint</span><span class="p">,</span>
-            <span class="na">clusterName</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span><span class="p">,</span>
-            <span class="na">defaultInstanceProfile</span><span class="p">:</span> <span class="dl">'</span><span class="s1">KarpenterNodeInstanceProfile-</span><span class="dl">'</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">clusterName</span><span class="p">,</span>
-          <span class="p">}</span>
-        <span class="p">}</span>
-      <span class="p">}</span>
-    <span class="p">});</span>
-    <span class="nx">helm</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">addDependency</span><span class="p">(</span><span class="nx">ns</span><span class="p">);</span>
-    <span class="nx">helm</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">addDependency</span><span class="p">(</span><span class="nx">sa</span><span class="p">);</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>上面的代码大概过程如下：</p>
-
-<ul>
-  <li>创建一个角色，这个拥有角色有 <code class="language-plaintext highlighter-rouge">AmazonEKSWorkerNodePolicy</code> <code class="language-plaintext highlighter-rouge">AmazonEKS_CNI_Policy</code> <code class="language-plaintext highlighter-rouge">AmazonEC2ContainerRegistryReadOnly</code> <code class="language-plaintext highlighter-rouge">AmazonSSMManagedInstanceCore</code> 几个预设策略。 未来 Kapenter 会将这个角色赋予 Node。</li>
-  <li>在 karpenter 这个命名空间下创建一系列资源，包括：
-    <ul>
-      <li>IRSA：将 K8S 的 Service Account 与 IAM 的 Role 建立关联。</li>
-      <li>通过 Helm 安装 Karpenter。</li>
-    </ul>
-  </li>
-</ul>
-
-<h2 id="上面代码的坑">上面代码的坑</h2>
-
-<p>坑主要集中在 Helm 图样的安装：</p>
-
-<ol>
-  <li>CDK 的 HelmChart 对于 oci 库的支持处于起步阶段，经过多次试验以及阅读相关源码，才确认写法：<code class="language-plaintext highlighter-rouge">chart: 'oci://public.ecr.aws/karpenter/karpenter'</code>，<code class="language-plaintext highlighter-rouge">repository: 'oci://public.ecr.aws/karpenter/karpenter'</code>。</li>
-  <li>Karpenter HelmChart 对于 values 的写法，这个和官网不一样，如果按照 terraform 的写法会完全无效，terraform 的写法是：”settings.aws.clusterEndpoint”，而这里的写法<strong>必须是</strong> JSON 格式。</li>
-</ol>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="iac," /><category term="aws" /><category term="kubernetes," /><category term="自动伸缩," /><category term="karpenter," /><category term="cdk," /><category term="iam" /><summary type="html"><![CDATA[本文记录了使用 CDK (2.53.0) 安装 Karpenter (v0.19.2) 的方法。]]></summary></entry></feed>
+<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name>啤酒云</name></author><category term="data" /><category term="调度平台," /><category term="大数据," /><category term="airflow" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry></feed>

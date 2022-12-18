@@ -45,7 +45,7 @@ terraform {
 
 对于已经创建资源，在 terraform 中，通常使用 data 去查询，如下代码，只需要指定 集群的 名字就可以查询到集群的信息：
 
-```hcl
+```terraform
 data "aws_eks_cluster" "main" {
   name = var.cluster_name
 }
@@ -163,7 +163,7 @@ YAML
 
 在集群内创建了一个 namespace。
 
-由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 `kubectl_file_documents` 将一大段资源结构成单个资源数组。
+由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 `kubectl_file_documents` 将一大段资源解构成单个资源数组。
 
 ```terraform
 

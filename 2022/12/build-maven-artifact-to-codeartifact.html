@@ -126,7 +126,7 @@
       <span class="nt">&lt;repositories&gt;</span>
         <span class="nt">&lt;repository&gt;</span>
           <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
-          <span class="nt">&lt;url&gt;</span>ARTIFACT_URL<span class="nt">&lt;/url&gt;</span>
+          <span class="nt">&lt;url&gt;</span>$${ARTIFACT_URL}<span class="nt">&lt;/url&gt;</span>
         <span class="nt">&lt;/repository&gt;</span>
       <span class="nt">&lt;/repositories&gt;</span>
     <span class="nt">&lt;/profile&gt;</span>
@@ -135,7 +135,7 @@
     <span class="nt">&lt;server&gt;</span>
       <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
       <span class="nt">&lt;username&gt;</span>aws<span class="nt">&lt;/username&gt;</span>
-      <span class="nt">&lt;password&gt;</span>CODEARTIFACT_AUTH_TOKEN<span class="nt">&lt;/password&gt;</span>
+      <span class="nt">&lt;password&gt;</span>$${CODEARTIFACT_AUTH_TOKEN}<span class="nt">&lt;/password&gt;</span>
     <span class="nt">&lt;/server&gt;</span>
   <span class="nt">&lt;/servers&gt;</span>
 <span class="nt">&lt;/settings&gt;</span>
@@ -143,8 +143,8 @@
 
 <ul>
   <li>此变量会以环境变量 <code class="language-plaintext highlighter-rouge">M2_SETTINGS</code> 出现在 Pod 中。</li>
-  <li>这个 <code class="language-plaintext highlighter-rouge">&lt;password&gt;CODEARTIFACT_AUTH_TOKEN&lt;/password&gt;</code> 和 <code class="language-plaintext highlighter-rouge">&lt;url&gt;ARTIFACT_URL&lt;/url&gt;</code> 会在 CI 的过程中替换掉。</li>
-  <li>这里不能用 <code class="language-plaintext highlighter-rouge">${CODEARTIFACT_AUTH_TOKEN}</code> 这样方式，会被 CI 过程替提前换掉。</li>
+  <li>ARTIFACT_URL 会直接被 Gitlab 的替换，CODEARTIFACT_AUTH_TOKEN 会在 CI 过程中动态获取。</li>
+  <li>这里不能用 <code class="language-plaintext highlighter-rouge">${CODEARTIFACT_AUTH_TOKEN}</code> 这样方式，会被 CI 过程替提前换掉，转义字符是 <strong>$$</strong>。</li>
 </ul>
 
 <h2 id="设置-gitlab-ci">设置 Gitlab CI</h2>
@@ -166,7 +166,6 @@
     <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
     <span class="pi">-</span> <span class="s">./aws/install</span>
     <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
-    <span class="pi">-</span> <span class="s">echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;" -e "s/ARTIFACT_URL/${ARTIFACT_URL}/g' &gt; ~/.m2/settings.xml</span>
   <span class="na">script</span><span class="pi">:</span>
     <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
     <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
@@ -218,7 +217,6 @@ git push origin v1.0.0
     <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
     <span class="pi">-</span> <span class="s">./aws/install</span>
     <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
-    <span class="pi">-</span> <span class="s">echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;s/ARTIFACT_URL/${ARTIFACT_URL}/g' &gt; ~/.m2/settings.xml</span>
   <span class="na">script</span><span class="pi">:</span>
     <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
     <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>

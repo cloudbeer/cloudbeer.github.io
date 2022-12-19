@@ -1,4 +1,390 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-12T14:02:47+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact</title><link href="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html" rel="alternate" type="text/html" title="使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact" /><published>2022-12-12T12:59:33+00:00</published><updated>2022-12-12T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact</id><content type="html" xml:base="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html"><![CDATA[<p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-19T03:56:32+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" rel="alternate" type="text/html" title="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" /><published>2022-12-19T03:40:33+00:00</published><updated>2022-12-19T03:40:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"><![CDATA[<p>Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。</p>
+
+<h2 id="安装-gitlab-runner">安装 Gitlab runner</h2>
+
+<p>首先，我们需要为 Gitlab runner 打一个标签。这里我设置了标签为 arm。稍后我们会将任务调度到这个 runner。</p>
+
+<p>下面是 CDK 代码:</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">0.48.0</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+  <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">runnerRegistrationToken</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-runner-token&gt;</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">gitlabUrl</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-gitlab-url&gt;</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="na">rbac</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">create</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="na">rules</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">watch</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/exec</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/log</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/attach</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">secrets</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">configmaps</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">}</span>
+      <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">tags</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm, mass</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">runUntagged</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="na">helpers</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">image</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab/gitlab-runner-helper:arm64-v14.10.2</span><span class="dl">"</span>
+      <span class="p">},</span>
+      <span class="na">config</span><span class="p">:</span> <span class="s2">`
+    [[runners]]
+    name = "arm-runner"
+    environment = ["FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=true"]
+    executor = "kubernetes"
+    [runners.kubernetes]
+      image = "ubuntu:22.04"
+      privileged = true
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "docker-certs"
+      mount_path = "/certs/client"
+      medium = "Memory"
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "dind-storage"
+      mount_path = "/var/lib/docker"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-modules"
+      mount_path = "/lib/modules"
+      read_only = true
+      host_path = "/lib/modules"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-hosts"
+      mount_path = "/etc/hosts"
+      read_only = true
+      host_path = "/etc/hosts"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-cgroup"
+      mount_path = "/sys/fs/cgroup"
+      host_path = "/sys/fs/cgroup"
+    [runners.kubernetes.node_selector]
+      "karpenter-arch" = "arm64" 
+    `</span>
+    <span class="p">},</span>
+  <span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>配置中需要着重关注以下:</p>
+
+<ul>
+  <li>在 ARM 环境下，需要指定 gitlab-runner-helper 的镜像，因为 这个镜像是单架构的，而默认的图样使的是 X86 的镜像。这个镜像会作为 构建任务的 sidecar 运行。</li>
+  <li><code class="language-plaintext highlighter-rouge">FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY</code> 必须设置为 true 才能调度 pod 任务。</li>
+  <li>配置中 <code class="language-plaintext highlighter-rouge">[runners.kubernetes.node_selector]</code> 是为 K8S 调度做准备的，此处表示后续的构建任务会调度到相应 tag 的 node 节点。</li>
+</ul>
+
+<h2 id="kapennter-节点池">Kapennter 节点池</h2>
+
+<p><a href="https://karpenter.sh/">Karpenter</a>  是 AWS 最新的节点伸缩工具，非常好用。</p>
+
+<p>Kapennter 的安装和入门就不做过多说明了。直接看代码：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.sh/v1alpha5</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Provisioner</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">arm-builder</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">requirements</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">karpenter.k8s.aws/instance-category"</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">c"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">m"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">r"</span><span class="pi">]</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">karpenter.sh/capacity-type</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">spot"</span><span class="pi">]</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">kubernetes.io/arch"</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">arm64"</span><span class="pi">]</span>
+  <span class="na">limits</span><span class="pi">:</span>
+    <span class="na">resources</span><span class="pi">:</span>
+      <span class="na">cpu</span><span class="pi">:</span> <span class="m">1000</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">karpenter-arch</span><span class="pi">:</span> <span class="s">arm64</span>
+  <span class="na">providerRef</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="na">ttlSecondsAfterEmpty</span><span class="pi">:</span> <span class="m">30</span>
+
+<span class="nn">---</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.k8s.aws/v1alpha1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">AWSNodeTemplate</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">amiFamily</span><span class="pi">:</span> <span class="s">Bottlerocket</span>
+  <span class="na">subnetSelector</span><span class="pi">:</span>
+    <span class="s2">"</span><span class="s">aws:cloudformation:stack-name"</span><span class="err">:</span> <span class="s">gitlab</span>
+    <span class="s">"aws-cdk:subnet-type": Private</span>
+  <span class="na">securityGroupSelector</span><span class="pi">:</span>
+    <span class="s2">"</span><span class="s">kubernetes.io/cluster/gitlab"</span><span class="err">:</span> <span class="s">owned</span>
+
+</code></pre></div></div>
+
+<p>代码说明:</p>
+
+<ul>
+  <li>创建了节点池(Provisioner)，可以指定节点的机型范围，CPU 类型，付费类型等。指定 arm 就可以选择 Graviton 机型，指定 spot 可以只购买竞价实例。</li>
+  <li>这里建议使用 Bottlerocket 作为 node 的操作系统，使用 Amazon Linux 会抛出一个无法解析 git 仓库的地址的错误。</li>
+</ul>
+
+<h2 id="gitlab-ci-配置">Gitlab CI 配置</h2>
+
+<p>现在需要将构建任务调度到这个 runner 上。</p>
+
+<p>下面是 .gitlab-ci.yml 的示例：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">Build</span>
+
+<span class="na">frontend-build</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">Build</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">node:16.16.0-alpine</span>
+  <span class="na">tags</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">arm</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">npm install</span>
+    <span class="pi">-</span> <span class="s">npm run build</span>
+  <span class="na">artifacts</span><span class="pi">:</span>
+    <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">build/</span>
+</code></pre></div></div>
+
+<p>上面的代码很简单，只需要给构建任务指定 tags 标签即可</p>
+
+<h2 id="总结">总结</h2>
+
+<p>通过以上的三段配置，整体的 CI 流程如下：</p>
+
+<p>触发 Gitlab 构建 -&gt; 寻找有 arm 标记的 runner -&gt; 启动构建任务(pod) -&gt; 寻找 <code class="language-plaintext highlighter-rouge">karpenter-arch: arm64</code> 的节点 -&gt; 没有符合条件的节点，pod pending -&gt; Karpenter 购买 arm + spot 节点 -&gt; 构建任务开始调度成功 -&gt; 执行构建任务 -&gt; 任务结束，释放 node 节点。</p>
+
+<p>如图：</p>
+
+<p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
+
+<p>Karpenter 会购买最便宜的机型，全新节点的购买时间约 1 分 30 秒。</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。]]></summary></entry><entry><title type="html">The cheapest way to build applications (Gitlab CI) on AWS</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-en.html" rel="alternate" type="text/html" title="The cheapest way to build applications (Gitlab CI) on AWS" /><published>2022-12-18T12:59:33+00:00</published><updated>2022-12-18T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-en</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-en.html"><![CDATA[<p>Graviton (ARM) is the most cost-effective in AWS (up to 40% savings), while Spot instances are suitable for task-type workloads and can save up to 90%. Gitlab Runner can easily schedule build tasks to Graviton + Spot instances.</p>
+
+<h2 id="config-gitlab-runner">Config Gitlab runner</h2>
+
+<p>First, we need to tag the Gitlab runner. Here I set the tag to arm. Later we will schedule the task to the runner.</p>
+
+<p>Here is the CDK code:</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">0.48.0</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+  <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">runnerRegistrationToken</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-runner-token&gt;</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">gitlabUrl</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-gitlab-url&gt;</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="na">rbac</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">create</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="na">rules</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">watch</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/exec</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/log</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/attach</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">secrets</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">configmaps</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">}</span>
+      <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">tags</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm, mass</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">runUntagged</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="na">helpers</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">image</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab/gitlab-runner-helper:arm64-v14.10.2</span><span class="dl">"</span>
+      <span class="p">},</span>
+      <span class="na">config</span><span class="p">:</span> <span class="s2">`
+    [[runners]]
+    name = "arm-runner"
+    environment = ["FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=true"]
+    executor = "kubernetes"
+    [runners.kubernetes]
+      image = "ubuntu:22.04"
+      privileged = true
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "docker-certs"
+      mount_path = "/certs/client"
+      medium = "Memory"
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "dind-storage"
+      mount_path = "/var/lib/docker"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-modules"
+      mount_path = "/lib/modules"
+      read_only = true
+      host_path = "/lib/modules"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-hosts"
+      mount_path = "/etc/hosts"
+      read_only = true
+      host_path = "/etc/hosts"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-cgroup"
+      mount_path = "/sys/fs/cgroup"
+      host_path = "/sys/fs/cgroup"
+    [runners.kubernetes.node_selector]
+      "karpenter-arch" = "arm64" 
+    `</span>
+    <span class="p">},</span>
+  <span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>Some notices:</p>
+
+<ul>
+  <li>Under ARM env, we need to specify the gitlab-runner-helper image, because the helper image is single-arch, default pattern is X86. This image will run as a sidecar for the build task.</li>
+  <li><code class="language-plaintext highlighter-rouge">FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY</code> must be sett to true to execute pod.</li>
+  <li><code class="language-plaintext highlighter-rouge">[runners.kubernetes.node_selector]</code> is prepared for K8S pod scheduling, which means the build tasks will be scheduled to the node node of the corresponding tag.</li>
+</ul>
+
+<h2 id="karpenter-provisioner">Karpenter Provisioner</h2>
+
+<p><a href="https://karpenter.sh/">Karpenter</a> is a K8S node auto scaler built by AWS.</p>
+
+<p>Here is the Karpenter Provisioner code.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.sh/v1alpha5</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Provisioner</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">arm-builder</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">requirements</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">karpenter.k8s.aws/instance-category"</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">c"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">m"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">r"</span><span class="pi">]</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">karpenter.sh/capacity-type</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">spot"</span><span class="pi">]</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">kubernetes.io/arch"</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">arm64"</span><span class="pi">]</span>
+  <span class="na">limits</span><span class="pi">:</span>
+    <span class="na">resources</span><span class="pi">:</span>
+      <span class="na">cpu</span><span class="pi">:</span> <span class="m">1000</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">karpenter-arch</span><span class="pi">:</span> <span class="s">arm64</span>
+  <span class="na">providerRef</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="na">ttlSecondsAfterEmpty</span><span class="pi">:</span> <span class="m">30</span>
+
+
+<span class="nn">---</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.k8s.aws/v1alpha1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">AWSNodeTemplate</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">amiFamily</span><span class="pi">:</span> <span class="s">Bottlerocket</span>
+  <span class="na">subnetSelector</span><span class="pi">:</span>
+    <span class="s2">"</span><span class="s">aws:cloudformation:stack-name"</span><span class="err">:</span> <span class="s">gitlab</span>
+    <span class="s">"aws-cdk:subnet-type": Private</span>
+  <span class="na">securityGroupSelector</span><span class="pi">:</span>
+    <span class="s2">"</span><span class="s">kubernetes.io/cluster/gitlab"</span><span class="err">:</span> <span class="s">owned</span>
+
+</code></pre></div></div>
+
+<p>Notices:</p>
+
+<ul>
+  <li>You can specify instance categories, CPU types, payment types, etc.</li>
+  <li>We choose arm cpu and spot capacity type, this combination is the cheapest.</li>
+  <li>It is recommended to use Bottlerocket as the os of node. Using Amazon Linux will throw an error that “Cannot resolve DNS address of the git repository”.</li>
+</ul>
+
+<h2 id="gitlab-ci-config">Gitlab CI config</h2>
+
+<p>Now we need to schedule the build task to this runner.</p>
+
+<p>Here is an example <code class="language-plaintext highlighter-rouge">.gitlab-ci.yml</code> code:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">Build</span>
+
+<span class="na">frontend-build</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">Build</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">node:16.16.0-alpine</span>
+  <span class="na">tags</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">arm</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">npm install</span>
+    <span class="pi">-</span> <span class="s">npm run build</span>
+  <span class="na">artifacts</span><span class="pi">:</span>
+    <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">build/</span>
+</code></pre></div></div>
+
+<p>You only need to specify the tags for the build task.</p>
+
+<h2 id="summary">Summary</h2>
+
+<p>Through the above three configurations, the overall CI process is as follows:</p>
+
+<p>Trigger Gitlab build -&gt; Look for runner with arm tag -&gt; Start build task (pod) -&gt; Look for <code class="language-plaintext highlighter-rouge">karpenter-arch: arm64</code> node -&gt; No arm node, pod pending -&gt; Karpenter purchase arm + spot node -&gt; The build task starts -&gt; The task ends and the node is released.</p>
+
+<p>As shown in the figure below:</p>
+
+<p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
+
+<p>A whole new node purchase time is about 1 min 30s, Karpenter will always look for the cheapest instance.</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton (ARM) is the most cost-effective in AWS (up to 40% savings), while Spot instances are suitable for task-type workloads and can save up to 90%. Gitlab Runner can easily schedule build tasks to Graviton + Spot instances.]]></summary></entry><entry><title type="html">使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact</title><link href="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html" rel="alternate" type="text/html" title="使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact" /><published>2022-12-12T12:59:33+00:00</published><updated>2022-12-12T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact</id><content type="html" xml:base="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html"><![CDATA[<p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
 
 <h2 id="创建-codeartifact">创建 CodeArtifact</h2>
 
@@ -26,7 +412,7 @@
       <span class="nt">&lt;repositories&gt;</span>
         <span class="nt">&lt;repository&gt;</span>
           <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
-          <span class="nt">&lt;url&gt;</span>ARTIFACT_URL<span class="nt">&lt;/url&gt;</span>
+          <span class="nt">&lt;url&gt;</span>$${ARTIFACT_URL}<span class="nt">&lt;/url&gt;</span>
         <span class="nt">&lt;/repository&gt;</span>
       <span class="nt">&lt;/repositories&gt;</span>
     <span class="nt">&lt;/profile&gt;</span>
@@ -35,7 +421,7 @@
     <span class="nt">&lt;server&gt;</span>
       <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
       <span class="nt">&lt;username&gt;</span>aws<span class="nt">&lt;/username&gt;</span>
-      <span class="nt">&lt;password&gt;</span>CODEARTIFACT_AUTH_TOKEN<span class="nt">&lt;/password&gt;</span>
+      <span class="nt">&lt;password&gt;</span>$${CODEARTIFACT_AUTH_TOKEN}<span class="nt">&lt;/password&gt;</span>
     <span class="nt">&lt;/server&gt;</span>
   <span class="nt">&lt;/servers&gt;</span>
 <span class="nt">&lt;/settings&gt;</span>
@@ -43,8 +429,8 @@
 
 <ul>
   <li>此变量会以环境变量 <code class="language-plaintext highlighter-rouge">M2_SETTINGS</code> 出现在 Pod 中。</li>
-  <li>这个 <code class="language-plaintext highlighter-rouge">&lt;password&gt;CODEARTIFACT_AUTH_TOKEN&lt;/password&gt;</code> 和 <code class="language-plaintext highlighter-rouge">&lt;url&gt;ARTIFACT_URL&lt;/url&gt;</code> 会在 CI 的过程中替换掉。</li>
-  <li>这里不能用 <code class="language-plaintext highlighter-rouge">${CODEARTIFACT_AUTH_TOKEN}</code> 这样方式，会被 CI 过程替提前换掉。</li>
+  <li>ARTIFACT_URL 会直接被 Gitlab 的替换，CODEARTIFACT_AUTH_TOKEN 会在 CI 过程中动态获取。</li>
+  <li>这里不能用 <code class="language-plaintext highlighter-rouge">${CODEARTIFACT_AUTH_TOKEN}</code> 这样方式，会被 CI 过程替提前换掉，转义字符是 <strong>$$</strong>。</li>
 </ul>
 
 <h2 id="设置-gitlab-ci">设置 Gitlab CI</h2>
@@ -66,7 +452,6 @@
     <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
     <span class="pi">-</span> <span class="s">./aws/install</span>
     <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
-    <span class="pi">-</span> <span class="s">echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;" -e "s/ARTIFACT_URL/${ARTIFACT_URL}/g' &gt; ~/.m2/settings.xml</span>
   <span class="na">script</span><span class="pi">:</span>
     <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
     <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
@@ -118,7 +503,6 @@ git push origin v1.0.0
     <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
     <span class="pi">-</span> <span class="s">./aws/install</span>
     <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
-    <span class="pi">-</span> <span class="s">echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;s/ARTIFACT_URL/${ARTIFACT_URL}/g' &gt; ~/.m2/settings.xml</span>
   <span class="na">script</span><span class="pi">:</span>
     <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
     <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
@@ -604,8 +988,8 @@ Job succeeded
 
 <p>对于已经创建资源，在 terraform 中，通常使用 data 去查询，如下代码，只需要指定 集群的 名字就可以查询到集群的信息：</p>
 
-<div class="language-hcl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">data</span> <span class="s2">"aws_eks_cluster"</span> <span class="s2">"main"</span> <span class="p">{</span>
-  <span class="nx">name</span> <span class="p">=</span> <span class="nx">var</span><span class="err">.</span><span class="nx">cluster_name</span>
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">data</span> <span class="s2">"aws_eks_cluster"</span> <span class="s2">"main"</span> <span class="p">{</span>
+  <span class="nx">name</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
@@ -718,7 +1102,7 @@ metadata:
 
 <p>在集群内创建了一个 namespace。</p>
 
-<p>由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 <code class="language-plaintext highlighter-rouge">kubectl_file_documents</code> 将一大段资源结构成单个资源数组。</p>
+<p>由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 <code class="language-plaintext highlighter-rouge">kubectl_file_documents</code> 将一大段资源解构成单个资源数组。</p>
 
 <div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 <span class="k">data</span> <span class="s2">"http"</span> <span class="s2">"argocd_yaml"</span> <span class="p">{</span>
@@ -1671,366 +2055,4 @@ git push <span class="nt">-f</span> origin main
 
 <p>部署仓库：<a href="https://github.com/cloudbeer/cd-script">https://github.com/cloudbeer/cd-script</a></p>
 
-<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name>啤酒云</name></author><category term="devops" /><category term="gitlab," /><category term="gitops," /><category term="持续集成" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。]]></summary></entry><entry><title type="html">在 K8S 中实现 灰度，蓝绿 发布</title><link href="https://youbug.cn/2022/12/k8s-gray-blue-green.html" rel="alternate" type="text/html" title="在 K8S 中实现 灰度，蓝绿 发布" /><published>2022-12-01T08:09:00+00:00</published><updated>2022-12-01T08:09:00+00:00</updated><id>https://youbug.cn/2022/12/k8s-gray-blue-green</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-gray-blue-green.html"><![CDATA[<p>在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。</p>
-
-<h2 id="应用部署">应用部署</h2>
-
-<p>应用版本 1</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">ng-v1</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">4</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
-        <span class="na">version</span><span class="pi">:</span> <span class="s">v1</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">containers</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
-          <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:1.22</span>
-</code></pre></div></div>
-
-<p>应用版本 2</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">ng-v2</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
-        <span class="na">version</span><span class="pi">:</span> <span class="s">v2</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">containers</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
-          <span class="na">image</span><span class="pi">:</span> <span class="s">kong/httpbin</span>
-</code></pre></div></div>
-
-<ul>
-  <li>为了演示版本不同，分别部署了 2 个完全不同的应用作为演示。</li>
-  <li>这俩应用有着相同的 label: app 以及不同的 label: version</li>
-</ul>
-
-<h2 id="灰度发布">灰度发布</h2>
-
-<p>首先创建一个 service，这个 service 对外暴露服务使用了 app=ng 作为选择器。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">ports</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">80</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
-</code></pre></div></div>
-
-<p>由于 service 本身是按照 RR 的策略进行轮询的，所有对应的 pod endpoint 得到的流量会保持一致。</p>
-
-<p>所以上述代码中，流量会按照 pod 数量分配，此示例中 v1:v2 流量比例为 4:1。通过改变 pod 的数量就可以实现<strong>粗糙的</strong>灰度了。</p>
-
-<p>启动一个 pod 测试一下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl run <span class="nt">-it</span> <span class="nt">--rm</span> <span class="nb">test</span> <span class="nt">--image</span><span class="o">=</span>nginx:1.22 <span class="nt">--restart</span><span class="o">=</span>Never <span class="nt">--</span> sh
-</code></pre></div></div>
-
-<p>在终端中重复执行多次 curl，查看会发现流量按照 4:1 的比例分配了。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl ng
-</code></pre></div></div>
-
-<p>这个 bash 代码模拟了每隔 5 秒逐步增加 V2 的流量，通过 4 次改变 pod 数量，最终将流量完全切换到 v2。</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
-<span class="nv">v1count</span><span class="o">=</span>5
-<span class="nv">v2count</span><span class="o">=</span>0
-<span class="k">for </span>i <span class="k">in</span> <span class="o">{</span>1..5<span class="o">}</span>
-<span class="k">do
-  </span><span class="nv">v1count</span><span class="o">=</span><span class="k">$((</span>v1count-1<span class="k">))</span>
-  <span class="nv">v2count</span><span class="o">=</span><span class="k">$((</span>v2count+1<span class="k">))</span>
-  kubectl scale deployment ng-v1 <span class="nt">--replicas</span> <span class="nv">$v1count</span>
-  kubectl scale deployment ng-v2 <span class="nt">--replicas</span> <span class="nv">$v2count</span>
-  <span class="nb">sleep </span>5
-<span class="k">done</span>
-</code></pre></div></div>
-
-<p>这个方法不适合如下情况：</p>
-
-<ul>
-  <li>pod数量只有一两个的</li>
-  <li>需按一定规则灰度</li>
-</ul>
-
-<h2 id="蓝绿发布">蓝绿发布</h2>
-
-<p>需要修改 service，增加一个版本的 selector，让 service 固定在特定版本：</p>
-
-<p>当应用是版本 v1 的时候：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">ng</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">ports</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">port</span><span class="pi">:</span> <span class="m">80</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">ng</span>
-    <span class="na">version</span><span class="pi">:</span> <span class="s">v1</span>
-</code></pre></div></div>
-
-<p>实际生产中，先部署好 v2 版本，当验证无误后，可以通过修改 service 的 version 为 v2 。</p>
-
-<p>现在测试一下：</p>
-
-<p>先将 2 个版本部署成等量 pod。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment ng-v1 <span class="nt">--replicas</span> 1
-
-kubectl scale deployment ng-v2 <span class="nt">--replicas</span> 1
-</code></pre></div></div>
-
-<p>初始的 service 为版本 v1：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
-apiVersion: v1
-kind: Service
-metadata:
-  name: ng
-spec:
-  ports:
-    - port: 80
-  selector:
-    app: ng
-    version: v1
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<p>现在切换到 v2 版本，如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl patch svc ng <span class="nt">-p</span> <span class="s1">'{"spec":{"selector": {"app": "ng", "version": "v2"}}}'</span>
-</code></pre></div></div>
-
-<h2 id="ab-test-发布">A/B test 发布</h2>
-
-<p>A/B test 意味着需要按照一定逻辑进行流量分发。</p>
-
-<blockquote>
-  <p>😭，臣妾做不到。</p>
-</blockquote>
-
-<p>但可以借助 nginx 等产品完成。</p>
-
-<p>事实上，一些第三方的 ingress 产品，以及 Service Mesh 就都可以解决这些问题的。</p>
-
-<p>如果对延迟不敏感，可以考虑直接上 Istio 或 Linkerd 等 Service Mesh 产品。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="devops" /><category term="kubernetes," /><category term="蓝绿," /><category term="灰度," /><category term="容器" /><summary type="html"><![CDATA[在基本的 K8S 中，没有提供方便细粒度的流量分配策略。但借助 K8S 的 selector 机制，仍然可以实现简单的灰度和蓝绿发布。]]></summary></entry><entry><title type="html">Apache Airflow 入门</title><link href="https://youbug.cn/2022/12/airflow-start.html" rel="alternate" type="text/html" title="Apache Airflow 入门" /><published>2022-12-01T04:57:44+00:00</published><updated>2022-12-01T04:57:44+00:00</updated><id>https://youbug.cn/2022/12/airflow-start</id><content type="html" xml:base="https://youbug.cn/2022/12/airflow-start.html"><![CDATA[<p>从小白到略知一二。</p>
-
-<h2 id="背景">背景</h2>
-
-<p>都说 Airflow 很强大，用 python 语言写 DAG。</p>
-
-<p>对于我，语言不重要，了解他的运行架构和设计思想更重要。</p>
-
-<p>先安装一个单机版本试试。</p>
-
-<h2 id="安装">安装</h2>
-
-<p>在 Mac M1 上默认安装各种编译错误，然后使用 <strong>conda</strong> 重新安装了 python，终于搞定。</p>
-
-<p>安装过程复制自官方：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">AIRFLOW_VERSION</span><span class="o">=</span>2.4.3
-<span class="nv">PYTHON_VERSION</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span>python <span class="nt">--version</span> | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s2">" "</span> <span class="nt">-f</span> 2 | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s2">"."</span> <span class="nt">-f</span> 1-2<span class="si">)</span><span class="s2">"</span>
-<span class="nv">CONSTRAINT_URL</span><span class="o">=</span><span class="s2">"https://raw.githubusercontent.com/apache/airflow/constraints-</span><span class="k">${</span><span class="nv">AIRFLOW_VERSION</span><span class="k">}</span><span class="s2">/constraints-</span><span class="k">${</span><span class="nv">PYTHON_VERSION</span><span class="k">}</span><span class="s2">.txt"</span>
-pip <span class="nb">install</span> <span class="s2">"apache-airflow==</span><span class="k">${</span><span class="nv">AIRFLOW_VERSION</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--constraint</span> <span class="s2">"</span><span class="k">${</span><span class="nv">CONSTRAINT_URL</span><span class="k">}</span><span class="s2">"</span>
-</code></pre></div></div>
-
-<p>启动一个开发版本试试：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow standalone
-</code></pre></div></div>
-
-<p>成功启动后，控制台打印了一些有用信息。本机 Web 端默认为： <code class="language-plaintext highlighter-rouge">http://localhost:8080</code>。</p>
-
-<p>登录账号也在控制台中打印。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>standalone |
-standalone | Airflow is ready
-standalone | Login with username: admin  password: xxxxxxxxxx
-standalone | Airflow Standalone is <span class="k">for </span>development purposes only. Do not use this <span class="k">in </span>production!
-standalone |
-</code></pre></div></div>
-
-<p>进入之后，有很多现成的 DAG，一头雾水。</p>
-
-<p>或者<strong>走下面这个步骤，都差不多。</strong></p>
-
-<p>初始化数据库：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow db init
-</code></pre></div></div>
-
-<p>这个过程中，有个警告，是说要安装 kubernetes 的 excutor。顺手给他装一下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>apache-airflow-providers-cncf-kubernetes
-</code></pre></div></div>
-
-<p>创建一个新账号</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow <span class="nb">users </span>create <span class="se">\</span>
-    <span class="nt">--username</span> xie <span class="se">\</span>
-    <span class="nt">--firstname</span> Cloudbeer <span class="se">\</span>
-    <span class="nt">--lastname</span> Xie <span class="se">\</span>
-    <span class="nt">--role</span> Admin <span class="se">\</span>
-    <span class="nt">--email</span> cloudbeer@gmail.com
-</code></pre></div></div>
-
-<p>换个端口启动 Web Server</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow webserver <span class="nt">--port</span> 9000
-</code></pre></div></div>
-
-<p>换个 终端窗口启动 Scheduler：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow scheduler
-</code></pre></div></div>
-
-<h2 id="编写第一个-dag">编写第一个 DAG</h2>
-
-<p>Airflow 的 hello world 代码如下：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
-<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
-<span class="kn">from</span> <span class="nn">airflow</span> <span class="kn">import</span> <span class="n">DAG</span>
-
-<span class="kn">from</span> <span class="nn">airflow.operators.bash</span> <span class="kn">import</span> <span class="n">BashOperator</span>
-<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span>
-    <span class="s">'hellodag'</span><span class="p">,</span>
-    <span class="n">default_args</span><span class="o">=</span><span class="p">{</span>
-        <span class="s">'depends_on_past'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
-        <span class="s">'email'</span><span class="p">:</span> <span class="p">[</span><span class="s">'cloudbeer@gmail.com'</span><span class="p">],</span>
-        <span class="s">'email_on_failure'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
-        <span class="s">'email_on_retry'</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
-        <span class="s">'retries'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="s">'retry_delay'</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
-    <span class="p">},</span>
-    <span class="n">description</span><span class="o">=</span><span class="s">'这是一个简单的 DAG'</span><span class="p">,</span>
-    <span class="n">schedule</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-    <span class="n">catchup</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">'example'</span><span class="p">],</span>
-<span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
-    <span class="n">t1</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
-        <span class="n">task_id</span><span class="o">=</span><span class="s">'print_date'</span><span class="p">,</span>
-        <span class="n">bash_command</span><span class="o">=</span><span class="s">'date'</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="n">t2</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
-        <span class="n">task_id</span><span class="o">=</span><span class="s">'sleep'</span><span class="p">,</span>
-        <span class="n">depends_on_past</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-        <span class="n">bash_command</span><span class="o">=</span><span class="s">'sleep 5'</span><span class="p">,</span>
-        <span class="n">retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">t1</span><span class="p">.</span><span class="n">doc_md</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
-        <span class="s">"""</span><span class="se">\
-</span><span class="s">    #### Task Documentation
-    You can document your task using the attributes `doc_md` (markdown),
-    `doc` (plain text), `doc_rst`, `doc_json`, `doc_yaml` which gets
-    rendered in the UI's Task Instance Details page.
-    ![img](http://montcs.bloomu.edu/~bobmon/Semesters/2012-01/491/import%20soul.png)
-    **Image Credit:** Randall Munroe, [XKCD](https://xkcd.com/license.html)
-    """</span>
-    <span class="p">)</span>
-
-    <span class="n">dag</span><span class="p">.</span><span class="n">doc_md</span> <span class="o">=</span> <span class="s">"""
-    这是一个简单的 DAG。
-    """</span> 
-
-
-    <span class="n">templated_command</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
-        <span class="s">"""
-    {% for i in range(5) %}
-        echo "{{ ds }}"
-        echo "{{ macros.ds_add(ds, 7)}}"
-    {% endfor %}
-        """</span>
-    <span class="p">)</span>
-    <span class="n">t3</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
-        <span class="n">task_id</span><span class="o">=</span><span class="s">'templated'</span><span class="p">,</span>
-        <span class="n">depends_on_past</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-        <span class="n">bash_command</span><span class="o">=</span><span class="n">templated_command</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="n">t1</span> <span class="o">&gt;&gt;</span> <span class="p">[</span><span class="n">t2</span><span class="p">,</span> <span class="n">t3</span><span class="p">]</span>
-</code></pre></div></div>
-
-<ul>
-  <li>上面的代码修改 DAG 的名字为 hellodag</li>
-  <li>文件名命名为 hellodag.py</li>
-</ul>
-
-<p>将这个文件放到 ~/airflow/dags 目录下。</p>
-
-<p>使用 python 验证一下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python hellodag.py
-</code></pre></div></div>
-
-<p>没有错误。</p>
-
-<h2 id="airflow-任务测试">Airflow 任务测试</h2>
-
-<p>dag 文件放到了对应的目录了，现在查看一下 dags。（又要开一个终端）</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow dags list
-</code></pre></div></div>
-
-<ul>
-  <li>hellodag 已经出现在列表了。</li>
-</ul>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow tasks list hellodag <span class="nt">--tree</span>
-</code></pre></div></div>
-
-<ul>
-  <li>这个命令可以看到这个 dag 包含了三个任务 <code class="language-plaintext highlighter-rouge">print_date</code>, <code class="language-plaintext highlighter-rouge">sleep</code>, <code class="language-plaintext highlighter-rouge">templated</code></li>
-  <li>–tree 显示了依赖关系。</li>
-</ul>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: print_date&gt;
-    &lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: <span class="nb">sleep</span><span class="o">&gt;</span>
-    &lt;Task<span class="o">(</span>BashOperator<span class="o">)</span>: templated&gt;
-</code></pre></div></div>
-
-<p>测试一下任务：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow tasks <span class="nb">test </span>hellodag print_date 2015-06-01
-
-airflow tasks <span class="nb">test </span>hellodag <span class="nb">sleep </span>2015-06-01
-
-airflow tasks <span class="nb">test </span>hellodag templated 2015-06-01
-</code></pre></div></div>
-
-<p>运行 backfill (回填)</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>airflow dags backfill hellodag <span class="se">\</span>
-    <span class="nt">--start-date</span> 2015-06-01 <span class="se">\</span>
-    <span class="nt">--end-date</span> 2015-06-07
-</code></pre></div></div>
-
-<p>好了。入了个门。我去研究 Airflow in K8S 了。</p>]]></content><author><name>啤酒云</name></author><category term="data" /><category term="调度平台," /><category term="大数据," /><category term="airflow" /><summary type="html"><![CDATA[从小白到略知一二。]]></summary></entry></feed>
+<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name>啤酒云</name></author><category term="devops" /><category term="gitlab," /><category term="gitops," /><category term="持续集成" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。]]></summary></entry></feed>

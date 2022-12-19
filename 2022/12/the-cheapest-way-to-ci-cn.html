@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>在 AWS 构建应用 (Gitlab CI) 最便宜的姿势 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。" />
+<meta property="og:description" content="Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。" />
+<link rel="canonical" href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" />
+<meta property="og:url" content="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-19T03:40:33+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2022-12-19T03:40:33+00:00","datePublished":"2022-12-19T03:40:33+00:00","description":"Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。","headline":"在 AWS 构建应用 (Gitlab CI) 最便宜的姿势","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"},"url":"https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-19T03:40:33+00:00" itemprop="datePublished">2022-12-19
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。</p>
+
+<h2 id="安装-gitlab-runner">安装 Gitlab runner</h2>
+
+<p>首先，我们需要为 Gitlab runner 打一个标签。这里我设置了标签为 arm。稍后我们会将任务调度到这个 runner。</p>
+
+<p>下面是 CDK 代码:</p>
+
+<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">0.48.0</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+  <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">runnerRegistrationToken</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-runner-token&gt;</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">gitlabUrl</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-gitlab-url&gt;</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="na">rbac</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">create</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="na">rules</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">watch</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/exec</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/log</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/attach</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">secrets</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
+          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">configmaps</span><span class="dl">"</span><span class="p">],</span>
+          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
+        <span class="p">}</span>
+      <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">tags</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm, mass</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">runUntagged</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="na">helpers</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">image</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab/gitlab-runner-helper:arm64-v14.10.2</span><span class="dl">"</span>
+      <span class="p">},</span>
+      <span class="na">config</span><span class="p">:</span> <span class="s2">`
+    [[runners]]
+    name = "arm-runner"
+    environment = ["FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=true"]
+    executor = "kubernetes"
+    [runners.kubernetes]
+      image = "ubuntu:22.04"
+      privileged = true
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "docker-certs"
+      mount_path = "/certs/client"
+      medium = "Memory"
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "dind-storage"
+      mount_path = "/var/lib/docker"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-modules"
+      mount_path = "/lib/modules"
+      read_only = true
+      host_path = "/lib/modules"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-hosts"
+      mount_path = "/etc/hosts"
+      read_only = true
+      host_path = "/etc/hosts"
+    [[runners.kubernetes.volumes.host_path]]
+      name = "hostpath-cgroup"
+      mount_path = "/sys/fs/cgroup"
+      host_path = "/sys/fs/cgroup"
+    [runners.kubernetes.node_selector]
+      "karpenter-arch" = "arm64" 
+    `</span>
+    <span class="p">},</span>
+  <span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>配置中需要着重关注以下:</p>
+
+<ul>
+  <li>在 ARM 环境下，需要指定 gitlab-runner-helper 的镜像，因为 这个镜像是单架构的，而默认的图样使的是 X86 的镜像。这个镜像会作为 构建任务的 sidecar 运行。</li>
+  <li><code class="language-plaintext highlighter-rouge">FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY</code> 必须设置为 true 才能调度 pod 任务。</li>
+  <li>配置中 <code class="language-plaintext highlighter-rouge">[runners.kubernetes.node_selector]</code> 是为 K8S 调度做准备的，此处表示后续的构建任务会调度到相应 tag 的 node 节点。</li>
+</ul>
+
+<h2 id="kapennter-节点池">Kapennter 节点池</h2>
+
+<p><a href="https://karpenter.sh/">Karpenter</a>  是 AWS 最新的节点伸缩工具，非常好用。</p>
+
+<p>Kapennter 的安装和入门就不做过多说明了。直接看代码：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.sh/v1alpha5</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Provisioner</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">arm-builder</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">requirements</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">karpenter.k8s.aws/instance-category"</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">c"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">m"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">r"</span><span class="pi">]</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">karpenter.sh/capacity-type</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">spot"</span><span class="pi">]</span>
+    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">kubernetes.io/arch"</span>
+      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
+      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">arm64"</span><span class="pi">]</span>
+  <span class="na">limits</span><span class="pi">:</span>
+    <span class="na">resources</span><span class="pi">:</span>
+      <span class="na">cpu</span><span class="pi">:</span> <span class="m">1000</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">karpenter-arch</span><span class="pi">:</span> <span class="s">arm64</span>
+  <span class="na">providerRef</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="na">ttlSecondsAfterEmpty</span><span class="pi">:</span> <span class="m">30</span>
+
+<span class="nn">---</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.k8s.aws/v1alpha1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">AWSNodeTemplate</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">amiFamily</span><span class="pi">:</span> <span class="s">Bottlerocket</span>
+  <span class="na">subnetSelector</span><span class="pi">:</span>
+    <span class="s2">"</span><span class="s">aws:cloudformation:stack-name"</span><span class="err">:</span> <span class="s">gitlab</span>
+    <span class="s">"aws-cdk:subnet-type": Private</span>
+  <span class="na">securityGroupSelector</span><span class="pi">:</span>
+    <span class="s2">"</span><span class="s">kubernetes.io/cluster/gitlab"</span><span class="err">:</span> <span class="s">owned</span>
+
+</code></pre></div></div>
+
+<p>代码说明:</p>
+
+<ul>
+  <li>创建了节点池(Provisioner)，可以指定节点的机型范围，CPU 类型，付费类型等。指定 arm 就可以选择 Graviton 机型，指定 spot 可以只购买竞价实例。</li>
+  <li>这里建议使用 Bottlerocket 作为 node 的操作系统，使用 Amazon Linux 会抛出一个无法解析 git 仓库的地址的错误。</li>
+</ul>
+
+<h2 id="gitlab-ci-配置">Gitlab CI 配置</h2>
+
+<p>现在需要将构建任务调度到这个 runner 上。</p>
+
+<p>下面是 .gitlab-ci.yml 的示例：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">Build</span>
+
+<span class="na">frontend-build</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">Build</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">node:16.16.0-alpine</span>
+  <span class="na">tags</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">arm</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">npm install</span>
+    <span class="pi">-</span> <span class="s">npm run build</span>
+  <span class="na">artifacts</span><span class="pi">:</span>
+    <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">build/</span>
+</code></pre></div></div>
+
+<p>上面的代码很简单，只需要给构建任务指定 tags 标签即可</p>
+
+<h2 id="总结">总结</h2>
+
+<p>通过以上的三段配置，整体的 CI 流程如下：</p>
+
+<p>触发 Gitlab 构建 -&gt; 寻找有 arm 标记的 runner -&gt; 启动构建任务(pod) -&gt; 寻找 <code class="language-plaintext highlighter-rouge">karpenter-arch: arm64</code> 的节点 -&gt; 没有符合条件的节点，pod pending -&gt; Karpenter 购买 arm + spot 节点 -&gt; 构建任务开始调度成功 -&gt; 执行构建任务 -&gt; 任务结束，释放 node 节点。</p>
+
+<p>如图：</p>
+
+<p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
+
+<p>Karpenter 会购买最便宜的机型，全新节点的购买时间约 1 分 30 秒。</p>
+
+  </div>
+
+  <a class="u-url" href="/2022/12/the-cheapest-way-to-ci-cn.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

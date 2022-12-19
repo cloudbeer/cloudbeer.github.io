@@ -137,8 +137,8 @@
 
 <p>对于已经创建资源，在 terraform 中，通常使用 data 去查询，如下代码，只需要指定 集群的 名字就可以查询到集群的信息：</p>
 
-<div class="language-hcl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">data</span> <span class="s2">"aws_eks_cluster"</span> <span class="s2">"main"</span> <span class="p">{</span>
-  <span class="nx">name</span> <span class="p">=</span> <span class="nx">var</span><span class="err">.</span><span class="nx">cluster_name</span>
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">data</span> <span class="s2">"aws_eks_cluster"</span> <span class="s2">"main"</span> <span class="p">{</span>
+  <span class="nx">name</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
@@ -251,7 +251,7 @@ metadata:
 
 <p>在集群内创建了一个 namespace。</p>
 
-<p>由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 <code class="language-plaintext highlighter-rouge">kubectl_file_documents</code> 将一大段资源结构成单个资源数组。</p>
+<p>由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 <code class="language-plaintext highlighter-rouge">kubectl_file_documents</code> 将一大段资源解构成单个资源数组。</p>
 
 <div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 <span class="k">data</span> <span class="s2">"http"</span> <span class="s2">"argocd_yaml"</span> <span class="p">{</span>

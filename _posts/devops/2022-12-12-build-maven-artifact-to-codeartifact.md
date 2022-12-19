@@ -35,7 +35,7 @@ categories: aws, gitlab, devops, container
       <repositories>
         <repository>
           <id>cloudbeer-mvn</id>
-          <url>ARTIFACT_URL</url>
+          <url>$${ARTIFACT_URL}</url>
         </repository>
       </repositories>
     </profile>
@@ -44,15 +44,15 @@ categories: aws, gitlab, devops, container
     <server>
       <id>cloudbeer-mvn</id>
       <username>aws</username>
-      <password>CODEARTIFACT_AUTH_TOKEN</password>
+      <password>$${CODEARTIFACT_AUTH_TOKEN}</password>
     </server>
   </servers>
 </settings>
 ```
 
 - 此变量会以环境变量 `M2_SETTINGS` 出现在 Pod 中。
-- 这个 `<password>CODEARTIFACT_AUTH_TOKEN</password>` 和 `<url>ARTIFACT_URL</url>` 会在 CI 的过程中替换掉。
-- 这里不能用 `${CODEARTIFACT_AUTH_TOKEN}` 这样方式，会被 CI 过程替提前换掉。
+- ARTIFACT_URL 会直接被 Gitlab 的替换，CODEARTIFACT_AUTH_TOKEN 会在 CI 过程中动态获取。
+- 这里不能用 `${CODEARTIFACT_AUTH_TOKEN}` 这样方式，会被 CI 过程替提前换掉，转义字符是 **$$**。
 
 ## 设置 Gitlab CI
 
@@ -74,7 +74,6 @@ build:
     - unzip awscliv2.zip
     - ./aws/install
     - export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`
-    - echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;" -e "s/ARTIFACT_URL/${ARTIFACT_URL}/g' > ~/.m2/settings.xml
   script:
     - cd $CI_PROJECT_DIR
     - mvn deploy "-Daether.checksums.algorithms=MD5"
@@ -122,7 +121,6 @@ build:
     - unzip awscliv2.zip
     - ./aws/install
     - export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`
-    - echo $M2_SETTINGS | sed -e 's/CODEARTIFACT_AUTH_TOKEN/${CODEARTIFACT_AUTH_TOKEN}/g;s/ARTIFACT_URL/${ARTIFACT_URL}/g' > ~/.m2/settings.xml
   script:
     - cd $CI_PROJECT_DIR
     - mvn deploy "-Daether.checksums.algorithms=MD5"

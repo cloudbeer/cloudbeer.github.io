@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-20T11:49:45+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-20T11:54:16+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
 
 <h2 id="检查-docker-环境">检查 docker 环境</h2>
 
@@ -87,7 +87,9 @@ ERROR: multiple platforms feature is currently not supported for docker driver.�
     <span class="pi">-</span> <span class="s">docker buildx build --platform linux/arm64,linux/amd64 -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA --push .</span>
 </code></pre></div></div>
 
-<p>上面的脚本大部分都成功了，最后还是折了。下面是一些坑总结（吐槽模式开启）：</p>
+<p>上面的脚本成功运行。</p>
+
+<p>下面是一些坑总结（吐槽模式开启）：</p>
 
 <ul>
   <li>使用 官方 docker 镜像作为基础镜像构建，会发现 awscli v2 装不上， awscli v2 安装到 alpine 需要编译，不是简单加几个依赖包就行的，这个懒得折腾了。</li>

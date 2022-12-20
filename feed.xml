@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-20T10:16:49+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-20T11:49:45+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
 
 <h2 id="检查-docker-环境">检查 docker 环境</h2>
 
@@ -50,7 +50,7 @@ Client:
   <li>在 19+ 版本的 docker 里，docker 生产的证书需要时间，为了安全起见，需要检测 docker 状态：<code class="language-plaintext highlighter-rouge">until docker version &gt; /dev/null; do sleep 1; done</code>，等他没问题再进行下一步操作，否则任务会中断。</li>
   <li><code class="language-plaintext highlighter-rouge">docker context, docker buildx create, docker buildx use</code> 这些解决了 “
 ERROR: multiple platforms feature is currently not supported for docker driver.”, “Docker buildx - could not create a builder instance with TLS data loaded from environment” 这些个错误。</li>
-  <li><code class="language-plaintext highlighter-rouge">docker buildx build... --push</code> 会直接把镜像构建结果推送到 docker bub。</li>
+  <li><code class="language-plaintext highlighter-rouge">docker buildx build... --push</code> 会直接把镜像构建结果推送到 docker hub。</li>
 </ul>
 
 <p>构建结果：<a href="https://hub.docker.com/r/cloudbeer/pure-ci/tags">https://hub.docker.com/r/cloudbeer/pure-ci/tags</a></p>
@@ -97,7 +97,7 @@ ERROR: multiple platforms feature is currently not supported for docker driver.�
   <li>使用 AWS ECR 别忘记要先建库。</li>
   <li>使用 AWS ECR 别忘记要先建库。</li>
   <li>使用 AWS ECR 别忘记要先建库。</li>
-  <li><strong>我忘记了。</strong></li>
+  <li><strong>我又忘记了。</strong></li>
 </ul>
 
 <p>最终的部分 log 贴在下面：</p>
@@ -145,6 +145,8 @@ Login Succeeded
 Job succeeded
 </code></pre></div></div>
 
+<p>请忽略 ECR Web 控制台的显示方式。</p>
+
 <h2 id="不是本文的总结">不是本文的总结</h2>
 
 <ul>
@@ -152,7 +154,7 @@ Job succeeded
   <li>可以将构建过程放到 Dockerfile 里面去，Docker 有完整的多阶段构建的模式来生产您的镜像（如 go 语言）。</li>
   <li>对于脚本类型的语言，完全可以用这种方式构建，依赖包安装也应该在 Dockerfile 中进行。</li>
   <li>Java 的普通运行包可以使用直接拷贝的方式，X86 环境下构建的 jar 包可以直接运行在 ARM 的 jdk 中。</li>
-  <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 sha256 值。</li>
+  <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 digest 值。</li>
 </ul>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container," /><category term="tucao," /><category term="gitlab" /><summary type="html"><![CDATA[现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。]]></summary></entry><entry><title type="html">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" rel="alternate" type="text/html" title="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" /><published>2022-12-19T03:40:33+00:00</published><updated>2022-12-19T03:40:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"><![CDATA[<p>Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。</p>
 
 <h2 id="安装-gitlab-runner">安装 Gitlab runner</h2>

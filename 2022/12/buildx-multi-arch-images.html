@@ -150,7 +150,7 @@ Client:
   <li>在 19+ 版本的 docker 里，docker 生产的证书需要时间，为了安全起见，需要检测 docker 状态：<code class="language-plaintext highlighter-rouge">until docker version &gt; /dev/null; do sleep 1; done</code>，等他没问题再进行下一步操作，否则任务会中断。</li>
   <li><code class="language-plaintext highlighter-rouge">docker context, docker buildx create, docker buildx use</code> 这些解决了 “
 ERROR: multiple platforms feature is currently not supported for docker driver.”, “Docker buildx - could not create a builder instance with TLS data loaded from environment” 这些个错误。</li>
-  <li><code class="language-plaintext highlighter-rouge">docker buildx build... --push</code> 会直接把镜像构建结果推送到 docker bub。</li>
+  <li><code class="language-plaintext highlighter-rouge">docker buildx build... --push</code> 会直接把镜像构建结果推送到 docker hub。</li>
 </ul>
 
 <p>构建结果：<a href="https://hub.docker.com/r/cloudbeer/pure-ci/tags">https://hub.docker.com/r/cloudbeer/pure-ci/tags</a></p>
@@ -197,7 +197,7 @@ ERROR: multiple platforms feature is currently not supported for docker driver.�
   <li>使用 AWS ECR 别忘记要先建库。</li>
   <li>使用 AWS ECR 别忘记要先建库。</li>
   <li>使用 AWS ECR 别忘记要先建库。</li>
-  <li><strong>我忘记了。</strong></li>
+  <li><strong>我又忘记了。</strong></li>
 </ul>
 
 <p>最终的部分 log 贴在下面：</p>
@@ -245,6 +245,8 @@ Login Succeeded
 Job succeeded
 </code></pre></div></div>
 
+<p>请忽略 ECR Web 控制台的显示方式。</p>
+
 <h2 id="不是本文的总结">不是本文的总结</h2>
 
 <ul>
@@ -252,7 +254,7 @@ Job succeeded
   <li>可以将构建过程放到 Dockerfile 里面去，Docker 有完整的多阶段构建的模式来生产您的镜像（如 go 语言）。</li>
   <li>对于脚本类型的语言，完全可以用这种方式构建，依赖包安装也应该在 Dockerfile 中进行。</li>
   <li>Java 的普通运行包可以使用直接拷贝的方式，X86 环境下构建的 jar 包可以直接运行在 ARM 的 jdk 中。</li>
-  <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 sha256 值。</li>
+  <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 digest 值。</li>
 </ul>
 
   </div>

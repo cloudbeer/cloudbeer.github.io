@@ -59,7 +59,7 @@ dockerx:
 - 在 19+ 版本的 docker 里，docker 生产的证书需要时间，为了安全起见，需要检测 docker 状态：`until docker version > /dev/null; do sleep 1; done`，等他没问题再进行下一步操作，否则任务会中断。
 - `docker context, docker buildx create, docker buildx use` 这些解决了 "
 ERROR: multiple platforms feature is currently not supported for docker driver.", "Docker buildx - could not create a builder instance with TLS data loaded from environment" 这些个错误。
-- `docker buildx build... --push` 会直接把镜像构建结果推送到 docker bub。
+- `docker buildx build... --push` 会直接把镜像构建结果推送到 docker hub。
 
 构建结果：<https://hub.docker.com/r/cloudbeer/pure-ci/tags>
 
@@ -105,7 +105,7 @@ dockerx-ecr:
 - 使用 AWS ECR 别忘记要先建库。
 - 使用 AWS ECR 别忘记要先建库。
 - 使用 AWS ECR 别忘记要先建库。
-- **我忘记了。**
+- **我又忘记了。**
 
 最终的部分 log 贴在下面：
 
@@ -153,10 +153,12 @@ Login Succeeded
 Job succeeded
 ```
 
+请忽略 ECR Web 控制台的显示方式。
+
 ## 不是本文的总结
 
 - 使用 docker-buildx 会直接使用相应架构的底层依赖镜像，如果使用这种方法，您不能将一个有架构依赖的可执行文件直接拷贝构建镜像，否则会出现底层包和业务包对不上的问题。
 - 可以将构建过程放到 Dockerfile 里面去，Docker 有完整的多阶段构建的模式来生产您的镜像（如 go 语言）。
 - 对于脚本类型的语言，完全可以用这种方式构建，依赖包安装也应该在 Dockerfile 中进行。
 - Java 的普通运行包可以使用直接拷贝的方式，X86 环境下构建的 jar 包可以直接运行在 ARM 的 jdk 中。
-- Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 sha256 值。
+- Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 digest 值。

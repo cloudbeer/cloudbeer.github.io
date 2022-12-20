@@ -102,11 +102,12 @@ dockerx-ecr:
 - 使用 pip 官方安装的 awscli v2 居然是在 docker 里运行的，这是在搞笑吗？我本来就是个 dind，套娃了啊。
 - 使用 aws-cli 镜像作为底包，`amazon-linux-extras install docker` 这个安装的 docker 居然把 plugins 都干掉了。干掉 compose 可以理解，为啥把 buildx 这么好的工具干掉了。
 - 安装 buildx 插件，可以直接从 buildx 镜像包中拷贝，命令是 `docker container create` 和 `docker cp`。
-- ECR 登录是没问题的，构建是没问题的。但最终在推送阶段还是失败了，应该是 ECR 不支持多架构。
+- 使用 AWS ECR 别忘记要先建库。
+- 使用 AWS ECR 别忘记要先建库。
+- 使用 AWS ECR 别忘记要先建库。
+- **我忘记了。**
 
-**AWS ECR 你要加油了！！**
-
-最终错误的部分 log 贴在下面，：
+最终的部分 log 贴在下面：
 
 ```shell
 ...
@@ -134,10 +135,22 @@ Login Succeeded
 #9 [auth] sharing credentials for [MASKED].dkr.ecr.us-east-1.amazonaws.com
 #9 DONE 0.0s
 #8 exporting to image
-#8 1.388 error: failed to do request: Post "https://[MASKED].dkr.ecr.us-east-1.amazonaws.com/v2/pure-ci/blobs/uploads/": EOF
-#8 1.388 retrying in 1s
-#8 1.413 error: failed to do request: Post "https://[MASKED].dkr.ecr.us-east-1.amazonaws.com/v2/pure-ci/blobs/uploads/": EOF
-...
+#8 ...
+#7 [linux/amd64 1/1] FROM docker.io/library/amazoncorretto:11@sha256:6962bc64de2b612c2a760299956853762cfcee538b1b6b55706661426546936c
+#7 sha256:74c4a50287c9345fabef12ad41b61e3450e3400fbe99f5d48281ceb781041ae3 147.75MB / 147.75MB 2.6s done
+#7 sha256:5b4a36b5b78f93a5f470cf722b313bb32cddb0f8e0fa0db348059b5c0881b04f 62.33MB / 62.33MB 1.0s done
+#7 DONE 2.9s
+#6 [linux/arm64 1/1] FROM docker.io/library/amazoncorretto:11@sha256:6962bc64de2b612c2a760299956853762cfcee538b1b6b55706661426546936c
+#6 sha256:c0aade9a94f7c23d8fc79b4c11ce14d37b8569a6fec3017a295169ff500ec8d8 144.91MB / 144.91MB 2.9s
+#6 sha256:6cbfee25f0741b3d3f4d2474d904a200cd8404a01aa17813bf3fc3d4ebb551a4 63.96MB / 63.96MB 1.8s done
+#6 sha256:c0aade9a94f7c23d8fc79b4c11ce14d37b8569a6fec3017a295169ff500ec8d8 144.91MB / 144.91MB 3.0s done
+#6 DONE 3.1s
+#8 exporting to image
+#8 pushing layers 17.6s done
+#8 pushing manifest for [MASKED].dkr.ecr.us-east-1.amazonaws.com/pure-ci:1ac460d1@sha256:dc0282c4166a58f7b8298e5061a00c02c6bce6e358000b479e49e6d73cf57b34
+#8 pushing manifest for [MASKED].dkr.ecr.us-east-1.amazonaws.com/pure-ci:1ac460d1@sha256:dc0282c4166a58f7b8298e5061a00c02c6bce6e358000b479e49e6d73cf57b34 2.2s done
+#8 DONE 19.8s
+Job succeeded
 ```
 
 ## 不是本文的总结

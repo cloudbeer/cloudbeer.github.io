@@ -1,4 +1,146 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-19T03:56:32+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" rel="alternate" type="text/html" title="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" /><published>2022-12-19T03:40:33+00:00</published><updated>2022-12-19T03:40:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"><![CDATA[<p>Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-20T09:58:27+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
+
+<h2 id="检查-docker-环境">检查 docker 环境</h2>
+
+<p>检查官方的 docker 20 的镜像，运行 docker info 查看 Plugins：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>docker info
+Client:
+ Context:    default
+ Debug Mode: <span class="nb">false
+ </span>Plugins:
+  buildx: Docker Buildx <span class="o">(</span>Docker Inc., v0.9.1<span class="o">)</span>
+  compose: Docker Compose <span class="o">(</span>Docker Inc., v2.14.1<span class="o">)</span>
+...
+</code></pre></div></div>
+
+<p>已经内置了 buildx 插件。</p>
+
+<h2 id="gitlab-ci-脚本">Gitlab CI 脚本</h2>
+
+<h3 id="构建到官方仓库-docker-hub">构建到官方仓库 docker hub</h3>
+
+<p>下面的示例 build 了一个 arm64 + amd64 的裸 JDK。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">dockerx</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">test</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
+  <span class="na">variables</span><span class="pi">:</span>
+    <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay2</span>
+    <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2376</span>
+    <span class="na">DOCKER_TLS_CERTDIR</span><span class="pi">:</span> <span class="s">/certs</span>
+    <span class="na">DOCKER_TLS_VERIFY</span><span class="pi">:</span> <span class="m">1</span>
+    <span class="na">DOCKER_CERT_PATH</span><span class="pi">:</span> <span class="s">/certs/client</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:20-dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">until docker version &gt; /dev/null; do sleep 1; done</span>
+    <span class="pi">-</span> <span class="s">echo "FROM amazoncorretto:11" &gt; Dockerfile</span>
+    <span class="pi">-</span> <span class="s">docker context create xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx create --name xbuilder --use xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx use xbuilder</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">echo $DOCKER_PASS | docker login -u$DOCKER_USER --password-stdin</span>
+    <span class="pi">-</span> <span class="s">docker buildx build --platform linux/arm64,linux/amd64 -t cloudbeer/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA --push .</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>主要的命令为 <code class="language-plaintext highlighter-rouge">docker buildx build --platform linux/arm64,linux/amd64</code>，可以直接指定平台架构。</li>
+  <li>在 19+ 版本的 docker 里，docker 生产的证书需要时间，为了安全起见，需要检测 docker 状态：<code class="language-plaintext highlighter-rouge">until docker version &gt; /dev/null; do sleep 1; done</code>，等他没问题再进行下一步操作，否则任务会中断。</li>
+  <li><code class="language-plaintext highlighter-rouge">docker context, docker buildx create, docker buildx use</code> 这些解决了 “
+ERROR: multiple platforms feature is currently not supported for docker driver.”, “Docker buildx - could not create a builder instance with TLS data loaded from environment” 这些个错误。</li>
+  <li><code class="language-plaintext highlighter-rouge">docker buildx build... --push</code> 会直接把镜像构建结果推送到 docker bub。</li>
+</ul>
+
+<p>构建结果：<a href="https://hub.docker.com/r/cloudbeer/pure-ci/tags">https://hub.docker.com/r/cloudbeer/pure-ci/tags</a></p>
+
+<p><img src="/assets/posts/devops/docker-hub-multi.png" alt="Buildx result" /></p>
+
+<h3 id="推送到-aws-ecr">推送到 AWS ECR</h3>
+
+<p>使用 AWS 的服务，一般离不开 aws cli，在本场景中，要么在 aws cli 镜像中安装 docker，要么在 docker 里安装 aws cli，下面是我的测试脚本，此脚本可以 run 到最后：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">dockerx-ecr</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">test</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">amazon/aws-cli</span>
+  <span class="na">variables</span><span class="pi">:</span>
+    <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay2</span>
+    <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2376</span>
+    <span class="na">DOCKER_TLS_CERTDIR</span><span class="pi">:</span> <span class="s">/certs</span>
+    <span class="na">DOCKER_TLS_VERIFY</span><span class="pi">:</span> <span class="m">1</span>
+    <span class="na">DOCKER_CERT_PATH</span><span class="pi">:</span> <span class="s">/certs/client</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">amazon-linux-extras install docker</span>
+    <span class="pi">-</span> <span class="s">mkdir -p ~/.docker/cli-plugins/</span>
+    <span class="pi">-</span> <span class="s">until docker version &gt; /dev/null; do sleep 1; done</span>
+    <span class="pi">-</span> <span class="s">docker container create --name buildx docker/buildx-bin sh</span>
+    <span class="pi">-</span> <span class="s">docker cp buildx:/buildx ~/.docker/cli-plugins/docker-buildx</span>
+    <span class="pi">-</span> <span class="s">echo "FROM amazoncorretto:11" &gt; Dockerfile</span>
+    <span class="pi">-</span> <span class="s">docker context create xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx create --name xbuilder --use xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx use xbuilder</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY</span>
+    <span class="pi">-</span> <span class="s">docker buildx build --platform linux/arm64,linux/amd64 -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA --push .</span>
+</code></pre></div></div>
+
+<p>上面的脚本大部分都成功了，最后还是折了。下面是一些坑总结（吐槽模式开启）：</p>
+
+<ul>
+  <li>使用 官方 docker 镜像作为基础镜像构建，会发现 awscli v2 装不上， awscli v2 安装到 alpine 需要编译，不是简单加几个依赖包就行的，这个懒得折腾了。</li>
+  <li>使用 pip 官方安装的 awscli v2 居然是在 docker 里运行的，这是在搞笑吗？我本来就是个 dind，套娃了啊。</li>
+  <li>使用 aws-cli 镜像作为底包，<code class="language-plaintext highlighter-rouge">amazon-linux-extras install docker</code> 这个安装的 docker 居然把 plugins 都干掉了。干掉 compose 可以理解，为啥把 buildx 这么好的工具干掉了。</li>
+  <li>安装 buildx 插件，可以直接从 buildx 镜像包中拷贝，命令是 <code class="language-plaintext highlighter-rouge">docker container create</code> 和 <code class="language-plaintext highlighter-rouge">docker cp</code>。</li>
+  <li>ECR 登录是没问题的，构建是没问题的。但最终在推送阶段还是失败了，应该是 ECR 不支持多架构。</li>
+</ul>
+
+<p><strong>AWS ECR 你要加油了！！</strong></p>
+
+<p>最终错误的部分 log 贴在下面，：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="nv">$ </span>aws ecr get-login-password <span class="nt">--region</span> us-east-1 | docker login <span class="nt">--username</span> AWS <span class="nt">--password-stdin</span> <span class="nv">$DOCKER_REGISTRY</span>
+Login Succeeded
+<span class="c">#3 transferring context: 2B done</span>
+<span class="c">#3 DONE 0.1s</span>
+<span class="c">#4 [linux/arm64 internal] load metadata for docker.io/library/amazoncorretto:11</span>
+<span class="c">#4 DONE 2.6s</span>
+<span class="c">#5 [linux/amd64 internal] load metadata for docker.io/library/amazoncorretto:11</span>
+<span class="c">#5 DONE 2.6s</span>
+...
+<span class="c">#6 [linux/amd64 1/1] FROM docker.io/library/amazoncorretto:11@sha256:6962bc64de2b612c2a760299956853762cfcee538b1b6b55706661426546936c</span>
+<span class="c">#6 DONE 0.1s</span>
+<span class="c">#8 exporting to image</span>
+<span class="c">#8 exporting layers done</span>
+<span class="c">#8 exporting manifest sha256:3dd903be615ce4c36321b161806bc061a567079a2947ec658cdcd14d1c114235 0.0s done</span>
+<span class="c">#8 exporting config sha256:8b9bb2aca3d28e14fa06412d152fd4ce6c7a55f1554bec3c71ce4a4410060af3</span>
+<span class="c">#8 exporting config sha256:8b9bb2aca3d28e14fa06412d152fd4ce6c7a55f1554bec3c71ce4a4410060af3 0.0s done</span>
+<span class="c">#8 exporting manifest sha256:4218135aa38e8522e988b60392190cd7bfc1715cedb3f301f82cec43fee383e2 0.0s done</span>
+<span class="c">#8 exporting config sha256:de3379d966e1b03cf4c7f3c6db803f459cf1c3e887fbe2c10af9ce0c72a6f406 0.0s done</span>
+<span class="c">#8 exporting manifest list sha256:dc0282c4166a58f7b8298e5061a00c02c6bce6e358000b479e49e6d73cf57b34 0.0s done</span>
+<span class="c">#8 pushing layers</span>
+<span class="c">#8 ...</span>
+<span class="c">#9 [auth] sharing credentials for [MASKED].dkr.ecr.us-east-1.amazonaws.com</span>
+<span class="c">#9 DONE 0.0s</span>
+<span class="c">#8 exporting to image</span>
+<span class="c">#8 1.388 error: failed to do request: Post "https://[MASKED].dkr.ecr.us-east-1.amazonaws.com/v2/pure-ci/blobs/uploads/": EOF</span>
+<span class="c">#8 1.388 retrying in 1s</span>
+<span class="c">#8 1.413 error: failed to do request: Post "https://[MASKED].dkr.ecr.us-east-1.amazonaws.com/v2/pure-ci/blobs/uploads/": EOF</span>
+...
+</code></pre></div></div>
+
+<h2 id="不是本文的总结">不是本文的总结</h2>
+
+<ul>
+  <li>使用 docker-buildx 会直接使用相应架构的底层依赖镜像，如果使用这种方法，您不能将一个有架构依赖的可执行文件直接拷贝构建镜像，否则会出现底层包和业务包对不上的问题。</li>
+  <li>可以将构建过程放到 Dockerfile 里面去，Docker 有完整的多阶段构建的模式来生产您的镜像（如 go 语言）。</li>
+  <li>对于脚本类型的语言，完全可以用这种方式构建，依赖包安装也应该在 Dockerfile 中进行。</li>
+  <li>Java 的普通运行包可以使用直接拷贝的方式，X86 环境下构建的 jar 包可以直接运行在 ARM 的 jdk 中。</li>
+  <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 sha256 值。</li>
+</ul>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container," /><category term="tucao," /><category term="gitlab" /><summary type="html"><![CDATA[现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。]]></summary></entry><entry><title type="html">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" rel="alternate" type="text/html" title="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" /><published>2022-12-19T03:40:33+00:00</published><updated>2022-12-19T03:40:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"><![CDATA[<p>Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。</p>
 
 <h2 id="安装-gitlab-runner">安装 Gitlab runner</h2>
 
@@ -1840,219 +1982,4 @@ git push <span class="nt">-f</span> origin main
 
 <p>如果 eks 创建失败，整个过程会回滚，此时状态会回滚到 eks 创建之前，也就是说 vpc 还在。</p>
 
-<p>同理，如果想要删除 eks，只需要删除相应的 eks resource 代码即可。</p>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws" /><category term="cdk" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry><entry><title type="html">容器 DevOps: Gitlab CI</title><link href="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html" rel="alternate" type="text/html" title="容器 DevOps: Gitlab CI" /><published>2022-12-04T06:32:01+00:00</published><updated>2022-12-04T06:32:01+00:00</updated><id>https://youbug.cn/2022/12/k8s-devops-gitlab-ci</id><content type="html" xml:base="https://youbug.cn/2022/12/k8s-devops-gitlab-ci.html"><![CDATA[<p>当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。</p>
-
-<h2 id="示例描述">示例描述</h2>
-
-<p>本文使用了 Gitlab SaaS 版本。SaaS 版本的 CI 每个月有 400min 的免费的额度。</p>
-
-<p>本文的源代码在：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a>，这是一个 Spring Cloud gateway 应用。</p>
-
-<p>ci 的过程包括：</p>
-
-<ul>
-  <li>编译 java 源码</li>
-  <li>打包 docker 镜像，并上传到镜像仓库（本文使用的是 AWS ECR 仓库）</li>
-  <li>修改部署目标脚本的镜像版本</li>
-</ul>
-
-<p>完成这几个步骤之后，argocd 会接手 cd 的工作。</p>
-
-<h2 id="gitlab-ciyml-代码拆解">.gitlab-ci.yml 代码拆解</h2>
-
-<h3 id="环境变量">环境变量</h3>
-
-<p>环境变量的定义有三种方式：</p>
-
-<ul>
-  <li>全局定义：左侧菜单 Settings -&gt; CI/CD, 页面上 Variables 部分，展开 Expand。</li>
-  <li>在 yaml 文件里直接定义：参见下面的代码。</li>
-  <li>手工指定：在每次手工启动流水线时，可以填写变量。</li>
-</ul>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
-  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay</span>
-  <span class="na">DOCKER_REGISTRY</span><span class="pi">:</span> <span class="s">00000000.dkr.ecr.us-east-2.amazonaws.com</span>
-  <span class="na">AWS_DEFAULT_REGION</span><span class="pi">:</span> <span class="s">us-east-2</span>
-  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2375</span>
-</code></pre></div></div>
-
-<h3 id="stages-的定义">stages 的定义</h3>
-
-<p>首先定义几个 大的步骤：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">build</span>
-  <span class="pi">-</span> <span class="s">package</span>
-  <span class="pi">-</span> <span class="s">deploy</span>
-</code></pre></div></div>
-
-<p>然后在各个步骤详情里，可以把当前的步骤进行分类，就像这样：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">do-something</span><span class="pi">:</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">build</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">alpine</span>
-  <span class="na">script</span><span class="pi">:</span> <span class="s2">"</span><span class="s">sleep</span><span class="nv"> </span><span class="s">300"</span>
-</code></pre></div></div>
-
-<h3 id="源码编译">源码编译</h3>
-
-<p>对于编译型语言，需要将源代码进行编译，本示例中就是需要将 java 源代码编译打包成 jar 包。</p>
-
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">maven</span><span class="o">-</span><span class="nl">build:</span>
-  <span class="nl">image:</span> <span class="nl">maven:</span><span class="n">latest</span>
-  <span class="nl">stage:</span> <span class="n">build</span>
-  <span class="nl">script:</span> <span class="s">"mvn package"</span>
-  <span class="nl">artifacts:</span>
-    <span class="nl">paths:</span>
-      <span class="o">-</span> <span class="n">target</span><span class="o">/*.</span><span class="na">jar</span>
-</code></pre></div></div>
-
-<ul>
-  <li>编译时使用 maven 这个镜像</li>
-  <li>运行的指令是 <code class="language-plaintext highlighter-rouge">mvn package</code></li>
-  <li>编译的结果指定为 target 目录下的所有 jar 文件，gitlab 会将 artifacts 上传，供给后面的步骤使用。</li>
-</ul>
-
-<h3 id="docker-镜像打包上传">Docker 镜像打包上传</h3>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">docker-build</span><span class="pi">:</span>
-  <span class="na">image</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">amazon/aws-cli</span>
-    <span class="na">entrypoint</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
-  <span class="na">services</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">docker:dind</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
-  <span class="na">before_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">amazon-linux-extras install docker</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">docker build -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA .</span>
-    <span class="pi">-</span> <span class="s">aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY</span>
-    <span class="pi">-</span> <span class="s">docker push $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
-
-</code></pre></div></div>
-
-<ul>
-  <li>打包完成后需要上传到 ecr，而 ecr 依赖了 aws cli，所以使用了 aws_cli 的镜像包。在执行过程中，还需要将 AWS 的 AKSK 配置到环境变量。</li>
-  <li>在 before_script 里，在 aws_cli 镜像里安装 docker，此时使用了 dind (docker in docker) 模式。</li>
-  <li>在 docker build 的过程中，使用了 git 的 commiot sha 作为版本号。 CI_COMMIT_SHORT_SHA 是 gitlab 的内置环境变量。</li>
-</ul>
-
-<blockquote>
-  <p>gitlab 的 dind 可以参考这个：<a href="https://docs.gitlab.com/ee/ci/docker/using_docker_build.html">https://docs.gitlab.com/ee/ci/docker/using_docker_build.html</a></p>
-</blockquote>
-
-<blockquote>
-  <p>gitlab 内置环境变量参考：<a href="https://docs.gitlab.com/ee/ci/variables/predefined_variables.html">https://docs.gitlab.com/ee/ci/variables/predefined_variables.html</a></p>
-</blockquote>
-
-<h3 id="部署">部署</h3>
-
-<p>在本示例中，采用了 gitops 的方式，将 CI 和 CD 完全解耦，CI 只需要做到构建完成，并更新部署代码仓库就可以了。剩下的工作交由 CD 来完成。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">yaml-change</span><span class="pi">:</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">deploy</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">line/kubectl-kustomize</span>
-  <span class="na">before_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">apk add git</span>
-    <span class="pi">-</span> <span class="s">git clone https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cd-script.git "/${CI_COMMIT_SHA}"</span>
-    <span class="pi">-</span> <span class="s">git config --global user.email "cloudbeer@gmail.com"</span>
-    <span class="pi">-</span> <span class="s">git config --global user.name "gitlab-robot"</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}/gateway"</span>
-    <span class="pi">-</span> <span class="s">kustomize edit set image $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
-    <span class="pi">-</span> <span class="s">cat kustomization.yaml</span>
-  <span class="na">after_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}"</span>
-    <span class="pi">-</span> <span class="s">git add .</span>
-    <span class="pi">-</span> <span class="s">git commit -m "[skip ci]updating image $DOCKER_REGISTRY/$CI_COMMIT_SHORT_SHA"</span>
-    <span class="pi">-</span> <span class="s">git push origin main</span>
-</code></pre></div></div>
-
-<ul>
-  <li>镜像上传到镜像仓库后，就可以去修改部署代码了。本示例将部署代码放到了 github，您可以将部署代码放到任意 git 仓库。但在 gitops 模式下，部署脚本不建议和业务源代码放到一起。</li>
-  <li>本示例使用了 <a href="https://kustomize.io/">kustomize</a> 来更新部署，kustomize 也被 argocd 默认支持。</li>
-  <li>过程是：将部署代码从 git 仓库拉回本地，通过 kustomize 命令修改了 image 的地址，修改完成后推回 git 仓库。</li>
-</ul>
-
-<blockquote>
-  <p>GITHUB_PWD 需要配置一个 带有 scope 的 token，请到 <a href="https://github.com/settings/tokens">https://github.com/settings/tokens</a> 配置。</p>
-</blockquote>
-
-<p>完整的代码如下：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">variables</span><span class="pi">:</span>
-  <span class="na">DOCKER_REGISTRY</span><span class="pi">:</span> <span class="s">cloudbeer</span>
-  <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay</span>
-  <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2375</span>
-
-<span class="na">stages</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">build</span>
-  <span class="pi">-</span> <span class="s">package</span>
-  <span class="pi">-</span> <span class="s">deploy</span>
-
-<span class="na">maven-build</span><span class="pi">:</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">build</span>
-  <span class="na">script</span><span class="pi">:</span> <span class="s2">"</span><span class="s">mvn</span><span class="nv"> </span><span class="s">package"</span>
-  <span class="na">artifacts</span><span class="pi">:</span>
-    <span class="na">paths</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s">target/*.jar</span>
-
-<span class="na">docker-build</span><span class="pi">:</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">package</span>
-  <span class="na">services</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">docker:dind</span>
-  <span class="na">before_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">docker info</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">docker build -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA .</span>
-    <span class="pi">-</span> <span class="s">echo $DOCKER_PASS | docker login -u$DOCKER_USER --password-stdin</span>
-    <span class="pi">-</span> <span class="s">docker push $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
-
-<span class="na">yaml-change</span><span class="pi">:</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">deploy</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">line/kubectl-kustomize</span>
-  <span class="na">before_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">apk add git</span>
-    <span class="pi">-</span> <span class="s">git clone https://cloudbeer:${GITHUB_PWD}@github.com/cloudbeer/cd-script.git "/${CI_COMMIT_SHA}"</span>
-    <span class="pi">-</span> <span class="s">git config --global user.email "cloudbeer@gmail.com"</span>
-    <span class="pi">-</span> <span class="s">git config --global user.name "gitlab-robot"</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}/gateway"</span>
-    <span class="pi">-</span> <span class="s">kustomize edit set image $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA</span>
-    <span class="pi">-</span> <span class="s">cat kustomization.yaml</span>
-  <span class="na">after_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">cd "/${CI_COMMIT_SHA}"</span>
-    <span class="pi">-</span> <span class="s">git add .</span>
-    <span class="pi">-</span> <span class="s">git commit -m "[skip ci]updating image $DOCKER_REGISTRY/$CI_COMMIT_SHORT_SHA"</span>
-    <span class="pi">-</span> <span class="s">git push origin main</span>
-</code></pre></div></div>
-
-<p>完整代码与文章正文会稍有出入，改用了公开的 github 和 docker hub 来存储 部署文件 和 镜像。</p>
-
-<h3 id="本项目的运行和测试过程">本项目的运行和测试过程</h3>
-
-<p>克隆项目</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://gitlab.com/cloudbeer/gateway.git
-</code></pre></div></div>
-
-<p>上传到您自己的 gitlab 仓库，并启动自动构建。</p>
-
-<p>修改构建脚本，将 部署仓库，镜像仓库分别改成您自己的地址。并将相关账号配置到 Variables 里。</p>
-
-<p>改动代码后，如果您不想让 gitlab 自动启动 pipeline，在 commit 信息里加上 <code class="language-plaintext highlighter-rouge">[skip ci]xxxx</code> 即可。</p>
-
-<p>观察构建过程，成功后，可以看到镜像仓库中增加了 版本(tag)， 部署仓库中的 gateway 目录里的 kustomization.yaml 被修改。</p>
-
-<hr />
-
-<p>本文涉及的三个外部仓库，这三个仓库均为 public：</p>
-
-<p>业务源代码：<a href="https://gitlab.com/cloudbeer/gateway">https://gitlab.com/cloudbeer/gateway</a></p>
-
-<p>部署仓库：<a href="https://github.com/cloudbeer/cd-script">https://github.com/cloudbeer/cd-script</a></p>
-
-<p>镜像仓库：<a href="https://hub.docker.com/r/cloudbeer/gateway/tags">https://hub.docker.com/r/cloudbeer/gateway/tags</a></p>]]></content><author><name>啤酒云</name></author><category term="devops" /><category term="gitlab," /><category term="gitops," /><category term="持续集成" /><summary type="html"><![CDATA[当下 Gitlab 具备了 CI/CD 能力。 其 CI 流水线 主要定义在源代码根目录的 .gitlab-ci.yml 的文件里。这篇文章主要描述了如何编写 GitOps 方式的 gitlab-ci 文件。]]></summary></entry></feed>
+<p>同理，如果想要删除 eks，只需要删除相应的 eks resource 代码即可。</p>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws" /><category term="cdk" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry></feed>

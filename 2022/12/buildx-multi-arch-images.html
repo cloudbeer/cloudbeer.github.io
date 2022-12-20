@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>自动化构建多架构(amd, arm)镜像 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="自动化构建多架构(amd, arm)镜像" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。" />
+<meta property="og:description" content="现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。" />
+<link rel="canonical" href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" />
+<meta property="og:url" content="https://youbug.cn/2022/12/buildx-multi-arch-images.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-20T09:40:33+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="自动化构建多架构(amd, arm)镜像" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2022-12-20T09:40:33+00:00","datePublished":"2022-12-20T09:40:33+00:00","description":"现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。","headline":"自动化构建多架构(amd, arm)镜像","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2022/12/buildx-multi-arch-images.html"},"url":"https://youbug.cn/2022/12/buildx-multi-arch-images.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">自动化构建多架构(amd, arm)镜像</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-20T09:40:33+00:00" itemprop="datePublished">2022-12-20
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
+
+<h2 id="检查-docker-环境">检查 docker 环境</h2>
+
+<p>检查官方的 docker 20 的镜像，运行 docker info 查看 Plugins：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>docker info
+Client:
+ Context:    default
+ Debug Mode: <span class="nb">false
+ </span>Plugins:
+  buildx: Docker Buildx <span class="o">(</span>Docker Inc., v0.9.1<span class="o">)</span>
+  compose: Docker Compose <span class="o">(</span>Docker Inc., v2.14.1<span class="o">)</span>
+...
+</code></pre></div></div>
+
+<p>已经内置了 buildx 插件。</p>
+
+<h2 id="gitlab-ci-脚本">Gitlab CI 脚本</h2>
+
+<h3 id="构建到官方仓库-docker-hub">构建到官方仓库 docker hub</h3>
+
+<p>下面的示例 build 了一个 arm64 + amd64 的裸 JDK。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">dockerx</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">test</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">docker:20</span>
+  <span class="na">variables</span><span class="pi">:</span>
+    <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay2</span>
+    <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2376</span>
+    <span class="na">DOCKER_TLS_CERTDIR</span><span class="pi">:</span> <span class="s">/certs</span>
+    <span class="na">DOCKER_TLS_VERIFY</span><span class="pi">:</span> <span class="m">1</span>
+    <span class="na">DOCKER_CERT_PATH</span><span class="pi">:</span> <span class="s">/certs/client</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:20-dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">until docker version &gt; /dev/null; do sleep 1; done</span>
+    <span class="pi">-</span> <span class="s">echo "FROM amazoncorretto:11" &gt; Dockerfile</span>
+    <span class="pi">-</span> <span class="s">docker context create xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx create --name xbuilder --use xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx use xbuilder</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">echo $DOCKER_PASS | docker login -u$DOCKER_USER --password-stdin</span>
+    <span class="pi">-</span> <span class="s">docker buildx build --platform linux/arm64,linux/amd64 -t cloudbeer/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA --push .</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>主要的命令为 <code class="language-plaintext highlighter-rouge">docker buildx build --platform linux/arm64,linux/amd64</code>，可以直接指定平台架构。</li>
+  <li>在 19+ 版本的 docker 里，docker 生产的证书需要时间，为了安全起见，需要检测 docker 状态：<code class="language-plaintext highlighter-rouge">until docker version &gt; /dev/null; do sleep 1; done</code>，等他没问题再进行下一步操作，否则任务会中断。</li>
+  <li><code class="language-plaintext highlighter-rouge">docker context, docker buildx create, docker buildx use</code> 这些解决了 “
+ERROR: multiple platforms feature is currently not supported for docker driver.”, “Docker buildx - could not create a builder instance with TLS data loaded from environment” 这些个错误。</li>
+  <li><code class="language-plaintext highlighter-rouge">docker buildx build... --push</code> 会直接把镜像构建结果推送到 docker bub。</li>
+</ul>
+
+<p>构建结果：<a href="https://hub.docker.com/r/cloudbeer/pure-ci/tags">https://hub.docker.com/r/cloudbeer/pure-ci/tags</a></p>
+
+<p><img src="/assets/posts/devops/docker-hub-multi.png" alt="Buildx result" /></p>
+
+<h3 id="推送到-aws-ecr">推送到 AWS ECR</h3>
+
+<p>使用 AWS 的服务，一般离不开 aws cli，在本场景中，要么在 aws cli 镜像中安装 docker，要么在 docker 里安装 aws cli，下面是我的测试脚本，此脚本可以 run 到最后：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">dockerx-ecr</span><span class="pi">:</span>
+  <span class="na">stage</span><span class="pi">:</span> <span class="s">test</span>
+  <span class="na">image</span><span class="pi">:</span> <span class="s">amazon/aws-cli</span>
+  <span class="na">variables</span><span class="pi">:</span>
+    <span class="na">DOCKER_DRIVER</span><span class="pi">:</span> <span class="s">overlay2</span>
+    <span class="na">DOCKER_HOST</span><span class="pi">:</span> <span class="s">tcp://docker:2376</span>
+    <span class="na">DOCKER_TLS_CERTDIR</span><span class="pi">:</span> <span class="s">/certs</span>
+    <span class="na">DOCKER_TLS_VERIFY</span><span class="pi">:</span> <span class="m">1</span>
+    <span class="na">DOCKER_CERT_PATH</span><span class="pi">:</span> <span class="s">/certs/client</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker:dind</span>
+  <span class="na">before_script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">amazon-linux-extras install docker</span>
+    <span class="pi">-</span> <span class="s">mkdir -p ~/.docker/cli-plugins/</span>
+    <span class="pi">-</span> <span class="s">until docker version &gt; /dev/null; do sleep 1; done</span>
+    <span class="pi">-</span> <span class="s">docker container create --name buildx docker/buildx-bin sh</span>
+    <span class="pi">-</span> <span class="s">docker cp buildx:/buildx ~/.docker/cli-plugins/docker-buildx</span>
+    <span class="pi">-</span> <span class="s">echo "FROM amazoncorretto:11" &gt; Dockerfile</span>
+    <span class="pi">-</span> <span class="s">docker context create xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx create --name xbuilder --use xbuilder-ctx</span>
+    <span class="pi">-</span> <span class="s">docker buildx use xbuilder</span>
+  <span class="na">script</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY</span>
+    <span class="pi">-</span> <span class="s">docker buildx build --platform linux/arm64,linux/amd64 -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA --push .</span>
+</code></pre></div></div>
+
+<p>上面的脚本大部分都成功了，最后还是折了。下面是一些坑总结（吐槽模式开启）：</p>
+
+<ul>
+  <li>使用 官方 docker 镜像作为基础镜像构建，会发现 awscli v2 装不上， awscli v2 安装到 alpine 需要编译，不是简单加几个依赖包就行的，这个懒得折腾了。</li>
+  <li>使用 pip 官方安装的 awscli v2 居然是在 docker 里运行的，这是在搞笑吗？我本来就是个 dind，套娃了啊。</li>
+  <li>使用 aws-cli 镜像作为底包，<code class="language-plaintext highlighter-rouge">amazon-linux-extras install docker</code> 这个安装的 docker 居然把 plugins 都干掉了。干掉 compose 可以理解，为啥把 buildx 这么好的工具干掉了。</li>
+  <li>安装 buildx 插件，可以直接从 buildx 镜像包中拷贝，命令是 <code class="language-plaintext highlighter-rouge">docker container create</code> 和 <code class="language-plaintext highlighter-rouge">docker cp</code>。</li>
+  <li>ECR 登录是没问题的，构建是没问题的。但最终在推送阶段还是失败了，应该是 ECR 不支持多架构。</li>
+</ul>
+
+<p><strong>AWS ECR 你要加油了！！</strong></p>
+
+<p>最终错误的部分 log 贴在下面，：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="nv">$ </span>aws ecr get-login-password <span class="nt">--region</span> us-east-1 | docker login <span class="nt">--username</span> AWS <span class="nt">--password-stdin</span> <span class="nv">$DOCKER_REGISTRY</span>
+Login Succeeded
+<span class="c">#3 transferring context: 2B done</span>
+<span class="c">#3 DONE 0.1s</span>
+<span class="c">#4 [linux/arm64 internal] load metadata for docker.io/library/amazoncorretto:11</span>
+<span class="c">#4 DONE 2.6s</span>
+<span class="c">#5 [linux/amd64 internal] load metadata for docker.io/library/amazoncorretto:11</span>
+<span class="c">#5 DONE 2.6s</span>
+...
+<span class="c">#6 [linux/amd64 1/1] FROM docker.io/library/amazoncorretto:11@sha256:6962bc64de2b612c2a760299956853762cfcee538b1b6b55706661426546936c</span>
+<span class="c">#6 DONE 0.1s</span>
+<span class="c">#8 exporting to image</span>
+<span class="c">#8 exporting layers done</span>
+<span class="c">#8 exporting manifest sha256:3dd903be615ce4c36321b161806bc061a567079a2947ec658cdcd14d1c114235 0.0s done</span>
+<span class="c">#8 exporting config sha256:8b9bb2aca3d28e14fa06412d152fd4ce6c7a55f1554bec3c71ce4a4410060af3</span>
+<span class="c">#8 exporting config sha256:8b9bb2aca3d28e14fa06412d152fd4ce6c7a55f1554bec3c71ce4a4410060af3 0.0s done</span>
+<span class="c">#8 exporting manifest sha256:4218135aa38e8522e988b60392190cd7bfc1715cedb3f301f82cec43fee383e2 0.0s done</span>
+<span class="c">#8 exporting config sha256:de3379d966e1b03cf4c7f3c6db803f459cf1c3e887fbe2c10af9ce0c72a6f406 0.0s done</span>
+<span class="c">#8 exporting manifest list sha256:dc0282c4166a58f7b8298e5061a00c02c6bce6e358000b479e49e6d73cf57b34 0.0s done</span>
+<span class="c">#8 pushing layers</span>
+<span class="c">#8 ...</span>
+<span class="c">#9 [auth] sharing credentials for [MASKED].dkr.ecr.us-east-1.amazonaws.com</span>
+<span class="c">#9 DONE 0.0s</span>
+<span class="c">#8 exporting to image</span>
+<span class="c">#8 1.388 error: failed to do request: Post "https://[MASKED].dkr.ecr.us-east-1.amazonaws.com/v2/pure-ci/blobs/uploads/": EOF</span>
+<span class="c">#8 1.388 retrying in 1s</span>
+<span class="c">#8 1.413 error: failed to do request: Post "https://[MASKED].dkr.ecr.us-east-1.amazonaws.com/v2/pure-ci/blobs/uploads/": EOF</span>
+...
+</code></pre></div></div>
+
+<h2 id="不是本文的总结">不是本文的总结</h2>
+
+<ul>
+  <li>使用 docker-buildx 会直接使用相应架构的底层依赖镜像，如果使用这种方法，您不能将一个有架构依赖的可执行文件直接拷贝构建镜像，否则会出现底层包和业务包对不上的问题。</li>
+  <li>可以将构建过程放到 Dockerfile 里面去，Docker 有完整的多阶段构建的模式来生产您的镜像（如 go 语言）。</li>
+  <li>对于脚本类型的语言，完全可以用这种方式构建，依赖包安装也应该在 Dockerfile 中进行。</li>
+  <li>Java 的普通运行包可以使用直接拷贝的方式，X86 环境下构建的 jar 包可以直接运行在 ARM 的 jdk 中。</li>
+  <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 sha256 值。</li>
+</ul>
+
+  </div>
+
+  <a class="u-url" href="/2022/12/buildx-multi-arch-images.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

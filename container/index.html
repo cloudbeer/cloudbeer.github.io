@@ -76,7 +76,15 @@
   }
 </style>
 
-<div class="home"><h1 class="page-heading">容器</h1><ul class="post-list"><li><span class="post-meta">2022-12-19</span>
+<div class="home"><h1 class="page-heading">容器</h1><ul class="post-list"><li><span class="post-meta">2022-12-20</span>
+      <h3>
+        <a class="post-link" href="/2022/12/buildx-multi-arch-images.html">
+          自动化构建多架构(amd, arm)镜像
+        </a>
+      </h3>
+      <div><p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
+</div>
+    </li><li><span class="post-meta">2022-12-19</span>
       <h3>
         <a class="post-link" href="/2022/12/the-cheapest-way-to-ci-cn.html">
           在 AWS 构建应用 (Gitlab CI) 最便宜的姿势
@@ -147,15 +155,6 @@
         </a>
       </h3>
       <div><p>目前市场上 php 仍有一席之地。本文探讨如何将 php 应用容器化并迁移部署到 K8S。</p>
-</div>
-    </li><li><span class="post-meta">2021-07-16</span>
-      <h3>
-        <a class="post-link" href="/2021/07/create-kubeconfig.html">
-          生产有权限控制的 kubeconfig
-        </a>
-      </h3>
-      <div><p>​
-在开发测试场景中，我们开通了 k8s 集群，需要把集群的资源分配给使用者，但希望他们只能在自己的命名空间使用资源，不影响其他人的。</p>
 </div>
     </li></ul>
 

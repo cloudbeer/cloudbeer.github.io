@@ -96,7 +96,9 @@ dockerx-ecr:
     - docker buildx build --platform linux/arm64,linux/amd64 -t $DOCKER_REGISTRY/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA --push .
 ```
 
-上面的脚本大部分都成功了，最后还是折了。下面是一些坑总结（吐槽模式开启）：
+上面的脚本成功运行。
+
+下面是一些坑总结（吐槽模式开启）：
 
 - 使用 官方 docker 镜像作为基础镜像构建，会发现 awscli v2 装不上， awscli v2 安装到 alpine 需要编译，不是简单加几个依赖包就行的，这个懒得折腾了。
 - 使用 pip 官方安装的 awscli v2 居然是在 docker 里运行的，这是在搞笑吗？我本来就是个 dind，套娃了啊。

@@ -1,4 +1,416 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-20T11:54:16+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2022-12-23T09:59:50+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">编写 Argo CD 人工部署 API</title><link href="https://youbug.cn/2022/12/argocd-manual-sync-api.html" rel="alternate" type="text/html" title="编写 Argo CD 人工部署 API" /><published>2022-12-23T09:53:33+00:00</published><updated>2022-12-23T09:53:33+00:00</updated><id>https://youbug.cn/2022/12/argocd-manual-sync-api</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-manual-sync-api.html"><![CDATA[<p>使用 ArgoCD 可以有效解耦 CI 和 CD。
+想象这个场景：当 CI 流程将构建物打包完成，并更新了 Git 部署仓库，此时 CI 流程发通知给相关有审批人员，审批者通过点击链接就可以完成部署。
+虽然可以通过登录 Argo CD 的 UI 界面可以完成此操作，但感觉还不够丝滑。</p>
+
+<h2 id="想法">想法</h2>
+
+<p>我的想法是：</p>
+
+<p>编写 2 个 API 暴露出来：</p>
+
+<ul>
+  <li>发邮件(或者发微信，slack 啥的) 的 API</li>
+  <li>封装 argocd sync 的 API</li>
+</ul>
+
+<p>过程是：</p>
+
+<p>CI 结束后 -&gt; 调用 API 发邮件，邮件的内容，是一个带有时间戳签名的 Url -&gt; 收到邮件的人，直接在邮件里点击此链接触发 argocd sync。
+下面我来分解这一过程，并最后给出整体的代码。</p>
+
+<p>本文的代码使用 C# 编写，为啥用 C#？因为好久没用过了。这个语言我不想忘记，他是最好的面对对象语言。</p>
+
+<h2 id="先看看-argo-cd-api">先看看 Argo CD API</h2>
+
+<p>通过这个地址阅读 Argo CD API 文档：<code class="language-plaintext highlighter-rouge">&lt;argocd_server_url&gt;/swagger-ui</code></p>
+
+<p>我们找到了我们需要的 API 有两个：</p>
+
+<ul>
+  <li>SessionService_Create: <code class="language-plaintext highlighter-rouge">&lt;argocd_server_url&gt;/api/v1/session</code>，获取 Authorization token。</li>
+  <li>ApplicationService_Sync: <code class="language-plaintext highlighter-rouge">&lt;argocd_server_url&gt;/api/v1/applications/{name}/sync</code>，同步应用。</li>
+</ul>
+
+<p>请将 <code class="language-plaintext highlighter-rouge">&lt;argocd_server_url&gt;</code> 更换为您的 Argo CD 对外发布地址 (在 K8S 集群内对应的服务为：argocd-server)。</p>
+
+<p>调用方法大约为：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /api/v1/session
+
+{
+  "username": "admin",
+  "password": "argocd-secret"
+}
+</code></pre></div></div>
+
+<ul>
+  <li>这里需要传入您的 Argo CD 的用户名和密码。</li>
+</ul>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /api/v1/applications/{name}/sync
+Authorization: Bearer ${token}
+
+{
+  "appNamespace": "argocd"
+}
+</code></pre></div></div>
+
+<ul>
+  <li>其中必须的参数 url 中间的 name，这个就是创建的 ArgoCD 应用的名字。</li>
+  <li>注意 appNamespace 是 ArgoCD 应用的命名空间，不是你的业务应用的命名空间。</li>
+</ul>
+
+<p>有了这 2 个 API，下面的操作就简单了。</p>
+
+<h2 id="发送更新邮件">发送更新邮件</h2>
+
+<p>下面这个方法映射了一个 URL 用于发送邮件：</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="k">public</span> <span class="kt">string</span> <span class="nf">sendEmail</span><span class="p">(</span><span class="kt">string</span> <span class="n">email</span><span class="p">,</span> <span class="kt">string</span> <span class="n">appName</span><span class="p">){</span>
+
+    <span class="kt">var</span> <span class="n">email</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MimeMessage</span><span class="p">();</span>
+
+    <span class="n">email</span><span class="p">.</span><span class="n">Sender</span> <span class="p">=</span> <span class="n">MailboxAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="s">"cloudbeer@gmail.com"</span><span class="p">);</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">Sender</span><span class="p">.</span><span class="n">Name</span> <span class="p">=</span> <span class="s">"CD Bot"</span><span class="p">;</span>
+
+    <span class="n">email</span><span class="p">.</span><span class="n">From</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">email</span><span class="p">.</span><span class="n">Sender</span><span class="p">);</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">To</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">MailboxAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">emails</span><span class="p">));</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">Subject</span> <span class="p">=</span> <span class="s">$"Application </span><span class="p">{</span><span class="n">appName</span><span class="p">}</span><span class="s"> is ready for deployment."</span><span class="p">;</span>
+    <span class="kt">var</span> <span class="n">sign</span> <span class="p">=</span> <span class="nf">signApi</span><span class="p">(</span><span class="n">appName</span><span class="p">,</span> <span class="m">7200</span><span class="p">);</span> 
+    <span class="n">email</span><span class="p">.</span><span class="n">Body</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">TextPart</span><span class="p">(</span><span class="n">TextFormat</span><span class="p">.</span><span class="n">Html</span><span class="p">)</span> <span class="p">{</span> 
+      <span class="n">Text</span> <span class="p">=</span>  <span class="s">$@"</span><span class="err">
+</span><span class="s">        Application Name: </span><span class="p">{</span><span class="n">appName</span><span class="p">}</span><span class="s">&lt;br&gt;</span><span class="err">
+</span><span class="s">        Updated Date: </span><span class="p">{</span><span class="n">DateTime</span><span class="p">.</span><span class="n">Now</span><span class="p">}</span><span class="s">&lt;br&gt;</span><span class="err">
+</span><span class="s">        &lt;br&gt;</span><span class="err">
+</span><span class="s">        Click this link to approve the deployment in 2 hours.&lt;br&gt;&lt;br&gt;&lt;br&gt;</span><span class="err">
+</span><span class="s">        &lt;a href='http://localhost:9999/argo/deploy?name=</span><span class="p">{</span><span class="n">appName</span><span class="p">}</span><span class="s">&amp;sign=</span><span class="p">{</span><span class="n">sign</span><span class="p">}</span><span class="s">' </span><span class="err">
+</span><span class="s">          style='padding:10px 30px;border:1px solid #ccc;border-radius:5px;'&gt;</span><span class="err">
+</span><span class="s">        Deploy Now</span><span class="err">
+</span><span class="s">        &lt;/a&gt;</span><span class="err">
+</span><span class="s">        &lt;br /&gt;&lt;br&gt;&lt;br&gt;</span><span class="err">
+</span><span class="s">        &lt;br /&gt;请注意：上述链接 2 小时候有效。"</span>
+    <span class="p">};</span>
+
+    <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">smtp</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">SmtpClient</span><span class="p">())</span>
+    <span class="p">{</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Connect</span><span class="p">(</span><span class="s">"smtp.gmail.com"</span><span class="p">,</span> <span class="m">465</span><span class="p">,</span> <span class="k">true</span><span class="p">);</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Authenticate</span><span class="p">(</span><span class="s">"cloudbeer@gmail.com"</span><span class="p">,</span> <span class="n">gmailPassword</span><span class="p">);</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Send</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Disconnect</span><span class="p">(</span><span class="k">true</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="s">"OK"</span><span class="p">;</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>使用了 MailKit 发送邮件。</li>
+  <li>此 API 接受参数: email 和 appName</li>
+  <li>计算包含时间戳(2小时过期时间)的签名， 将部署链接 (http://localhost:9999/argo/deploy?name=?) 和签名作为邮件正文发送到目标邮箱。</li>
+  <li>此 api 应该由 CI 来调用。</li>
+  <li>点击邮件里面的链接，则会触发部署操作。</li>
+</ul>
+
+<h2 id="触发部署操作">触发部署操作</h2>
+
+<p>先看代码：</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  <span class="k">public</span> <span class="k">async</span> <span class="n">Task</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">&gt;</span> <span class="nf">deploy</span><span class="p">(</span><span class="kt">string</span> <span class="n">name</span><span class="p">,</span> <span class="kt">string</span> <span class="n">sign</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(!</span><span class="nf">verifyApi</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">sign</span><span class="p">)){</span>
+      <span class="k">return</span> <span class="s">"签名验证失败，或者链接过期了"</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kt">var</span> <span class="n">map</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;();</span>
+    <span class="n">map</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"username"</span><span class="p">,</span> <span class="n">argoUsername</span><span class="p">);</span>
+    <span class="n">map</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"password"</span><span class="p">,</span> <span class="n">argoPassword</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">pContent</span> <span class="p">=</span> <span class="n">JsonSerializer</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">(</span><span class="n">map</span><span class="p">);</span>
+
+
+    <span class="kt">var</span> <span class="n">request</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpRequestMessage</span><span class="p">(</span><span class="n">HttpMethod</span><span class="p">.</span><span class="n">Post</span><span class="p">,</span> <span class="n">argoUrl</span> <span class="p">+</span> <span class="s">"/api/v1/session"</span><span class="p">);</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">Accept</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="k">new</span> <span class="nf">MediaTypeWithQualityHeaderValue</span><span class="p">(</span><span class="s">"application/json"</span><span class="p">));</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Content</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">StringContent</span><span class="p">(</span><span class="n">pContent</span><span class="p">,</span> <span class="n">Encoding</span><span class="p">.</span><span class="n">UTF8</span><span class="p">);</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Content</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">ContentType</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MediaTypeHeaderValue</span><span class="p">(</span><span class="s">"application/json"</span><span class="p">);</span>
+    <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">httpClientHandler</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpClientHandler</span><span class="p">())</span>
+    <span class="p">{</span>
+      <span class="n">httpClientHandler</span><span class="p">.</span><span class="n">ServerCertificateCustomValidationCallback</span> <span class="p">=</span> <span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">cert</span><span class="p">,</span> <span class="n">chain</span><span class="p">,</span> <span class="n">errors</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="p">{</span> <span class="k">return</span> <span class="k">true</span><span class="p">;</span> <span class="p">};</span>
+      <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpClient</span><span class="p">(</span><span class="n">httpClientHandler</span><span class="p">))</span>
+      <span class="p">{</span>
+        <span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="k">await</span> <span class="n">client</span><span class="p">.</span><span class="nf">SendAsync</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+        <span class="n">response</span><span class="p">.</span><span class="nf">EnsureSuccessStatusCode</span><span class="p">();</span>
+        <span class="kt">string</span> <span class="n">responseBody</span> <span class="p">=</span> <span class="k">await</span> <span class="n">response</span><span class="p">.</span><span class="n">Content</span><span class="p">.</span><span class="nf">ReadAsStringAsync</span><span class="p">();</span>
+
+        <span class="kt">var</span> <span class="n">token</span> <span class="p">=</span> <span class="n">JsonSerializer</span><span class="p">.</span><span class="n">Deserialize</span><span class="p">&lt;</span><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="kt">string</span><span class="p">&gt;&gt;(</span><span class="n">responseBody</span><span class="p">);</span>
+
+        <span class="kt">var</span> <span class="n">result</span> <span class="p">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nf">syncApp</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">[</span><span class="s">"token"</span><span class="p">],</span> <span class="s">"gateway"</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>首先验证签名。</li>
+  <li>通过调用 ArgoCD 的 <code class="language-plaintext highlighter-rouge">/api/v1/session</code> 去获取 Argo CD 的 临时 Authorization token。</li>
+  <li>调用应用同步 API。</li>
+  <li>调用成功则完成触发应用同步。</li>
+</ul>
+
+<h2 id="测试过程">测试过程</h2>
+
+<p>1 邮件发送</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl http://localhost:9999/argo/sendemail?email<span class="o">=</span>cloudbeer@gmail.com&amp;appName<span class="o">=</span>product
+</code></pre></div></div>
+
+<p>2 gmail 邮箱收邮件，点击 Deploy Now 链接。这个链接类似这样：</p>
+
+<p><a href="http://localhost:9999/argo/deploy?name=product&amp;sign=eyJl...1In0=">http://localhost:9999/argo/deploy?name=product&amp;sign=eyJl...1In0=</a></p>
+
+<p>3 点击上面的链接完成应用部署。</p>
+
+<h2 id="完整的代码">完整的代码</h2>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">using</span> <span class="nn">Microsoft.AspNetCore.Mvc</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Net.Http</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Net.Http.Headers</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text.Json</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">MailKit.Net.Smtp</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">MimeKit</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">MimeKit.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Security.Cryptography</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">ArgoTrigger.Controllers</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="k">class</span> <span class="nc">ArgoController</span> <span class="p">:</span> <span class="n">Controller</span>
+<span class="p">{</span>
+  <span class="k">private</span> <span class="kt">string</span> <span class="n">argoUrl</span> <span class="p">=</span> <span class="n">Environment</span><span class="p">.</span><span class="nf">GetEnvironmentVariable</span><span class="p">(</span><span class="s">"ARGO_URL"</span><span class="p">)</span> <span class="p">??</span> <span class="s">"http://host.docker.internal:8080"</span><span class="p">;</span>
+  <span class="k">private</span> <span class="kt">string</span> <span class="n">argoUsername</span> <span class="p">=</span> <span class="n">Environment</span><span class="p">.</span><span class="nf">GetEnvironmentVariable</span><span class="p">(</span><span class="s">"ARGO_USERNAME"</span><span class="p">)??</span> <span class="s">"admin"</span><span class="p">;</span>
+  <span class="k">private</span> <span class="kt">string</span> <span class="n">argoPassword</span> <span class="p">=</span> <span class="n">Environment</span><span class="p">.</span><span class="nf">GetEnvironmentVariable</span><span class="p">(</span><span class="s">"ARGO_PASSWORD"</span><span class="p">)??</span><span class="s">"uBGroHnh9TjSa7ud"</span><span class="p">;</span>
+  <span class="k">private</span> <span class="kt">string</span> <span class="n">gmailPassword</span> <span class="p">=</span> <span class="n">Environment</span><span class="p">.</span><span class="nf">GetEnvironmentVariable</span><span class="p">(</span><span class="s">"GMAIL_PASSWORD"</span><span class="p">);</span>
+  
+  <span class="k">public</span> <span class="k">async</span> <span class="n">Task</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">&gt;</span> <span class="nf">deploy</span><span class="p">(</span><span class="kt">string</span> <span class="n">name</span><span class="p">,</span> <span class="kt">string</span> <span class="n">sign</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(!</span><span class="nf">verifyApi</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">sign</span><span class="p">)){</span>
+      <span class="k">return</span> <span class="s">"签名验证失败，或者链接过期了"</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kt">var</span> <span class="n">map</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;();</span>
+    <span class="n">map</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"username"</span><span class="p">,</span> <span class="n">argoUsername</span><span class="p">);</span>
+    <span class="n">map</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"password"</span><span class="p">,</span> <span class="n">argoPassword</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">pContent</span> <span class="p">=</span> <span class="n">JsonSerializer</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">(</span><span class="n">map</span><span class="p">);</span>
+
+
+    <span class="kt">var</span> <span class="n">request</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpRequestMessage</span><span class="p">(</span><span class="n">HttpMethod</span><span class="p">.</span><span class="n">Post</span><span class="p">,</span> <span class="n">argoUrl</span> <span class="p">+</span> <span class="s">"/api/v1/session"</span><span class="p">);</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">Accept</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="k">new</span> <span class="nf">MediaTypeWithQualityHeaderValue</span><span class="p">(</span><span class="s">"application/json"</span><span class="p">));</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Content</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">StringContent</span><span class="p">(</span><span class="n">pContent</span><span class="p">,</span> <span class="n">Encoding</span><span class="p">.</span><span class="n">UTF8</span><span class="p">);</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Content</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">ContentType</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MediaTypeHeaderValue</span><span class="p">(</span><span class="s">"application/json"</span><span class="p">);</span>
+    <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">httpClientHandler</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpClientHandler</span><span class="p">())</span>
+    <span class="p">{</span>
+      <span class="n">httpClientHandler</span><span class="p">.</span><span class="n">ServerCertificateCustomValidationCallback</span> <span class="p">=</span> <span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">cert</span><span class="p">,</span> <span class="n">chain</span><span class="p">,</span> <span class="n">errors</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="p">{</span> <span class="k">return</span> <span class="k">true</span><span class="p">;</span> <span class="p">};</span>
+      <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpClient</span><span class="p">(</span><span class="n">httpClientHandler</span><span class="p">))</span>
+      <span class="p">{</span>
+        <span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="k">await</span> <span class="n">client</span><span class="p">.</span><span class="nf">SendAsync</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+        <span class="n">response</span><span class="p">.</span><span class="nf">EnsureSuccessStatusCode</span><span class="p">();</span>
+        <span class="kt">string</span> <span class="n">responseBody</span> <span class="p">=</span> <span class="k">await</span> <span class="n">response</span><span class="p">.</span><span class="n">Content</span><span class="p">.</span><span class="nf">ReadAsStringAsync</span><span class="p">();</span>
+
+        <span class="kt">var</span> <span class="n">token</span> <span class="p">=</span> <span class="n">JsonSerializer</span><span class="p">.</span><span class="n">Deserialize</span><span class="p">&lt;</span><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="kt">string</span><span class="p">&gt;&gt;(</span><span class="n">responseBody</span><span class="p">);</span>
+
+        <span class="kt">var</span> <span class="n">result</span> <span class="p">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nf">syncApp</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">[</span><span class="s">"token"</span><span class="p">],</span> <span class="s">"gateway"</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">private</span> <span class="k">async</span> <span class="n">Task</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">&gt;</span> <span class="nf">syncApp</span><span class="p">(</span><span class="n">HttpClient</span> <span class="n">client</span><span class="p">,</span> <span class="kt">string</span> <span class="n">token</span><span class="p">,</span> <span class="kt">string</span> <span class="n">appName</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="kt">var</span> <span class="n">map</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;();</span>
+    <span class="n">map</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"appNamespace"</span><span class="p">,</span> <span class="s">"argocd"</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">pContent</span> <span class="p">=</span> <span class="n">JsonSerializer</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">(</span><span class="n">map</span><span class="p">);</span>
+
+    <span class="kt">var</span> <span class="n">request</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">HttpRequestMessage</span><span class="p">(</span><span class="n">HttpMethod</span><span class="p">.</span><span class="n">Post</span><span class="p">,</span> <span class="n">argoUrl</span> <span class="p">+</span> <span class="s">"/api/v1/applications/"</span> <span class="p">+</span> <span class="n">appName</span> <span class="p">+</span> <span class="s">"/sync"</span><span class="p">);</span>
+
+
+    <span class="n">request</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">Accept</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="k">new</span> <span class="nf">MediaTypeWithQualityHeaderValue</span><span class="p">(</span><span class="s">"application/json"</span><span class="p">));</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">Authorization</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">AuthenticationHeaderValue</span><span class="p">(</span><span class="s">"Bearer"</span><span class="p">,</span> <span class="n">token</span><span class="p">);</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Content</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">StringContent</span><span class="p">(</span><span class="n">pContent</span><span class="p">,</span> <span class="n">Encoding</span><span class="p">.</span><span class="n">UTF8</span><span class="p">);</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">Content</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">ContentType</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MediaTypeHeaderValue</span><span class="p">(</span><span class="s">"application/json"</span><span class="p">);</span>
+
+    <span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="k">await</span> <span class="n">client</span><span class="p">.</span><span class="nf">SendAsync</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+    <span class="n">response</span><span class="p">.</span><span class="nf">EnsureSuccessStatusCode</span><span class="p">();</span>
+    <span class="kt">string</span> <span class="n">responseBody</span> <span class="p">=</span> <span class="k">await</span> <span class="n">response</span><span class="p">.</span><span class="n">Content</span><span class="p">.</span><span class="nf">ReadAsStringAsync</span><span class="p">();</span>
+
+    <span class="k">return</span> <span class="n">responseBody</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">public</span> <span class="kt">string</span> <span class="nf">sendEmail</span><span class="p">(</span><span class="kt">string</span> <span class="n">emails</span><span class="p">,</span> <span class="kt">string</span> <span class="n">appName</span><span class="p">){</span>
+    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="n">emails</span><span class="p">);</span>
+    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="n">gmailPassword</span><span class="p">);</span>
+
+    <span class="kt">var</span> <span class="n">email</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MimeMessage</span><span class="p">();</span>
+
+    <span class="n">email</span><span class="p">.</span><span class="n">Sender</span> <span class="p">=</span> <span class="n">MailboxAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="s">"cloudbeer@gmail.com"</span><span class="p">);</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">Sender</span><span class="p">.</span><span class="n">Name</span> <span class="p">=</span> <span class="s">"CD Bot"</span><span class="p">;</span>
+
+    <span class="n">email</span><span class="p">.</span><span class="n">From</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">email</span><span class="p">.</span><span class="n">Sender</span><span class="p">);</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">To</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">MailboxAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">emails</span><span class="p">));</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">Subject</span> <span class="p">=</span> <span class="s">$"Application </span><span class="p">{</span><span class="n">appName</span><span class="p">}</span><span class="s"> is ready for deployment."</span><span class="p">;</span>
+    <span class="kt">var</span> <span class="n">sign</span> <span class="p">=</span> <span class="nf">signApi</span><span class="p">(</span><span class="n">appName</span><span class="p">,</span> <span class="m">7200</span><span class="p">);</span> <span class="c1">//You should approve in 10 min.</span>
+    <span class="n">email</span><span class="p">.</span><span class="n">Body</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">TextPart</span><span class="p">(</span><span class="n">TextFormat</span><span class="p">.</span><span class="n">Html</span><span class="p">)</span> <span class="p">{</span> 
+      <span class="n">Text</span> <span class="p">=</span>  <span class="s">$@"</span><span class="err">
+</span><span class="s">        Application Name: </span><span class="p">{</span><span class="n">appName</span><span class="p">}</span><span class="s">&lt;br&gt;</span><span class="err">
+</span><span class="s">        Updated Date: </span><span class="p">{</span><span class="n">DateTime</span><span class="p">.</span><span class="n">Now</span><span class="p">}</span><span class="s">&lt;br&gt;</span><span class="err">
+</span><span class="s">        &lt;br&gt;</span><span class="err">
+</span><span class="s">        Click this link to approve the deployment in 2 hours.&lt;br&gt;&lt;br&gt;&lt;br&gt;</span><span class="err">
+</span><span class="s">        &lt;a href='http://localhost:9999/argo/deploy?name=</span><span class="p">{</span><span class="n">appName</span><span class="p">}</span><span class="s">&amp;sign=</span><span class="p">{</span><span class="n">sign</span><span class="p">}</span><span class="s">' </span><span class="err">
+</span><span class="s">          style='padding:10px 30px;border:1px solid #ccc;border-radius:5px;'&gt;</span><span class="err">
+</span><span class="s">        Deploy Now</span><span class="err">
+</span><span class="s">        &lt;/a&gt;</span><span class="err">
+</span><span class="s">        &lt;br /&gt;&lt;br&gt;&lt;br&gt;</span><span class="err">
+</span><span class="s">        &lt;br /&gt;请注意：上述链接 2 小时候有效。"</span>
+    <span class="p">};</span>
+
+    <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">smtp</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">SmtpClient</span><span class="p">())</span>
+    <span class="p">{</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Connect</span><span class="p">(</span><span class="s">"smtp.gmail.com"</span><span class="p">,</span> <span class="m">465</span><span class="p">,</span> <span class="k">true</span><span class="p">);</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Authenticate</span><span class="p">(</span><span class="s">"cloudbeer@gmail.com"</span><span class="p">,</span> <span class="n">gmailPassword</span><span class="p">);</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Send</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+        <span class="n">smtp</span><span class="p">.</span><span class="nf">Disconnect</span><span class="p">(</span><span class="k">true</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="s">"OK"</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">private</span> <span class="kt">string</span> <span class="nf">signApi</span><span class="p">(</span><span class="kt">string</span> <span class="n">appName</span><span class="p">,</span> <span class="kt">int</span> <span class="n">expireSecond</span><span class="p">){</span>
+    <span class="kt">string</span> <span class="n">cachedKey</span> <span class="p">=</span> <span class="s">"abcdefghijklmnop"</span><span class="p">;</span>
+    <span class="n">DateTime</span> <span class="n">expireAt</span> <span class="p">=</span> <span class="n">DateTime</span><span class="p">.</span><span class="n">Now</span><span class="p">.</span><span class="nf">AddSeconds</span><span class="p">(</span><span class="n">expireSecond</span><span class="p">);</span>
+    <span class="kt">string</span> <span class="n">sign</span> <span class="p">=</span> <span class="nf">sha256</span><span class="p">(</span><span class="n">cachedKey</span> <span class="p">+</span> <span class="n">appName</span> <span class="p">+</span> <span class="n">expireAt</span><span class="p">.</span><span class="n">Ticks</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">signJson</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;();</span>
+    <span class="n">signJson</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"expireAt"</span><span class="p">,</span> <span class="n">expireAt</span><span class="p">.</span><span class="n">Ticks</span><span class="p">.</span><span class="nf">ToString</span><span class="p">());</span>
+    <span class="n">signJson</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"sign"</span><span class="p">,</span> <span class="n">sign</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">jStrSign</span> <span class="p">=</span>  <span class="n">JsonSerializer</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">(</span><span class="n">signJson</span><span class="p">);</span>
+    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="n">jStrSign</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="nf">base64Encode</span><span class="p">(</span><span class="n">jStrSign</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">private</span> <span class="kt">bool</span> <span class="nf">verifyApi</span><span class="p">(</span><span class="kt">string</span> <span class="n">appName</span><span class="p">,</span> <span class="kt">string</span> <span class="n">sign</span><span class="p">){</span>
+    <span class="kt">string</span> <span class="n">cachedKey</span> <span class="p">=</span> <span class="s">"abcdefghijklmnop"</span><span class="p">;</span>
+    <span class="kt">string</span> <span class="n">jStrSign</span> <span class="p">=</span> <span class="nf">base64Decode</span><span class="p">(</span><span class="n">sign</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">signJson</span> <span class="p">=</span> <span class="n">JsonSerializer</span><span class="p">.</span><span class="n">Deserialize</span><span class="p">&lt;</span><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;&gt;(</span><span class="n">jStrSign</span><span class="p">);</span>
+    <span class="kt">long</span> <span class="n">expireAt</span> <span class="p">=</span> <span class="kt">long</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">signJson</span><span class="p">[</span><span class="s">"expireAt"</span><span class="p">]);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">DateTime</span><span class="p">.</span><span class="n">Now</span><span class="p">.</span><span class="n">Ticks</span> <span class="p">&gt;</span> <span class="n">expireAt</span><span class="p">){</span>
+      <span class="k">return</span> <span class="k">false</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="kt">string</span> <span class="n">signFromApi</span> <span class="p">=</span> <span class="n">signJson</span><span class="p">[</span><span class="s">"sign"</span><span class="p">];</span>
+    <span class="kt">string</span> <span class="n">signFromCache</span> <span class="p">=</span> <span class="nf">sha256</span><span class="p">(</span><span class="n">cachedKey</span> <span class="p">+</span> <span class="n">appName</span> <span class="p">+</span> <span class="n">signJson</span><span class="p">[</span><span class="s">"expireAt"</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="n">signFromCache</span> <span class="p">==</span> <span class="n">signFromApi</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kt">string</span> <span class="nf">sha256</span><span class="p">(</span><span class="kt">string</span> <span class="n">randomString</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="k">using</span> <span class="p">(</span><span class="n">SHA256</span> <span class="n">mySHA256</span> <span class="p">=</span> <span class="n">SHA256</span><span class="p">.</span><span class="nf">Create</span><span class="p">())</span>
+    <span class="p">{</span>
+      <span class="kt">byte</span><span class="p">[]</span> <span class="n">crypto</span> <span class="p">=</span> <span class="n">mySHA256</span><span class="p">.</span><span class="nf">ComputeHash</span><span class="p">(</span><span class="n">Encoding</span><span class="p">.</span><span class="n">UTF8</span><span class="p">.</span><span class="nf">GetBytes</span><span class="p">(</span><span class="n">randomString</span><span class="p">));</span>
+      <span class="kt">string</span> <span class="n">hash</span> <span class="p">=</span> <span class="n">String</span><span class="p">.</span><span class="n">Empty</span><span class="p">;</span>
+      <span class="k">foreach</span> <span class="p">(</span><span class="kt">byte</span> <span class="n">theByte</span> <span class="k">in</span> <span class="n">crypto</span><span class="p">)</span>
+      <span class="p">{</span>
+          <span class="n">hash</span> <span class="p">+=</span> <span class="n">theByte</span><span class="p">.</span><span class="nf">ToString</span><span class="p">(</span><span class="s">"x2"</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="k">return</span> <span class="n">hash</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="kt">string</span> <span class="nf">base64Encode</span><span class="p">(</span><span class="kt">string</span> <span class="n">plainText</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">var</span> <span class="n">plainTextBytes</span> <span class="p">=</span> <span class="n">System</span><span class="p">.</span><span class="n">Text</span><span class="p">.</span><span class="n">Encoding</span><span class="p">.</span><span class="n">UTF8</span><span class="p">.</span><span class="nf">GetBytes</span><span class="p">(</span><span class="n">plainText</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">System</span><span class="p">.</span><span class="n">Convert</span><span class="p">.</span><span class="nf">ToBase64String</span><span class="p">(</span><span class="n">plainTextBytes</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="kt">string</span> <span class="nf">base64Decode</span><span class="p">(</span><span class="kt">string</span> <span class="n">base64EncodedData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">var</span> <span class="n">base64EncodedBytes</span> <span class="p">=</span> <span class="n">System</span><span class="p">.</span><span class="n">Convert</span><span class="p">.</span><span class="nf">FromBase64String</span><span class="p">(</span><span class="n">base64EncodedData</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">System</span><span class="p">.</span><span class="n">Text</span><span class="p">.</span><span class="n">Encoding</span><span class="p">.</span><span class="n">UTF8</span><span class="p">.</span><span class="nf">GetString</span><span class="p">(</span><span class="n">base64EncodedBytes</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<h2 id="附net-core-项目入门">附：.NET Core 项目入门</h2>
+
+<p>下面记录了代码开始之前的工作，包括 .NET 运行环境配置，创建项目，开发配置等工作。我开始写这个文章的时候电脑还没有 .NET 环境。</p>
+
+<p>我准备使用 .NET 镜像作为我的开发环境，先拉一下镜像：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker pull mcr.microsoft.com/dotnet/sdk:7.0
+</code></pre></div></div>
+
+<h3 id="创建一个项目">创建一个项目</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
+  <span class="nt">-v</span> ~/projects/cloudbeer:/app <span class="se">\</span>
+  mcr.microsoft.com/dotnet/sdk:7.0 <span class="se">\</span>
+  dotnet new webapp <span class="nt">-o</span> /app/ArgoTrigger <span class="nt">--no-https</span> <span class="nt">-f</span> net7.0
+</code></pre></div></div>
+
+<p>这个命令含义如下：</p>
+
+<ul>
+  <li>家目录的 /projects/cloudbeer 映射到容器的 /app</li>
+  <li>通过 dotnet 命令在子目录 ArgoTrigger 里生产一个 asp.net core 项目。</li>
+</ul>
+
+<h3 id="安装依赖包">安装依赖包</h3>
+
+<p>安装 2 个依赖包，MailKit 和 MimeKit，用来发送通知邮件。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
+  <span class="nt">-v</span> ~/projects/cloudbeer:/app <span class="se">\</span>
+  mcr.microsoft.com/dotnet/sdk:7.0 <span class="se">\</span>
+  sh <span class="nt">-c</span> <span class="s2">"cd /app/ArgoTrigger &amp;&amp; dotnet add package MailKit"</span>
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="se">\</span>
+  <span class="nt">-v</span> ~/projects/cloudbeer:/app <span class="se">\</span>
+  mcr.microsoft.com/dotnet/sdk:7.0 <span class="se">\</span>
+  sh <span class="nt">-c</span> <span class="s2">"cd /app/ArgoTrigger &amp;&amp; dotnet add package MimeKit"</span>
+</code></pre></div></div>
+
+<h3 id="启动项目">启动项目</h3>
+
+<p>现在项目已经产生，可以打开 vscode 进行编辑了。</p>
+
+<p>默认的 Web 开发 Url 是 localhost + 随机端口，但我们需要将 容器的 端口映射出来，需要一个 0.0.0.0 的固定端口，修改配置文件 appsettings.json，加入：<code class="language-plaintext highlighter-rouge">"Urls": "http://0.0.0.0:9999"</code></p>
+
+<p>appsettings.json 这个文件现在看起来应该是这样：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"Urls"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://0.0.0.0:9999"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Logging"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"LogLevel"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"Default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Information"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"Microsoft.AspNetCore"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Warning"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nl">"AllowedHosts"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>然后启动项目的开发模式：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">-it</span> <span class="nt">--rm</span> <span class="nt">-p</span> 9999:9999 <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">DOTNET_WATCH_RESTART_ON_RUDE_EDIT</span><span class="o">=</span><span class="nb">true</span> <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">GMAIL_PASSWORD</span><span class="o">=</span><span class="nv">$GMAIL_PASSWORD</span> <span class="se">\</span>
+  <span class="nt">-v</span> ~/projects/cloudbeer:/app <span class="se">\</span>
+  mcr.microsoft.com/dotnet/sdk:7.0 <span class="se">\</span>
+  sh <span class="nt">-c</span> <span class="s2">"cd /app/ArgoTrigger &amp;&amp; dotnet watch -v"</span>
+</code></pre></div></div>
+
+<ul>
+  <li>GMAIL_PASSWORD 是一个环境变量，是 Gmail 的临时登录 token，这个变量通过本机到容器，最终传入发送邮件的代码中。</li>
+</ul>
+
+<p>现在可以打开 <a href="http://localhost:9999/">http://localhost:9999/</a> 了。</p>
+
+<blockquote>
+  <p>没有 IDE 的代码提示，比较痛苦。不过，老夫是一把梭，一谷歌，一剪刀搞定一切。</p>
+</blockquote>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container," /><category term="argocd" /><summary type="html"><![CDATA[使用 ArgoCD 可以有效解耦 CI 和 CD。 想象这个场景：当 CI 流程将构建物打包完成，并更新了 Git 部署仓库，此时 CI 流程发通知给相关有审批人员，审批者通过点击链接就可以完成部署。 虽然可以通过登录 Argo CD 的 UI 界面可以完成此操作，但感觉还不够丝滑。]]></summary></entry><entry><title type="html">自动化构建多架构(amd, arm)镜像</title><link href="https://youbug.cn/2022/12/buildx-multi-arch-images.html" rel="alternate" type="text/html" title="自动化构建多架构(amd, arm)镜像" /><published>2022-12-20T09:40:33+00:00</published><updated>2022-12-20T09:40:33+00:00</updated><id>https://youbug.cn/2022/12/buildx-multi-arch-images</id><content type="html" xml:base="https://youbug.cn/2022/12/buildx-multi-arch-images.html"><![CDATA[<p>现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 <code class="language-plaintext highlighter-rouge">docker buildx build --platform...</code>。</p>
 
 <h2 id="检查-docker-环境">检查 docker 环境</h2>
 
@@ -1846,157 +2258,4 @@ git push <span class="nt">-f</span> origin main
 <p><a href="https://jasonthai.me/blog/2019/07/22/how-to-deploy-a-github-page-using-circleci-20-custom-jekyll-gems/">How to Deploy to Github Pages Using CircleCI 2.0 + Custom Jekyll Dependencies
 </a></p>
 
-<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="tucao," /><category term="circleci," /><category term="github," /><category term="jekyll" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry><entry><title type="html">AWS CDK 入门：Hello World</title><link href="https://youbug.cn/2022/12/cdk-start-hello-world.html" rel="alternate" type="text/html" title="AWS CDK 入门：Hello World" /><published>2022-12-04T11:54:44+00:00</published><updated>2022-12-04T11:54:44+00:00</updated><id>https://youbug.cn/2022/12/cdk-start-hello-world</id><content type="html" xml:base="https://youbug.cn/2022/12/cdk-start-hello-world.html"><![CDATA[<p>本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。</p>
-
-<h2 id="iac-和-cdk-简介">IaC 和 CDK 简介</h2>
-
-<h3 id="什么是-iac">什么是 IaC？</h3>
-
-<p>这段来自：<a href="https://www.redhat.com/zh/topics/automation/what-is-infrastructure-as-code-iac">https://www.redhat.com/zh/topics/automation/what-is-infrastructure-as-code-iac</a></p>
-
-<blockquote>
-  <p>基础设施即代码（IaC）是通过代码而非手动流程来管理和置备基础设施的方法。</p>
-
-  <p>利用 IaC 我们可以创建包含基础设施规范的配置文件，从而便于编辑和分发配置。此外，它还可确保每次置备的环境都完全相同。通过对配置规范进行整理和记录，IaC 有助于实现配置管理，并避免发生未记录的临时配置更改。</p>
-
-  <p>版本控制是 IaC 的一个重要组成部分，就像其他任何软件源代码文件一样，配置文件也应该在源代码控制之下。以基础设施即代码方式部署还意味着您可以将基础架构划分为若干模块化组件，它们可通过自动化以不同的方式进行组合。</p>
-
-  <p>借助 IaC 实现基础架构置备的自动化，意味着开发人员无需再在每次开发或部署应用时手动置备和管理服务器、操作系统、存储及其他基础架构组件。对基础架构编码即可创建一个置备用的模板，尽管置备过程仍然可以手动完成，但也可以由自动化工具（例如红帽® Ansible® 自动化平台）为您代劳。</p>
-</blockquote>
-
-<p>简要来说就是：使用描述性的代码管理您的基础设施。</p>
-
-<h3 id="什么是-cdk">什么是 CDK？</h3>
-
-<p>这段来自：<a href="https://aws.amazon.com/cn/getting-started/guides/setup-cdk/">https://aws.amazon.com/cn/getting-started/guides/setup-cdk/</a></p>
-
-<blockquote>
-  <p>AWS CDK 是一个开源软件开发框架，可让您使用熟悉的编程语言 (如 JavaScript、TypeScript、Python、Java、C# 和 Go) 定义云应用程序资源。您编写的代码转换为 CloudFormation (CFN) 模板，可使用 <a href="https://aws.amazon.com/cn/cloudformation/">AWS CloudFormation</a> 创建基础设施。</p>
-</blockquote>
-
-<p>这个也总结一下：CDK 就是 AWS 的 IaC，他依赖 Cloudformation，可以用常用的语言来描述您的基础设施。</p>
-
-<h2 id="安装和设置-aws-cdk">安装和设置 AWS CDK</h2>
-
-<p>我习惯使用命令行的方式运行，如 <code class="language-plaintext highlighter-rouge">cdk deploy</code>。cdk 这个命令其实是一个 nodejs 程序。</p>
-
-<p>nodejs 安装就不说了，现在国内有很多开源镜像，如：<a href="https://mirrors.tuna.tsinghua.edu.cn/nodejs-release">https://mirrors.tuna.tsinghua.edu.cn/nodejs-release</a>，请安装版本 &gt;= 10.3.0 的。</p>
-
-<p>nodejs 安装完成后，就可以安装 cdk 命令行：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm i <span class="nt">-g</span> aws-cdk
-</code></pre></div></div>
-
-<p>默认安装完成后 CDK 就是全局命令行了。</p>
-
-<p>CDK 同时要依赖 AWS CLI 以及 AWS 凭证。</p>
-
-<p>安装 AWS CLI 参考：<a href="https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html">https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html</a></p>
-
-<p>在开发环境配置凭证：<a href="https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/cli-configure-quickstart.html">https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/cli-configure-quickstart.html</a></p>
-
-<h2 id="hello-world">Hello World</h2>
-
-<p>开发环境都设置好了！</p>
-
-<p>首先新建一个目录：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir </span>cdk-demo <span class="o">&amp;&amp;</span> <span class="nb">cd </span>cdk-demo
-</code></pre></div></div>
-
-<p>初始换项目，使用 typescipt 语言:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk init app <span class="nt">--language</span> typescript
-</code></pre></div></div>
-
-<ul>
-  <li>选择 typescipt 语言，是因为 cdk 的文档最多最全的是 typescipt 语言，包括 api 和 示例。</li>
-</ul>
-
-<p>等若干分钟（会依赖您依赖包的下载速度）之后，打开 lib/cdk-workshop-stack.ts，默认示例代码可以看出，创建了一个 sqs 的 Queue 资源。</p>
-
-<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">export</span> <span class="kd">class</span> <span class="nx">CdkWorkshopStack</span> <span class="kd">extends</span> <span class="nx">Stack</span> <span class="p">{</span>
-  <span class="kd">constructor</span><span class="p">(</span><span class="nx">scope</span><span class="p">:</span> <span class="nx">Construct</span><span class="p">,</span> <span class="nx">id</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">props</span><span class="p">?:</span> <span class="nx">StackProps</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">super</span><span class="p">(</span><span class="nx">scope</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">props</span><span class="p">);</span>
-
-    <span class="kd">const</span> <span class="nx">queue</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">sqs</span><span class="p">.</span><span class="nx">Queue</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">CdkWorkshopQueue</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">visibilityTimeout</span><span class="p">:</span> <span class="nx">Duration</span><span class="p">.</span><span class="nx">seconds</span><span class="p">(</span><span class="mi">300</span><span class="p">)</span>
-    <span class="p">});</span>
-
-    <span class="kd">const</span> <span class="nx">topic</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">sns</span><span class="p">.</span><span class="nx">Topic</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">CdkWorkshopTopic</span><span class="dl">'</span><span class="p">);</span>
-
-    <span class="nx">topic</span><span class="p">.</span><span class="nx">addSubscription</span><span class="p">(</span><span class="k">new</span> <span class="nx">subs</span><span class="p">.</span><span class="nx">SqsSubscription</span><span class="p">(</span><span class="nx">queue</span><span class="p">));</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>对于新环境，需要运行:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk bootstrap
-</code></pre></div></div>
-
-<ul>
-  <li>此命令在同一个账号和 region 中只需执行一次。</li>
-</ul>
-
-<p>通过 list 命令可以查看 stack。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk <span class="nb">ls</span>
-</code></pre></div></div>
-
-<p>运行部署：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk deploy
-</code></pre></div></div>
-
-<ul>
-  <li>此命令执行后，会有资源改变列表，并询问是否确认部署。</li>
-  <li>检查无误后，输入 y</li>
-</ul>
-
-<p>待执行完成后，检查是否真的创建出了 SQS 资源。</p>
-
-<p>清理资源：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cdk destroy
-</code></pre></div></div>
-
-<p>验证完成之后，请及时使用 cdk destroy 清理资源，否则会<strong>产生费用</strong>。</p>
-
-<p>使用 cdk destroy 删除更干净。</p>
-
-<h2 id="关于渐进式">关于“渐进式”</h2>
-
-<p>在本文的简介中，提出了 IaC/CDK 是“渐进式”的，这个主要是指 IaC 在执行的过程中，会存储当前执行的状态，并且能够回滚，叠加，删除。</p>
-
-<p>而且在实际运行的过程中，我们也可以使用 “渐进式” 的模式来操作，特别是在测试某个安装的情况下，可以一步一步执行，当执行失败的时候不至于全部回滚。</p>
-
-<p>比如，我们可以先创建一个 VPC：</p>
-
-<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="kd">const</span> <span class="nx">vpc</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vpc</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">EKSVpc</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">ipAddresses</span><span class="p">:</span> <span class="nx">IpAddresses</span><span class="p">.</span><span class="nx">cidr</span><span class="p">(</span><span class="dl">'</span><span class="s1">10.10.0.0/16</span><span class="dl">'</span><span class="p">)</span>
-    <span class="p">});</span>
-</code></pre></div></div>
-
-<p>此时 我们可以先执行这段程序:<code class="language-plaintext highlighter-rouge">cdk deploy</code>。</p>
-
-<p>然后，我们加入新的代码，继续创建了一个 eks。</p>
-
-<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="kd">const</span> <span class="nx">vpc</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vpc</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">EKSVpc</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">ipAddresses</span><span class="p">:</span> <span class="nx">IpAddresses</span><span class="p">.</span><span class="nx">cidr</span><span class="p">(</span><span class="dl">'</span><span class="s1">10.10.0.0/16</span><span class="dl">'</span><span class="p">)</span>
-    <span class="p">});</span>
-    <span class="kd">const</span> <span class="nx">eksCluster</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Cluster</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="dl">'</span><span class="s1">EKSCluster</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-      <span class="na">clusterName</span><span class="p">:</span> <span class="dl">"</span><span class="s2">cdk-workshop</span><span class="dl">"</span><span class="p">,</span>
-      <span class="nx">vpc</span><span class="p">,</span>
-      <span class="na">albController</span><span class="p">:</span> <span class="p">{</span>
-        <span class="na">version</span><span class="p">:</span> <span class="nx">AlbControllerVersion</span><span class="p">.</span><span class="nx">V2_4_1</span><span class="p">,</span>
-      <span class="p">},</span>
-      <span class="na">defaultCapacity</span><span class="p">:</span> <span class="mi">1</span>
-    <span class="p">});</span>
-</code></pre></div></div>
-
-<p>然后继续执行 <code class="language-plaintext highlighter-rouge">cdk deploy</code>，此时执行引擎会去比较当前的资源描述和当前 state 的异同，并开始创建 eks。</p>
-
-<p>如果 eks 创建失败，整个过程会回滚，此时状态会回滚到 eks 创建之前，也就是说 vpc 还在。</p>
-
-<p>同理，如果想要删除 eks，只需要删除相应的 eks resource 代码即可。</p>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws" /><category term="cdk" /><summary type="html"><![CDATA[本文是 AWS CDK 入门教程，将利用 “渐进” 模式 使用 AWS CDK 生产一个生产可用的 EKS 集群。本文是上半部分，CDK 入门知识。]]></summary></entry></feed>
+<p><a href="https://jekyllrb.com/docs/continuous-integration/circleci/">Jekyll - CircleCI</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="tucao," /><category term="circleci," /><category term="github," /><category term="jekyll" /><summary type="html"><![CDATA[花了一下午的时间，将博客的分页，分类功能加上了。结果发现 github pages 不支持，还不能自己安装 jekyll 的插件。然后头大了。]]></summary></entry></feed>

@@ -259,7 +259,7 @@ public class ArgoController : Controller
     email.From.Add(email.Sender);
     email.To.Add(MailboxAddress.Parse(emails));
     email.Subject = $"Application {appName} is ready for deployment.";
-    var sign = signApi(appName, 7200); //You should approve in 10 min.
+    var sign = signApi(appName, 7200); 
     email.Body = new TextPart(TextFormat.Html) { 
       Text =  $@"
         Application Name: {appName}<br>

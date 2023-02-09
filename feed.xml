@@ -1,4 +1,96 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-02-01T07:16:49+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">调度 Jenkins 任务到 Karpenter 节点池</title><link href="https://youbug.cn/2023/01/jenkins-job-with-karpenter.html" rel="alternate" type="text/html" title="调度 Jenkins 任务到 Karpenter 节点池" /><published>2023-01-02T07:12:33+00:00</published><updated>2023-01-02T07:12:33+00:00</updated><id>https://youbug.cn/2023/01/jenkins-job-with-karpenter</id><content type="html" xml:base="https://youbug.cn/2023/01/jenkins-job-with-karpenter.html"><![CDATA[<p>本文介绍了如何调度 Jenkins 任务到 EKS 集群的 Karpenter 虚拟节点。Karpenter 强大的 Node 组织能力，可以最大程度节约任务运行的成本。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-02-09T04:12:59+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">一个现成的 ChatGPT 微信机器人</title><link href="https://youbug.cn/2023/02/chatgpt-wechat-bot.html" rel="alternate" type="text/html" title="一个现成的 ChatGPT 微信机器人" /><published>2023-02-09T02:09:00+00:00</published><updated>2023-02-09T02:09:00+00:00</updated><id>https://youbug.cn/2023/02/chatgpt-wechat-bot</id><content type="html" xml:base="https://youbug.cn/2023/02/chatgpt-wechat-bot.html"><![CDATA[<p>本文是一个集成了 ChatGPT 的简单微信机器人的部署文档，使用了现有的 github 仓库，并进行适当修改，并发布成公共镜像包。当前文档说明为 1.0 镜像包。</p>
+
+<h2 id="说明">说明</h2>
+
+<p>在这个项目（<a href="https://github.com/wangrongding/wechat-bot">https://github.com/wangrongding/wechat-bot</a>）的基础上进行的修改：</p>
+
+<ul>
+  <li>从 openai 改成了 chatgpt 的调用。</li>
+  <li>修改了 chatgpt 的对话模型，现在会按照群和发送人整合成独立的对话 session。</li>
+  <li>去掉了白名单，单聊等功能等，改成 <strong>只支持群聊</strong> 。</li>
+</ul>
+
+<p>镜像地址：</p>
+
+<p><a href="https://hub.docker.com/r/cloudbeer/wx-chatbot/tags">https://hub.docker.com/r/cloudbeer/wx-chatbot/tags</a></p>
+
+<h2 id="部署">部署</h2>
+
+<h3 id="在-k8s-中部署">在 K8S 中部署</h3>
+
+<p>部署 YAML 参考如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
+  <span class="na">labels</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
+          <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/wx-chatbot:1.0</span>
+          <span class="na">env</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">OPENAI_API_KEY</span>
+              <span class="na">value</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">your-api-key</span><span class="pi">]</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">BOT_NAME</span>
+              <span class="na">value</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">your-bot-name</span><span class="pi">]</span>
+          <span class="na">command</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="s">node</span>
+            <span class="pi">-</span> <span class="s">index.js</span>
+</code></pre></div></div>
+
+<p>修改上面代码中的环境变量 <code class="language-plaintext highlighter-rouge">[your-api-key]</code>, <code class="language-plaintext highlighter-rouge">[your-bot-name]</code>：</p>
+
+<ul>
+  <li>
+    <p>OPENAI_API_KEY: 在 openai 网站申请的 API_KEY，当前申请地址是： <a href="https://platform.openai.com/account/api-keys">https://platform.openai.com/account/api-keys</a></p>
+  </li>
+  <li>
+    <p>BOT_NAME: 机器人的名字，当在群里发送以这个名字开头的文字的时候，会调用 chatgpt，如 BOT_NAME 为 <code class="language-plaintext highlighter-rouge">hisiri</code> 的时候，发送：<code class="language-plaintext highlighter-rouge">hisiri 你好</code> 会得到 ChatGPT 的响应。</p>
+  </li>
+</ul>
+
+<p>部署完成之后，使用 logs 命令查看二维码，相关的命令如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl logs wx-chatbot-xxxxxxx <span class="nt">-f</span>
+</code></pre></div></div>
+
+<ul>
+  <li>-f 可以持续打印日志，查看控制台信息。</li>
+  <li>使用微信扫码之后，当前微信会成为 ChatGPT 机器人。</li>
+</ul>
+
+<h2 id="docker-启动">Docker 启动</h2>
+
+<p>Docker 启动不再赘述，使用如下命令即可：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> <span class="nt">--name</span> wx-chatgpt-bot <span class="se">\</span>
+  <span class="nt">-e</span> <span class="nv">OPENAI_API_KEY</span><span class="o">=</span>abc <span class="nt">-e</span> <span class="nv">BOT_NAME</span><span class="o">=</span>@siri <span class="se">\</span>
+  cloudbeer/wx-chatbot:1.0 node index.js
+</code></pre></div></div>
+
+<ul>
+  <li>记得修改两个环境变量：<code class="language-plaintext highlighter-rouge">-e OPENAI_API_KEY=abc -e BOT_NAME=@siri</code>。</li>
+  <li>注意：此命令在 MAC 启动有bug，稍后修正。</li>
+</ul>
+
+<h2 id="问题和改进点">问题和改进点</h2>
+
+<ul>
+  <li>免费账号 ChatGPT 测会经常报 429 Too Many Requests 的错误。当前版本遇到此错误的时候没有回复，下一个版本会增加机器人对错误的响应。</li>
+  <li>微信可能会被封，建议使用新注册的微信小号作为机器人。（暂且不清楚微信侧触发机制）</li>
+  <li>重启应用会重新加载微信的会话，导致重复调用 ChatGPT API。</li>
+</ul>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="aws" /><category term="容器" /><summary type="html"><![CDATA[本文是一个集成了 ChatGPT 的简单微信机器人的部署文档，使用了现有的 github 仓库，并进行适当修改，并发布成公共镜像包。当前文档说明为 1.0 镜像包。]]></summary></entry><entry><title type="html">调度 Jenkins 任务到 Karpenter 节点池</title><link href="https://youbug.cn/2023/01/jenkins-job-with-karpenter.html" rel="alternate" type="text/html" title="调度 Jenkins 任务到 Karpenter 节点池" /><published>2023-01-02T07:12:33+00:00</published><updated>2023-01-02T07:12:33+00:00</updated><id>https://youbug.cn/2023/01/jenkins-job-with-karpenter</id><content type="html" xml:base="https://youbug.cn/2023/01/jenkins-job-with-karpenter.html"><![CDATA[<p>本文介绍了如何调度 Jenkins 任务到 EKS 集群的 Karpenter 虚拟节点。Karpenter 强大的 Node 组织能力，可以最大程度节约任务运行的成本。</p>
 
 <h2 id="插件配置">插件配置</h2>
 
@@ -2154,209 +2246,4 @@ www.youbug.cn.  30 IN A 192.168.0.1
   </tbody>
 </table>
 
-<p>当然，更好的做法是把 <strong>配置文件与应用解耦，所有的配置，包括远程服务的域名或 ip 都可以被远程修改</strong>。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="aws" /><category term="容器," /><category term="aws," /><category term="dns," /><category term="kubernetes" /><summary type="html"><![CDATA[在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？]]></summary></entry><entry><title type="html">容器 DevOps: Argo CD 入门</title><link href="https://youbug.cn/2022/12/argocd-start.html" rel="alternate" type="text/html" title="容器 DevOps: Argo CD 入门" /><published>2022-12-05T08:20:01+00:00</published><updated>2022-12-05T08:20:01+00:00</updated><id>https://youbug.cn/2022/12/argocd-start</id><content type="html" xml:base="https://youbug.cn/2022/12/argocd-start.html"><![CDATA[<p>在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。</p>
-
-<h2 id="gitops-和-argo-cd">GitOps 和 Argo CD</h2>
-
-<p>GitOps 的基本概念:</p>
-
-<p>参考这个：<a href="https://www.weave.works/technologies/gitops/">https://www.weave.works/technologies/gitops/</a>。大概意思是：将 CI/CD 整个过程作为代码，存储在 git 仓库，基于 git 仓库中的代码和动作作为 CI/CD 的依据。CI/CD 系统会根据变动触发构建或部署过程。</p>
-
-<p>Argo CD 的定义是：</p>
-
-<p>在 Kubernetes 中声明式 GitOps 的持续交付工具。Argo CD is a declarative, GitOps continuous delivery tool for Kubernetes.</p>
-
-<p>下面的示例中，将演示一下一个 CD 的过程。</p>
-
-<h2 id="简要安装测试模式">简要安装(测试模式)</h2>
-
-<p>安装非常简单，过程如下：</p>
-
-<p>创建 命名空间：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create namespace argocd
-</code></pre></div></div>
-
-<p>安装：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-n</span> argocd <span class="nt">-f</span> https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-</code></pre></div></div>
-
-<p>这样就可以了。</p>
-
-<p>使用下面的命令验证安装结果：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get po <span class="nt">-nargocd</span>
-</code></pre></div></div>
-
-<p>显示结果如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                                                READY   STATUS    RESTARTS      AGE
-argocd-application-controller-0                     1/1     Running   0             64s
-argocd-applicationset-controller-6779fd5cf5-ct5ck   1/1     Running   0             78s
-argocd-dex-server-68f86575b6-xcrx6                  1/1     Running   2 <span class="o">(</span>65s ago<span class="o">)</span>   76s
-argocd-notifications-controller-769b876844-wj6ck    1/1     Running   0             74s
-argocd-redis-547f5d94cd-9rb94                       1/1     Running   0             72s
-argocd-repo-server-77b686784d-2bkjp                 1/1     Running   0             69s
-argocd-server-6f497ddb95-l4sxv                      1/1     Running   0             66s
-</code></pre></div></div>
-
-<p>如果在生产环境，请参考高可用模式安装: <a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/">https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/</a></p>
-
-<h2 id="部署第一个-cd-应用">部署第一个 CD 应用</h2>
-
-<p>请 clone 这个 github 仓库 ，这里包含了应用部署脚本和 Argo CD 的脚本。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/cloudbeer/cd-script.git
-</code></pre></div></div>
-
-<p>下面我们尝试使用 argocd 持续升级 nginx 应用。</p>
-
-<p>为此，我们需要编写 nginx 的 k8s 部署脚本。</p>
-
-<h3 id="代码说明">代码说明</h3>
-
-<p>部署 nginx 应用：deployment.yaml</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">containers</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-          <span class="na">image</span><span class="pi">:</span> <span class="s">nginx</span>
-          <span class="na">ports</span><span class="pi">:</span>
-            <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">80</span>
-              <span class="na">protocol</span><span class="pi">:</span> <span class="s">TCP</span>
-</code></pre></div></div>
-
-<p>暴露 nginx 服务: service.yaml</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">ports</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">http-nginx</span>
-      <span class="na">port</span><span class="pi">:</span> <span class="m">80</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
-</code></pre></div></div>
-
-<p>kustomization.yaml</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">kustomize.config.k8s.io/v1beta1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Kustomization</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-<span class="na">commonLabels</span><span class="pi">:</span>
-  <span class="na">app</span><span class="pi">:</span> <span class="s">nginx</span>
-<span class="na">resources</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">deployment.yaml</span>
-  <span class="pi">-</span> <span class="s">service.yaml</span>
-<span class="na">images</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-    <span class="na">newTag</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1.16"</span>
-</code></pre></div></div>
-
-<p>上面编写的部署脚本，现在无须执行，先放到 git 仓库，
-本示例的代码位于： <a href="https://github.com/cloudbeer/cd-script/tree/main/nginx">https://github.com/cloudbeer/cd-script/tree/main/nginx</a></p>
-
-<p>现在编写 Argo CD 的应用，此部分可以在 Web 界面配置（稍后我们去查看 Web UI），
-Argo CD 的 Application 其实是在 K8S 中以 CRD 形式存在，就象下面的代码：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">argoproj.io/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Application</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">project</span><span class="pi">:</span> <span class="s">default</span>
-  <span class="na">destination</span><span class="pi">:</span>
-    <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
-    <span class="na">server</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://kubernetes.default.svc"</span>
-  <span class="na">source</span><span class="pi">:</span>
-    <span class="na">repoURL</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://github.com/cloudbeer/cd-script.git"</span>
-    <span class="na">targetRevision</span><span class="pi">:</span> <span class="s">HEAD</span>
-    <span class="na">path</span><span class="pi">:</span> <span class="s">nginx</span>
-  <span class="na">syncPolicy</span><span class="pi">:</span>
-    <span class="na">automated</span><span class="pi">:</span> 
-      <span class="na">prune</span><span class="pi">:</span> <span class="no">true</span>
-      <span class="na">selfHeal</span><span class="pi">:</span> <span class="no">true</span>
-</code></pre></div></div>
-
-<p>拆解一下上面的代码：</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">kind: Application</code> 是 Argo CD 扩展的 CRD。</li>
-  <li><code class="language-plaintext highlighter-rouge">project: default</code> project 是 argocde 的逻辑组织单元，他可以按照 project 去分类维护 Application。</li>
-  <li><code class="language-plaintext highlighter-rouge">destination</code> 部分描述了我们需要部署的目标为当前集群的 default 命名空间。(如果部署到其他命名空间，请先创建 ns，或者在 yaml 指定)。</li>
-  <li><code class="language-plaintext highlighter-rouge">source</code> 表示部署文件所在的 git 地址。本例中是这个 git 仓库的 nginx 目录。</li>
-  <li><code class="language-plaintext highlighter-rouge">syncPolicy</code> 是同步策略，自动策略中包括开关：
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">automated.prune</code>: 字面意思是 修剪，如果设置为 true，他可以允许删除 yaml 里没有的资源以保持部署与描述一致。</li>
-      <li><code class="language-plaintext highlighter-rouge">automated.selfHeal</code>: 设置为 true 的时候，Argo CD 会定期检查当前集群的状态和 yaml 描述是否一致，如果不一致，则会触发部署。</li>
-    </ul>
-  </li>
-</ul>
-
-<h3 id="部署">部署</h3>
-
-<p>现在请将上述 Application 部署到 K8S 集群 中。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">kubectl apply -f applications/nginx.yaml</span>
-</code></pre></div></div>
-
-<p>检查部署结果:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">kubectl get app -nargocd</span>
-</code></pre></div></div>
-
-<p>可以看到应用已经同步了：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME    SYNC STATUS   HEALTH STATUS
-nginx   Synced        Healthy
-</code></pre></div></div>
-
-<p>同时检查一下业务应用部署结果：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get po <span class="nt">-ndefault</span>
-</code></pre></div></div>
-
-<p>查看一下当前部署的版本：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get deploy nginx <span class="nt">-oyaml</span> | <span class="nb">grep </span>image:
-</code></pre></div></div>
-
-<p>现在我们尝试更新一下 nginx 的版本号，修改一下 kustomization.yaml 文件中的版本号。然后持续观察部署结果。</p>
-
-<blockquote>
-  <p>通常修改 kustomization 的动作是由 CI 系统来完成的，在上一章文章 <a href="/2022/12/k8s-devops-gitlab-ci.html">Gitlab CI</a> 里我们已经演示了如何 修改  kustomization.yaml 这个文件了。</p>
-</blockquote>
-
-<h3 id="使用-web-ui">使用 Web UI</h3>
-
-<p>先查询一下密码：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nt">-n</span> argocd get secret argocd-initial-admin-secret <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.password}"</span> | <span class="nb">base64</span> <span class="nt">-d</span><span class="p">;</span> <span class="nb">echo</span>
-</code></pre></div></div>
-
-<p>映射端口：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl port-forward svc/argocd-server <span class="nt">-n</span> argocd 8080:80
-</code></pre></div></div>
-
-<p>然后访问 <a href="http://localhost:8080">http://localhost:8080</a>，登录用户名 admin，密码为刚刚查询的密码。</p>
-
-<p>登录进去之后，就可以看到 Web 界面了，在 Web 里，可以看到很多绚烂的内容。</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container" /><category term="gitops," /><category term="argocd" /><summary type="html"><![CDATA[在 GitOps 模式下，当 CI 完成容器打包后，还需要将部署脚本的容器版本号更新到 git 仓库，接下来的工作就可以交给容器内的 CD 来干了。这有效解耦了 CI/CD 过程。这个模式非常适合多云多集群的应用部署，以及有效协调运维部门和业务研发部门的工作。]]></summary></entry></feed>
+<p>当然，更好的做法是把 <strong>配置文件与应用解耦，所有的配置，包括远程服务的域名或 ip 都可以被远程修改</strong>。</p>]]></content><author><name>啤酒云</name></author><category term="container," /><category term="aws" /><category term="容器," /><category term="aws," /><category term="dns," /><category term="kubernetes" /><summary type="html"><![CDATA[在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？]]></summary></entry></feed>

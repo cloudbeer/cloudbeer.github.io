@@ -84,7 +84,7 @@ class QiWeiController extends Controller {
 }
 ```
 
-- 请注意，上述代码有可能并不在一个代码文件中。
+- 请注意，上述代码有可能并不在一个文件中。
 
 ### 接收消息
 
@@ -132,7 +132,7 @@ class QiWeiController extends Controller {
 }
 ```
 
-- 接收到信息之后，讲信息解码出来，放到一个数组(队列) 中，供其他 deamon 方法调用。
+- 接收到信息之后，将信息解码出来，放到一个数组(队列) 中，供其他 deamon 方法调用。
 
 ### 请求 ChatGPT
 
@@ -285,6 +285,10 @@ const qiwei = {
 - 另一个进程获取从队列中获取一个记录，调用 openai API 得到结果。
 - 使用企业微信的消息发送 API 将结果发给问问题的人。
 - 使用群机器人的 WebHook 将结果发送给相应的群。
+
+效果图如下：左侧是和 APP 聊天，右侧是一个群聊机器人。
+
+![企业微信效果图](/assets/posts/tucao/wecom-chatgpt.jpg)
 
 ## 吐槽
 

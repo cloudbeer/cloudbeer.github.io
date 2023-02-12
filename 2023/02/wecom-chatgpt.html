@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>企业微信集成 ChatGPT 开发笔记 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="企业微信集成 ChatGPT 开发笔记" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。" />
+<meta property="og:description" content="原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。" />
+<link rel="canonical" href="https://youbug.cn/2023/02/wecom-chatgpt.html" />
+<meta property="og:url" content="https://youbug.cn/2023/02/wecom-chatgpt.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-02-12T10:09:44+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="企业微信集成 ChatGPT 开发笔记" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-02-12T10:09:44+00:00","datePublished":"2023-02-12T10:09:44+00:00","description":"原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。","headline":"企业微信集成 ChatGPT 开发笔记","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/02/wecom-chatgpt.html"},"url":"https://youbug.cn/2023/02/wecom-chatgpt.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">企业微信集成 ChatGPT 开发笔记</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-02-12T10:09:44+00:00" itemprop="datePublished">2023-02-12
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。</p>
+
+<h2 id="思路">思路</h2>
+
+<p>可以收消息的途径：企业应用。</p>
+
+<p>可以发消息的：企业应用的推送，群机器人。</p>
+
+<h2 id="过程及重点代码">过程及重点代码</h2>
+
+<p>步骤如下：</p>
+
+<h3 id="新建企业应用">新建企业应用</h3>
+
+<p>限制条件：必须是认证的企业，有认证过的相关域名。</p>
+
+<p>新建一个企业微信的企业内部应用，并启用接收消息的 API 功能。</p>
+
+<p>第一步必须有一个认证的过程，需要验证有效性，你必须把他的结果解密出来发给他。这个过程是他发送 GET 请求到你预定的 URL 的。</p>
+
+<p>相关的验证代码如下：</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">qiwei</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="c1">//计算签名，如果计算结果和他给的结果一致就是有效的</span>
+  <span class="na">computeSign</span><span class="p">:</span> <span class="p">(</span><span class="nx">token</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">,</span> <span class="nx">msg_encrypt</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">tmpArr</span> <span class="o">=</span> <span class="p">[</span><span class="nx">token</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">,</span> <span class="nx">msg_encrypt</span><span class="p">];</span>
+    <span class="k">return</span> <span class="nx">sha1</span><span class="p">(</span><span class="nx">tmpArr</span><span class="p">.</span><span class="nx">sort</span><span class="p">().</span><span class="nx">join</span><span class="p">(</span><span class="dl">''</span><span class="p">));</span>
+  <span class="p">},</span>
+  <span class="na">decode</span><span class="p">:</span> <span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">encodingAESKey</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">aesKey</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">encodingAESKey</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">=</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">aesCipher</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">createDecipheriv</span><span class="p">(</span><span class="dl">"</span><span class="s2">aes-256-cbc</span><span class="dl">"</span><span class="p">,</span> <span class="nx">aesKey</span><span class="p">,</span> <span class="nx">aesKey</span><span class="p">.</span><span class="nx">subarray</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">16</span><span class="p">));</span>
+    <span class="nx">aesCipher</span><span class="p">.</span><span class="nx">setAutoPadding</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">decipheredBuff</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="nx">concat</span><span class="p">([</span><span class="nx">aesCipher</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">),</span> <span class="nx">aesCipher</span><span class="p">.</span><span class="nx">final</span><span class="p">()]);</span>
+    <span class="nx">decipheredBuff</span> <span class="o">=</span> <span class="nx">PKCS7Decoder</span><span class="p">(</span><span class="nx">decipheredBuff</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">len_netOrder_corpid</span> <span class="o">=</span> <span class="nx">decipheredBuff</span><span class="p">.</span><span class="nx">subarray</span><span class="p">(</span><span class="mi">16</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">msg_len</span> <span class="o">=</span> <span class="nx">len_netOrder_corpid</span><span class="p">.</span><span class="nx">subarray</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">).</span><span class="nx">readUInt32BE</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">len_netOrder_corpid</span><span class="p">.</span><span class="nx">subarray</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="nx">msg_len</span> <span class="o">+</span> <span class="mi">4</span><span class="p">).</span><span class="nx">toString</span><span class="p">();</span>
+    <span class="k">return</span> <span class="nx">result</span><span class="p">;</span> 
+  <span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="kd">function</span> <span class="nx">sha1</span><span class="p">(</span><span class="nx">str</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">md5sum</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">createHash</span><span class="p">(</span><span class="dl">'</span><span class="s1">sha1</span><span class="dl">'</span><span class="p">);</span>
+  <span class="nx">md5sum</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">str</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">ciphertext</span> <span class="o">=</span> <span class="nx">md5sum</span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="dl">'</span><span class="s1">hex</span><span class="dl">'</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nx">ciphertext</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="kd">function</span> <span class="nx">PKCS7Decoder</span><span class="p">(</span><span class="nx">buff</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">pad</span> <span class="o">=</span> <span class="nx">buff</span><span class="p">[</span><span class="nx">buff</span><span class="p">.</span><span class="nx">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">pad</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">||</span> <span class="nx">pad</span> <span class="o">&gt;</span> <span class="mi">32</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">pad</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">buff</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">buff</span><span class="p">.</span><span class="nx">length</span> <span class="o">-</span> <span class="nx">pad</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="kd">class</span> <span class="nx">QiWeiController</span> <span class="kd">extends</span> <span class="nx">Controller</span> <span class="p">{</span>
+
+  <span class="k">async</span> <span class="nx">verifySignature</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">ctx</span><span class="p">,</span> <span class="nx">app</span> <span class="p">}</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">msg_signature</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">,</span> <span class="nx">echostr</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nx">query</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">QIWEI_TOKEN</span><span class="p">,</span> <span class="nx">QIWEI_ENCODING_AES_KEY</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">app</span><span class="p">.</span><span class="nx">config</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">mySign</span> <span class="o">=</span> <span class="nx">computeSign</span><span class="p">(</span><span class="nx">QIWEI_TOKEN</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">,</span> <span class="nx">echostr</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">mySign</span> <span class="o">!=</span> <span class="nx">msg_signature</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">ctx</span><span class="p">.</span><span class="nx">body</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">Invalid signature.</span><span class="dl">"</span><span class="p">;</span>
+      <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">decode</span><span class="p">(</span><span class="nx">echostr</span><span class="p">,</span> <span class="nx">QIWEI_ENCODING_AES_KEY</span><span class="p">);</span>
+      <span class="nx">ctx</span><span class="p">.</span><span class="nx">body</span> <span class="o">=</span> <span class="nx">result</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>请注意，上述代码有可能并不在一个代码文件中。</li>
+</ul>
+
+<h3 id="接收消息">接收消息</h3>
+
+<p>这个应用创建了之后，在客户端的工作台能看到这个应用，你可以和这个应用聊天，发给这个应用的消息都会被接受。发送的信息会被 Post 到你定义的 URL。</p>
+
+<p>接收信息代码如下：</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">qiwei</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="na">decodeIncomingMsg</span><span class="p">:</span> <span class="p">(</span><span class="nx">encMsg</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">ptToUserName</span> <span class="o">=</span> <span class="sr">/&lt;ToUserName&gt;&lt;!</span><span class="se">\[</span><span class="sr">CDATA</span><span class="se">\[(</span><span class="sr">.*</span><span class="se">?)\]\]</span><span class="sr">&gt;&lt;</span><span class="se">\/</span><span class="sr">ToUserName&gt;/</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">ptFromUserName</span> <span class="o">=</span> <span class="sr">/&lt;FromUserName&gt;&lt;!</span><span class="se">\[</span><span class="sr">CDATA</span><span class="se">\[(</span><span class="sr">.*</span><span class="se">?)\]\]</span><span class="sr">&gt;&lt;</span><span class="se">\/</span><span class="sr">FromUserName&gt;/</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">ptContent</span> <span class="o">=</span> <span class="sr">/&lt;Content&gt;&lt;!</span><span class="se">\[</span><span class="sr">CDATA</span><span class="se">\[(</span><span class="sr">.*</span><span class="se">?)\]\]</span><span class="sr">&gt;&lt;</span><span class="se">\/</span><span class="sr">Content&gt;/</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">realMsg</span> <span class="o">=</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">decode</span><span class="p">(</span><span class="nx">encMsg</span><span class="p">,</span> <span class="nx">key</span><span class="p">);</span>
+
+    <span class="kd">const</span> <span class="nx">resMsg</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="na">ToUserName</span><span class="p">:</span> <span class="nx">realMsg</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">ptToUserName</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span>
+      <span class="na">FromUserName</span><span class="p">:</span> <span class="nx">realMsg</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">ptFromUserName</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span>
+      <span class="na">Content</span><span class="p">:</span> <span class="nx">realMsg</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">ptContent</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">};</span>
+    <span class="c1">//这里可以修改到 MQ 中，并最终落盘</span>
+    <span class="nx">qiwei</span><span class="p">.</span><span class="nx">incomings</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">resMsg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nx">resMsg</span><span class="p">;</span>
+  <span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="kd">class</span> <span class="nx">QiWeiController</span> <span class="kd">extends</span> <span class="nx">Controller</span> <span class="p">{</span>
+
+  <span class="k">async</span> <span class="nx">incoming</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">ctx</span><span class="p">,</span> <span class="nx">app</span> <span class="p">}</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">msg_signature</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">nonce</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nx">query</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">QIWEI_TOKEN</span><span class="p">,</span> <span class="nx">QIWEI_ENCODING_AES_KEY</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">app</span><span class="p">.</span><span class="nx">config</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">body</span> <span class="o">=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nx">request</span><span class="p">.</span><span class="nx">body</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">ptEncMsg</span> <span class="o">=</span> <span class="sr">/&lt;Encrypt&gt;&lt;!</span><span class="se">\[</span><span class="sr">CDATA</span><span class="se">\[(</span><span class="sr">.*</span><span class="se">?)\]\]</span><span class="sr">&gt;&lt;</span><span class="se">\/</span><span class="sr">Encrypt&gt;/</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">found</span> <span class="o">=</span> <span class="nx">body</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">ptEncMsg</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">found</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">mySign</span> <span class="o">=</span> <span class="nx">computeSign</span><span class="p">(</span><span class="nx">QIWEI_TOKEN</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">,</span> <span class="nx">found</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">mySign</span> <span class="o">==</span> <span class="nx">msg_signature</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">decodeIncomingMsg</span><span class="p">(</span><span class="nx">found</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nx">QIWEI_ENCODING_AES_KEY</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">};</span>
+    <span class="nx">ctx</span><span class="p">.</span><span class="nx">body</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">OK</span><span class="dl">"</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>接收到信息之后，讲信息解码出来，放到一个数组(队列) 中，供其他 deamon 方法调用。</li>
+</ul>
+
+<h3 id="请求-chatgpt">请求 ChatGPT</h3>
+
+<p>使用了 chatpgt 这个 npm 包，调用非常简单。</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kd">const</span> <span class="nx">qiwei</span><span class="o">=</span><span class="p">{</span>
+
+  <span class="na">chatdeamon</span><span class="p">:</span> <span class="k">async</span> <span class="p">(</span><span class="nx">app</span><span class="p">,</span> <span class="nx">paimon</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">tarMsg</span> <span class="o">=</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">incomings</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
+      <span class="c1">// tarMsg &amp;&amp; console.log(tarMsg);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">tarMsg</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">conversationId</span> <span class="o">=</span> <span class="nx">tarMsg</span><span class="p">.</span><span class="nx">ToUserName</span><span class="p">;</span>
+        <span class="kd">let</span> <span class="nx">chatOpts</span> <span class="o">=</span> <span class="p">{</span>
+          <span class="na">timeoutMs</span><span class="p">:</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">,</span>
+          <span class="nx">conversationId</span>
+        <span class="p">};</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">qiwei</span><span class="p">.</span><span class="nx">parentMessageId</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">chatOpts</span><span class="p">.</span><span class="nx">parentMessageId</span> <span class="o">=</span> <span class="nx">parentMessageId</span><span class="p">;</span>
+        <span class="p">};</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">输入:</span><span class="dl">"</span><span class="p">,</span> <span class="nx">tarMsg</span><span class="p">.</span><span class="nx">Content</span><span class="p">,</span> <span class="dl">"</span><span class="s2">堆积量:</span><span class="dl">"</span><span class="p">,</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">incomings</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+        <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">paimon</span><span class="p">.</span><span class="nx">sendMessage</span><span class="p">(</span><span class="nx">tarMsg</span><span class="p">.</span><span class="nx">Content</span><span class="p">,</span> <span class="nx">chatOpts</span><span class="p">);</span>
+        <span class="nx">parentMessageId</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">投送结果：</span><span class="dl">"</span><span class="p">,</span> <span class="nx">result</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
+        <span class="k">await</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">sendToPerson</span><span class="p">(</span><span class="nx">app</span><span class="p">,</span> <span class="nx">result</span><span class="p">.</span><span class="nx">text</span><span class="p">,</span> <span class="nx">tarMsg</span><span class="p">.</span><span class="nx">FromUserName</span><span class="p">);</span>
+        <span class="k">await</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">paimonSendToRoom</span><span class="p">(</span><span class="nx">app</span><span class="p">,</span> <span class="nx">tarMsg</span><span class="p">.</span><span class="nx">Content</span><span class="p">,</span> <span class="nx">result</span><span class="p">.</span><span class="nx">text</span><span class="p">,</span> <span class="nx">tarMsg</span><span class="p">.</span><span class="nx">FromUserName</span><span class="p">);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">sleep</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="kd">function</span> <span class="nx">sleep</span><span class="p">(</span><span class="nx">ms</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">ms</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>写了死循环处理消息，这里 的 app 是 eggjs 的上下文的，用于取配置。</li>
+  <li>ChatGPT 的 API 经常限流，这里处理成了同步调用，一条一条往下进行。</li>
+  <li>代码中 paimon 是一个 ChatGPT 实例。</li>
+</ul>
+
+<h3 id="分发消息">分发消息</h3>
+
+<p>上面的代码可以看到拿到结果后分别分发到了个人和机器人。</p>
+
+<p>发送到个人可以在直接在单聊对话中看到结果，同时可以让企业微信机器人分发到群里。</p>
+
+<p>分发到个人的代码如下：</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">qiwei</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="na">getAccessToken</span><span class="p">:</span> <span class="k">async</span> <span class="p">(</span><span class="nx">app</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">qiwei</span><span class="p">.</span><span class="nx">access_token</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="dl">"</span><span class="s2">access_token</span><span class="dl">"</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">access_token</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="dl">"</span><span class="s2">expire_time</span><span class="dl">"</span><span class="p">))</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">expire_time</span> <span class="o">=</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">access_token</span><span class="p">.</span><span class="nx">expire_time</span><span class="p">;</span>
+      <span class="kd">const</span> <span class="nx">current</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">);</span>
+      <span class="kd">const</span> <span class="nx">isExpire</span> <span class="o">=</span> <span class="nx">expire_time</span> <span class="o">&lt;</span> <span class="nx">current</span> <span class="p">?</span> <span class="kc">true</span> <span class="p">:</span> <span class="kc">false</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isExpire</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">access_token</span><span class="p">.</span><span class="nx">access_token</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">let</span> <span class="nx">access_response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">app</span><span class="p">.</span><span class="nx">curl</span><span class="p">(</span><span class="s2">`https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=</span><span class="p">${</span><span class="nx">app</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">QIWEI_CORP_ID</span><span class="p">}</span><span class="s2">&amp;corpsecret=</span><span class="p">${</span><span class="nx">app</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">QIWEI_APP_SECRET</span><span class="p">}</span><span class="s2">`</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span>
+    <span class="p">});</span>
+    <span class="kd">let</span> <span class="p">{</span> <span class="na">data</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nx">access_token</span><span class="p">,</span> <span class="nx">expires_in</span>
+    <span class="p">}</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">access_response</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">access_token</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">qiwei</span><span class="p">.</span><span class="nx">access_token</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nx">access_token</span><span class="p">,</span>
+        <span class="na">expire_time</span><span class="p">:</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">+</span> <span class="nx">expires_in</span>
+      <span class="p">};</span>
+      <span class="k">return</span> <span class="nx">access_token</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`获取 access_token 失败`</span><span class="p">);</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">access_response</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">toString</span><span class="p">());</span>
+      <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="na">sendToPerson</span><span class="p">:</span> <span class="k">async</span> <span class="p">(</span><span class="nx">app</span><span class="p">,</span> <span class="nx">a</span><span class="p">,</span> <span class="nx">to</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">access_token</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">qiwei</span><span class="p">.</span><span class="nx">getAccessToken</span><span class="p">(</span><span class="nx">app</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=</span><span class="p">${</span><span class="nx">access_token</span><span class="p">}</span><span class="s2">`</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">msg</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="na">touser</span><span class="p">:</span> <span class="nx">to</span><span class="p">,</span>
+      <span class="na">msgtype</span><span class="p">:</span> <span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">agentid</span><span class="p">:</span> <span class="nx">app</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">QIWEI_APP_AGENT_ID</span><span class="p">,</span>
+      <span class="na">text</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">content</span><span class="p">:</span> <span class="nx">a</span>
+      <span class="p">}</span>
+    <span class="p">};</span>
+
+    <span class="kd">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">app</span><span class="p">.</span><span class="nx">curl</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">method</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">contentType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">data</span><span class="p">:</span> <span class="nx">msg</span><span class="p">,</span>
+      <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+    <span class="p">});</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">个人投送完成！</span><span class="dl">"</span><span class="p">);</span>
+  <span class="p">},</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>直接调用 信息发送 API 完成。</li>
+</ul>
+
+<p>使用群机器人完成发送</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">qiwei</span> <span class="o">=</span> <span class="p">{</span>
+
+  <span class="na">paimonSendToRoom</span><span class="p">:</span> <span class="k">async</span> <span class="p">(</span><span class="nx">app</span><span class="p">,</span> <span class="nx">q</span><span class="p">,</span> <span class="nx">a</span><span class="p">,</span> <span class="nx">to</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">msg</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="na">msgtype</span><span class="p">:</span> <span class="dl">"</span><span class="s2">markdown</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">markdown</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">content</span><span class="p">:</span> <span class="s2">`</span><span class="p">${</span><span class="nx">to</span><span class="p">}</span><span class="s2">: **</span><span class="p">${</span><span class="nx">q</span><span class="p">}</span><span class="s2">**
+---
+&lt;font color="warning"&gt;</span><span class="p">${</span><span class="nx">a</span><span class="p">}</span><span class="s2">&lt;/font&gt;`</span><span class="p">,</span>
+      <span class="p">}</span>
+    <span class="p">};</span>
+    <span class="k">await</span> <span class="nx">app</span><span class="p">.</span><span class="nx">curl</span><span class="p">(</span><span class="nx">app</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">QIWEI_BOT_WEBHOOK</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">method</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">contentType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">data</span><span class="p">:</span> <span class="nx">msg</span><span class="p">,</span>
+      <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+    <span class="p">});</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">机器人投送完成！</span><span class="dl">"</span><span class="p">);</span>
+
+  <span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>这个 API 很简单，直接把消息组装好丢给 webhook 就行了。表扬一下这个 API。</li>
+</ul>
+
+<h2 id="总结一下">总结一下</h2>
+
+<p>就不画时序图了。</p>
+
+<p>整体的过程是：</p>
+
+<ul>
+  <li>用户给企业微信 APP 发信息。</li>
+  <li>APP 收到信息丢入队列中，包含了文本，谁发的等信息。</li>
+  <li>另一个进程获取从队列中获取一个记录，调用 openai API 得到结果。</li>
+  <li>使用微信的消息 API 将结果发给问问题的人。</li>
+  <li>使用群机器人的 WebHook 将结果发送给相应的群。</li>
+</ul>
+
+<h2 id="吐槽">吐槽</h2>
+
+<p>1 隔壁的钉钉和飞书的机器人都能直接收发消息，为啥你不行。</p>
+
+<p>2 企业微信的 API 设计，有 XML 的，有 Json 的，API 调用方式也是千奇百怪。收消息的那个签名验证搞那么复杂，示例和 SDK 还不全。</p>
+
+<p>3 文档真乱，要到处去找。</p>
+
+<p>4 哈哈，我的机器人名字叫 派萌/pimon。</p>
+
+<hr />
+
+<p>参考链接：</p>
+
+<p><a href="https://developer.work.weixin.qq.com/document/path/91770">https://developer.work.weixin.qq.com/document/path/91770</a></p>
+
+<p><a href="https://developer.work.weixin.qq.com/document/10514">https://developer.work.weixin.qq.com/document/10514</a></p>
+
+<p><a href="https://www.npmjs.com/package/chatgpt">https://www.npmjs.com/package/chatgpt</a></p>
+
+<p><a href="https://developer.work.weixin.qq.com/document/path/90236">https://developer.work.weixin.qq.com/document/path/90236</a></p>
+
+<p><a href="https://github.com/WecomTeam/InnerAppCodeSample/tree/main/server">https://github.com/WecomTeam/InnerAppCodeSample/tree/main/server</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/02/wecom-chatgpt.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

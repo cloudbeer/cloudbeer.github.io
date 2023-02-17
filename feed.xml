@@ -1,4 +1,179 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-02-12T12:47:50+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">企业微信集成 ChatGPT 开发笔记</title><link href="https://youbug.cn/2023/02/wecom-chatgpt.html" rel="alternate" type="text/html" title="企业微信集成 ChatGPT 开发笔记" /><published>2023-02-12T10:09:44+00:00</published><updated>2023-02-12T10:09:44+00:00</updated><id>https://youbug.cn/2023/02/wecom-chatgpt</id><content type="html" xml:base="https://youbug.cn/2023/02/wecom-chatgpt.html"><![CDATA[<p>原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-02-17T04:08:03+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">SharingSphere-Proxy 入门</title><link href="https://youbug.cn/2023/02/shardingsphere-proxy-start.html" rel="alternate" type="text/html" title="SharingSphere-Proxy 入门" /><published>2023-02-17T03:27:44+00:00</published><updated>2023-02-17T03:27:44+00:00</updated><id>https://youbug.cn/2023/02/shardingsphere-proxy-start</id><content type="html" xml:base="https://youbug.cn/2023/02/shardingsphere-proxy-start.html"><![CDATA[<p>云厂商提供的数据库读写分离，通常会提供多个 url/endpoint 供开发者使用，一般需要应用自己去区分读写场景进行程序改造。现在有了这种数据访问的分布式中间件，自动对 SQL 语句进行检测和路由。本文体验了一下 SharingSphere-Proxy，并记录了一下配置和验证过程。</p>
+
+<h2 id="配置">配置</h2>
+
+<p>首先把 SharingSphere-Proxy 的配置拷贝出来，用官方文档提供的命令即可：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">-d</span> <span class="nt">--name</span> tmp <span class="nt">--entrypoint</span><span class="o">=</span>bash apache/shardingsphere-proxy
+docker <span class="nb">cp </span>tmp:/opt/shardingsphere-proxy/conf /host/path/to/conf
+docker <span class="nb">rm </span>tmp
+</code></pre></div></div>
+
+<ul>
+  <li>/host/path/to/conf 修改成你自己的目录。</li>
+</ul>
+
+<p>对于简单的读写分离，需要 2 个配置文件，内容分别如下：</p>
+
+<p>server.yaml</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">authority</span><span class="pi">:</span>
+  <span class="na">users</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">user</span><span class="pi">:</span> <span class="s">admin</span>
+      <span class="na">password</span><span class="pi">:</span> <span class="s">YourPassword</span>
+  <span class="na">privilege</span><span class="pi">:</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">ALL_PERMITTED</span>
+
+<span class="na">transaction</span><span class="pi">:</span>
+  <span class="na">defaultType</span><span class="pi">:</span> <span class="s">XA</span>
+  <span class="na">providerType</span><span class="pi">:</span> <span class="s">Atomikos</span>
+
+<span class="na">sqlParser</span><span class="pi">:</span>
+  <span class="na">sqlCommentParseEnabled</span><span class="pi">:</span> <span class="no">false</span>
+  <span class="na">sqlStatementCache</span><span class="pi">:</span>
+    <span class="na">initialCapacity</span><span class="pi">:</span> <span class="m">2000</span>
+    <span class="na">maximumSize</span><span class="pi">:</span> <span class="m">65535</span>
+  <span class="na">parseTreeCache</span><span class="pi">:</span>
+    <span class="na">initialCapacity</span><span class="pi">:</span> <span class="m">128</span>
+    <span class="na">maximumSize</span><span class="pi">:</span> <span class="m">1024</span>
+
+<span class="na">props</span><span class="pi">:</span>
+  <span class="na">max-connections-size-per-query</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">sql-show</span><span class="pi">:</span> <span class="no">true</span>
+</code></pre></div></div>
+
+<ul>
+  <li>这里的用户配置即是 SharingSphere-Proxy 模拟的 MySQL 引擎账号</li>
+</ul>
+
+<p>config-readwrite-splitting.yaml</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">databaseName</span><span class="pi">:</span> <span class="s">dbname</span>
+
+<span class="na">dataSources</span><span class="pi">:</span>
+  <span class="na">write_ds</span><span class="pi">:</span>
+    <span class="na">url</span><span class="pi">:</span> <span class="s">jdbc:mysql://xxxxxxxxx.rds.cn-northwest-1.amazonaws.com.cn:3306/dbname</span>
+    <span class="na">username</span><span class="pi">:</span> <span class="s">admin</span>
+    <span class="na">password</span><span class="pi">:</span> <span class="s">thisDBPwd</span>
+    <span class="na">connectionTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">30000</span>
+    <span class="na">idleTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">60000</span>
+    <span class="na">maxLifetimeMilliseconds</span><span class="pi">:</span> <span class="m">1800000</span>
+    <span class="na">maxPoolSize</span><span class="pi">:</span> <span class="m">50</span>
+    <span class="na">minPoolSize</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">read_ds_0</span><span class="pi">:</span>
+    <span class="na">url</span><span class="pi">:</span> <span class="s">jdbc:mysql://xxxxxxxxxt.cluster-ro-xxxx.rds.cn-northwest-1.amazonaws.com.cn:3306/dbname</span>
+    <span class="na">username</span><span class="pi">:</span> <span class="s">admin</span>
+    <span class="na">password</span><span class="pi">:</span> <span class="s">thisDBPwd</span>
+    <span class="na">connectionTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">30000</span>
+    <span class="na">idleTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">60000</span>
+    <span class="na">maxLifetimeMilliseconds</span><span class="pi">:</span> <span class="m">1800000</span>
+    <span class="na">maxPoolSize</span><span class="pi">:</span> <span class="m">50</span>
+    <span class="na">minPoolSize</span><span class="pi">:</span> <span class="m">1</span>
+<span class="na">rules</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="kt">!READWRITE_SPLITTING</span>
+    <span class="na">dataSources</span><span class="pi">:</span>
+      <span class="na">readwrite_ds</span><span class="pi">:</span>
+        <span class="na">staticStrategy</span><span class="pi">:</span>
+          <span class="na">writeDataSourceName</span><span class="pi">:</span> <span class="s">write_ds</span>
+          <span class="na">readDataSourceNames</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="s">read_ds_0</span>
+        <span class="na">loadBalancerName</span><span class="pi">:</span> <span class="s">random</span>
+    <span class="na">loadBalancers</span><span class="pi">:</span>
+      <span class="na">random</span><span class="pi">:</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">RANDOM</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>dbname url 密码这些需要修改成你自己的。</li>
+</ul>
+
+<p>上述配置的具体意思参考官方文档。</p>
+
+<h2 id="启动并验证">启动并验证</h2>
+
+<p>如果源数据使用 MySQL 引擎，需要下载 MySQL 的 JDBC 的驱动包到 ext-lib 中，如：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar
+</code></pre></div></div>
+
+<p>使用 docker 命令启动：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">-it</span> <span class="nt">--rm</span> <span class="se">\</span>
+    <span class="nt">-v</span> <span class="nv">$PWD</span>/conf:/opt/shardingsphere-proxy/conf <span class="se">\</span>
+    <span class="nt">-v</span> <span class="nv">$PWD</span>/ext-lib:/opt/shardingsphere-proxy/ext-lib <span class="se">\</span>
+    <span class="nt">-e</span> <span class="nv">PORT</span><span class="o">=</span>3308 <span class="nt">-p</span> 3306:3308 apache/shardingsphere-proxy
+</code></pre></div></div>
+
+<ul>
+  <li>上述命令启动了 SharingSphere-Proxy，并把端口映射到了主机的 3306 端口。</li>
+</ul>
+
+<p>启动之后，则可以在客户端透明访问 SharingSphere-Proxy 了。</p>
+
+<p>下面使用 MySQL 的标准客户端进行测试，如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mysql <span class="nt">-h</span> 172.31.14.22 <span class="nt">-uadmin</span> <span class="nt">-p</span>
+</code></pre></div></div>
+
+<p>输入密码后，可以直达 MySQL:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ubuntu@ip-172-31-8-115:~<span class="nv">$ </span>mysql <span class="nt">-h</span> 172.31.14.22 <span class="nt">-uadmin</span> <span class="nt">-p</span>
+Enter password:
+Welcome to the MySQL monitor.  Commands end with <span class="p">;</span> or <span class="se">\g</span><span class="nb">.</span>
+Your MySQL connection <span class="nb">id </span>is 2
+Server version: 5.7.22-ShardingSphere-Proxy 5.3.1 MySQL Community Server <span class="o">(</span>GPL<span class="o">)</span>
+
+Copyright <span class="o">(</span>c<span class="o">)</span> 2000, 2023, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type <span class="s1">'help;'</span> or <span class="s1">'\h'</span> <span class="k">for </span>help. Type <span class="s1">'\c'</span> to clear the current input statement.
+
+mysql&gt;
+</code></pre></div></div>
+
+<p>创建数据库，use 一下，创建一个表。</p>
+
+<pre><code class="language-SQL">CREATE TABLE student 
+( 
+  id int NOT NULL AUTO_INCREMENT, 
+  t varchar(50) NULL, 
+  PRIMARY KEY (id) 
+);
+</code></pre>
+
+<p>测试一下如下的 SQL</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">student</span> <span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="s1">'1'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'2'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'3'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'4'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'5'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'6'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'7'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'8'</span><span class="p">);</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">from</span> <span class="n">student</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>期望的结果是，他能正确路由。SharingSphere-Proxy 的 log 显示如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.643 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Logic SQL: INSERT INTO student <span class="o">(</span>t<span class="o">)</span> values <span class="o">(</span><span class="s1">'1'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'2'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'3'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'4'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'5'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'6'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'7'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'8'</span><span class="o">)</span>
+<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.644 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Actual SQL: write_ds ::: INSERT INTO student <span class="o">(</span>t<span class="o">)</span> values <span class="o">(</span><span class="s1">'1'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'2'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'3'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'4'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'5'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'6'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'7'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'8'</span><span class="o">)</span>
+<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.685 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Logic SQL: SELECT <span class="k">*</span> from student
+<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.685 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Actual SQL: read_ds_0 ::: SELECT <span class="k">*</span> from student
+...
+</code></pre></div></div>
+
+<p>由于同步数据需要一些时间，所以上述测试的 SQL 把 INSERT 和 SELECT 操作写在了一句话里。
+可以看到，插入成功之后，并不总是能直接拿到刚刚插入的结果，这个也证实了查询操作的确路由到了 ro 的 endpoint 上了。</p>
+
+<p>写完收工！</p>
+
+<hr />
+
+<p>参考：</p>
+
+<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/startup/docker/">https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/startup/docker/</a></p>
+
+<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/yaml-config/">https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/yaml-config/</a></p>
+
+<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/readwrite-splitting/">https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/readwrite-splitting/</a></p>]]></content><author><name>啤酒云</name></author><category term="data" /><category term="SharingSphere" /><summary type="html"><![CDATA[云厂商提供的数据库读写分离，通常会提供多个 url/endpoint 供开发者使用，一般需要应用自己去区分读写场景进行程序改造。现在有了这种数据访问的分布式中间件，自动对 SQL 语句进行检测和路由。本文体验了一下 SharingSphere-Proxy，并记录了一下配置和验证过程。]]></summary></entry><entry><title type="html">企业微信集成 ChatGPT 开发笔记</title><link href="https://youbug.cn/2023/02/wecom-chatgpt.html" rel="alternate" type="text/html" title="企业微信集成 ChatGPT 开发笔记" /><published>2023-02-12T10:09:44+00:00</published><updated>2023-02-12T10:09:44+00:00</updated><id>https://youbug.cn/2023/02/wecom-chatgpt</id><content type="html" xml:base="https://youbug.cn/2023/02/wecom-chatgpt.html"><![CDATA[<p>原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。</p>
 
 <h2 id="思路">思路</h2>
 
@@ -2174,176 +2349,4 @@ Job succeeded
 <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">gitlab</span><span class="p">;</span>
 </code></pre></div></div>
 
-<p>感觉好傻！</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="iac," /><category term="aws" /><category term="gitlab," /><category term="cdk," /><category term="eks" /><summary type="html"><![CDATA[本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。]]></summary></entry><entry><title type="html">使用 terraform 增加 EKS 组件</title><link href="https://youbug.cn/2022/12/modify-eks-by-terraform.html" rel="alternate" type="text/html" title="使用 terraform 增加 EKS 组件" /><published>2022-12-07T12:54:44+00:00</published><updated>2022-12-07T12:54:44+00:00</updated><id>https://youbug.cn/2022/12/modify-eks-by-terraform</id><content type="html" xml:base="https://youbug.cn/2022/12/modify-eks-by-terraform.html"><![CDATA[<p>在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。</p>
-
-<h2 id="常用-sdk">常用 SDK</h2>
-
-<p>操作 EKS 的常用 SDK 如下：</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">terraform</span> <span class="p">{</span>
-  <span class="nx">required_providers</span> <span class="p">{</span>
-    <span class="nx">aws</span> <span class="p">=</span> <span class="p">{</span>
-      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"hashicorp/aws"</span>
-      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"~&gt; 4.40.0"</span>
-    <span class="p">}</span>
-    <span class="nx">kubernetes</span> <span class="p">=</span> <span class="p">{</span>
-      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"hashicorp/kubernetes"</span>
-      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"&gt;= 2.15.0"</span>
-    <span class="p">}</span>
-    <span class="nx">helm</span> <span class="p">=</span> <span class="p">{</span>
-      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"hashicorp/helm"</span>
-      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"~&gt; 2.7.1"</span>
-    <span class="p">}</span>
-    <span class="nx">kubectl</span> <span class="p">=</span> <span class="p">{</span>
-      <span class="nx">source</span>  <span class="p">=</span> <span class="s2">"gavinbunney/kubectl"</span>
-      <span class="nx">version</span> <span class="p">=</span> <span class="s2">"&gt;= 1.14.0"</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<ul>
-  <li>hashicorp/aws: 操作 aws 资源</li>
-  <li>hashicorp/kubernetes: 操作 k8s 资源</li>
-  <li>hashicorp/helm: 操作 helm 图样</li>
-  <li>gavinbunney/kubectl: 被广泛采用的个人工具，可以支持单资源 kubectl 操作</li>
-</ul>
-
-<h2 id="先决条件">先决条件</h2>
-
-<p>对于已经创建资源，在 terraform 中，通常使用 data 去查询，如下代码，只需要指定 集群的 名字就可以查询到集群的信息：</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">data</span> <span class="s2">"aws_eks_cluster"</span> <span class="s2">"main"</span> <span class="p">{</span>
-  <span class="nx">name</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>对于 helm 和 kubectl 工具，我们需要为其配置相应的权限：</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">provider</span> <span class="s2">"helm"</span> <span class="p">{</span>
-  <span class="nx">kubernetes</span> <span class="p">{</span>
-    <span class="nx">host</span>                   <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">endpoint</span>
-    <span class="nx">cluster_ca_certificate</span> <span class="p">=</span> <span class="nx">base64decode</span><span class="p">(</span><span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">certificate_authority</span><span class="p">.</span><span class="mi">0</span><span class="p">.</span><span class="k">data</span><span class="p">)</span>
-    <span class="nx">exec</span> <span class="p">{</span>
-      <span class="nx">api_version</span> <span class="p">=</span> <span class="s2">"client.authentication.k8s.io/v1beta1"</span>
-      <span class="nx">args</span>        <span class="p">=</span> <span class="p">[</span><span class="s2">"eks"</span><span class="p">,</span> <span class="s2">"get-token"</span><span class="p">,</span> <span class="s2">"--cluster-name"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span><span class="p">,</span> <span class="s2">"--region"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">region</span><span class="p">]</span>
-      <span class="nx">command</span>     <span class="p">=</span> <span class="s2">"aws"</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="k">provider</span> <span class="s2">"kubectl"</span> <span class="p">{</span>
-  <span class="nx">host</span>                   <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">endpoint</span>
-  <span class="nx">cluster_ca_certificate</span> <span class="p">=</span> <span class="nx">base64decode</span><span class="p">(</span><span class="k">data</span><span class="p">.</span><span class="nx">aws_eks_cluster</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">certificate_authority</span><span class="p">.</span><span class="mi">0</span><span class="p">.</span><span class="k">data</span><span class="p">)</span>
-  <span class="nx">exec</span> <span class="p">{</span>
-    <span class="nx">api_version</span> <span class="p">=</span> <span class="s2">"client.authentication.k8s.io/v1beta1"</span>
-    <span class="nx">args</span>        <span class="p">=</span> <span class="p">[</span><span class="s2">"eks"</span><span class="p">,</span> <span class="s2">"get-token"</span><span class="p">,</span> <span class="s2">"--cluster-name"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">cluster_name</span><span class="p">,</span> <span class="s2">"--region"</span><span class="p">,</span> <span class="kd">var</span><span class="p">.</span><span class="nx">region</span><span class="p">]</span>
-    <span class="nx">command</span>     <span class="p">=</span> <span class="s2">"aws"</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<h2 id="使用-helm-安装组件">使用 helm 安装组件</h2>
-
-<p>使用 helm 安装非常简单，参照 helm 图样的说明即可，传入相应的参数.</p>
-
-<p>下面的代码是在集群内安装 Gitlab 的示例：</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">variable</span> <span class="s2">"namespace"</span> <span class="p">{</span>
-  <span class="nx">type</span>    <span class="p">=</span> <span class="nx">string</span>
-  <span class="nx">default</span> <span class="p">=</span> <span class="s2">"gitlab"</span>
-<span class="p">}</span>
-
-<span class="k">variable</span> <span class="s2">"name"</span> <span class="p">{</span>
-  <span class="nx">type</span>    <span class="p">=</span> <span class="nx">string</span>
-  <span class="nx">default</span> <span class="p">=</span> <span class="s2">"gitlab"</span>
-<span class="p">}</span>
-
-<span class="k">variable</span> <span class="s2">"domain"</span> <span class="p">{</span>
-  <span class="nx">type</span> <span class="p">=</span> <span class="nx">string</span>
-<span class="p">}</span>
-
-<span class="k">resource</span> <span class="s2">"helm_release"</span> <span class="s2">"gitlab"</span> <span class="p">{</span>
-  <span class="nx">namespace</span>        <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">namespace</span>
-  <span class="nx">create_namespace</span> <span class="p">=</span> <span class="kc">true</span>
-  <span class="nx">name</span>             <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">name</span>
-  <span class="nx">repository</span>       <span class="p">=</span> <span class="s2">"https://charts.gitlab.io/"</span>
-  <span class="nx">chart</span>            <span class="p">=</span> <span class="s2">"gitlab"</span>
-  <span class="nx">version</span>          <span class="p">=</span> <span class="s2">"6.5.5"</span>
-
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"global.ingress.enabled"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"global.ingress.configureCertmanager"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab.certmanager.install"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab.prometheus.install"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab.grafana.install"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"nginx-ingress.enabled"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"gitlab-runner.enabled"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kc">false</span>
-  <span class="p">}</span>
-  <span class="nx">set</span> <span class="p">{</span>
-    <span class="nx">name</span>  <span class="p">=</span> <span class="s2">"global.hosts.domain"</span>
-    <span class="nx">value</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">domain</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<h2 id="使用-kubectl-安装组件">使用 kubectl 安装组件</h2>
-
-<p>下面的示例安装了 argocd，使用了官网的默认安装方法，使用 kubectl 直接执行 yaml 文件。</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">variable</span> <span class="s2">"namespace"</span> <span class="p">{</span>
-  <span class="nx">type</span>    <span class="p">=</span> <span class="nx">string</span>
-  <span class="nx">default</span> <span class="p">=</span> <span class="s2">"argocd"</span>
-<span class="p">}</span>
-
-<span class="k">resource</span> <span class="s2">"kubectl_manifest"</span> <span class="s2">"argocd_namepsace"</span> <span class="p">{</span>
-  <span class="nx">yaml_body</span> <span class="p">=</span> <span class="o">&lt;&lt;</span><span class="no">YAML</span><span class="sh">
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ${var.namespace}
-</span><span class="no">YAML
-</span><span class="p">}</span>
-</code></pre></div></div>
-
-<p>在集群内创建了一个 namespace。</p>
-
-<p>由于 kubectl_manifest 只能执行单资源，象 argocd 给出的 yaml 文件里，包含了很多的资源，此时需要使用 <code class="language-plaintext highlighter-rouge">kubectl_file_documents</code> 将一大段资源解构成单个资源数组。</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-<span class="k">data</span> <span class="s2">"http"</span> <span class="s2">"argocd_yaml"</span> <span class="p">{</span>
-  <span class="nx">url</span> <span class="p">=</span> <span class="s2">"https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"</span>
-<span class="p">}</span>
-
-<span class="k">data</span> <span class="s2">"kubectl_file_documents"</span> <span class="s2">"argocd_docs"</span> <span class="p">{</span>
-  <span class="nx">content</span> <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">http</span><span class="p">.</span><span class="nx">argocd_yaml</span><span class="p">.</span><span class="nx">response_body</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>然后循环执行即可：</p>
-
-<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">resource</span> <span class="s2">"kubectl_manifest"</span> <span class="s2">"argocd"</span> <span class="p">{</span>
-  <span class="nx">for_each</span>           <span class="p">=</span> <span class="k">data</span><span class="p">.</span><span class="nx">kubectl_file_documents</span><span class="p">.</span><span class="nx">argocd_docs</span><span class="p">.</span><span class="nx">manifests</span>
-  <span class="nx">yaml_body</span>          <span class="p">=</span> <span class="nx">each</span><span class="p">.</span><span class="nx">value</span>
-  <span class="nx">override_namespace</span> <span class="p">=</span> <span class="kd">var</span><span class="p">.</span><span class="nx">namespace</span>
-<span class="p">}</span>
-</code></pre></div></div>]]></content><author><name>啤酒云</name></author><category term="iac," /><category term="aws," /><category term="container" /><category term="iac," /><category term="container," /><category term="aws," /><category term="terraform" /><summary type="html"><![CDATA[在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。]]></summary></entry></feed>
+<p>感觉好傻！</p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="iac," /><category term="aws" /><category term="gitlab," /><category term="cdk," /><category term="eks" /><summary type="html"><![CDATA[本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。]]></summary></entry></feed>

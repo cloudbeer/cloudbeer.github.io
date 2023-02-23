@@ -3,7 +3,7 @@ layout: post
 title:  一个现成的 ChatGPT 微信机器人
 date:   2023-02-09  19:09:00 +0800
 author: 啤酒云
-categories: container, aws
+categories: container
 tags: 容器
 ---
 

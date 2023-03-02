@@ -86,7 +86,7 @@ You will see the file uploaded to the target s3 bucket if the permissions are ri
 Setting AWS region cn-northwest-1 
  Retrieving credentials from node.
 Requesting assume role
-Assuming role ARN is arn:aws-cn:iam::123456789012:role/ role arn:aws-cn:sts::249715702315:assumed-role/for-Jenkins/Jenkins-Jenkins-withAWS-gitee-16 with id AROATUJBXHIVWAC6AZW3X:Jenkins-Jenkins-withAWS-gitee-16 
+Assuming role ARN is arn:aws-cn:iam::123456789012:role/ role arn:aws-cn:sts::123456789012:assumed-role/for-Jenkins/Jenkins-Jenkins-withAWS-gitee-16 with id AROATUJBXHIVWAC6AZW3X:Jenkins-Jenkins-withAWS-gitee-16 
  [Pipeline] {
 [Pipeline] s3Upload
 Uploading file:/var/Jenkins_home/workspace/Jenkins-withAWS_gitee/readme.md to s3://xxxxx/readme.md 

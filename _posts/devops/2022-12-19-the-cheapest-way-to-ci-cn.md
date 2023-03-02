@@ -111,7 +111,7 @@ cluster.addHelmChart("arm-runner", {
 - `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` 必须设置为 true 才能调度 pod 任务。
 - 配置中 `[runners.kubernetes.node_selector]` 是为 K8S 调度做准备的，此处表示后续的构建任务会调度到相应 tag 的 node 节点。
 
-## Kapennter 节点池
+## Karpenter 节点池
 
 [Karpenter](https://karpenter.sh/)  是 AWS 最新的节点伸缩工具，非常好用。
 

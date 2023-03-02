@@ -28,7 +28,7 @@ Firstly, Bind a role to the EC2. Choose the Jenkins EC2, then choose Actions -> 
 
 选择目标 EC2，并选择如图的菜单：
 
-![Set EC2 Role](/assets/posts/devops/Jenkins-assume-01.png)
+![Set EC2 Role](/assets/posts/devops/jenkins-assume-01.png)
 
 Next, you can choose a role, or create a new one.
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-02T07:25:24+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 里，使用 Jenkins 跨账号执行任务</title><link href="https://youbug.cn/2023/03/jenkins-assume-role.html" rel="alternate" type="text/html" title="在 AWS 里，使用 Jenkins 跨账号执行任务" /><published>2023-03-02T07:02:33+00:00</published><updated>2023-03-02T07:02:33+00:00</updated><id>https://youbug.cn/2023/03/jenkins-assume-role</id><content type="html" xml:base="https://youbug.cn/2023/03/jenkins-assume-role.html"><![CDATA[<p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-02T07:31:07+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 里，使用 Jenkins 跨账号执行任务</title><link href="https://youbug.cn/2023/03/jenkins-assume-role.html" rel="alternate" type="text/html" title="在 AWS 里，使用 Jenkins 跨账号执行任务" /><published>2023-03-02T07:02:33+00:00</published><updated>2023-03-02T07:02:33+00:00</updated><id>https://youbug.cn/2023/03/jenkins-assume-role</id><content type="html" xml:base="https://youbug.cn/2023/03/jenkins-assume-role.html"><![CDATA[<p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
 
 <h2 id="jenkins-configuration-jenkins-设置">Jenkins Configuration （Jenkins 设置）</h2>
 
@@ -20,7 +20,7 @@
 
 <p>选择目标 EC2，并选择如图的菜单：</p>
 
-<p><img src="/assets/posts/devops/Jenkins-assume-01.png" alt="Set EC2 Role" /></p>
+<p><img src="/assets/posts/devops/jenkins-assume-01.png" alt="Set EC2 Role" /></p>
 
 <p>Next, you can choose a role, or create a new one.</p>
 

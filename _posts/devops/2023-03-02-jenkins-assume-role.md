@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "在 AWS 里，使用 Jenkins 跨账号执行任务"
-date:   2023-03-02 15:12:33 +0800
+date:   2023-03-02 15:02:33 +0800
 author: 啤酒云
 categories: devops, aws
 ---

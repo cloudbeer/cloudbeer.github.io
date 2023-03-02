@@ -100,17 +100,25 @@
   <div class="post-content e-content" itemprop="articleBody">
     <p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
 
-<h2 id="jenkins-configuration">Jenkins Configuration</h2>
+<h2 id="jenkins-configuration-jenkins-设置">Jenkins Configuration （Jenkins 设置）</h2>
 
 <p>As a Jenkins administator, Menu: Manage Jenkins -&gt; Manage Plugins, Search “Pipeline: AWS Steps”, ensure this Jenkins plugin is installed.</p>
 
-<p>From “System Management -&gt; Configure System” to enable ‘Retrieve credentials from node’.</p>
+<p>以 Jenkins 的管理员身份登录，进入菜单： Manage Jenkins -&gt; Manage Plugins，搜索 “Pipeline: AWS Steps”，安装这个插件。</p>
 
-<h2 id="node-settings">Node settings</h2>
+<p>From “Manage Jenkins  -&gt; Configure System” to enable ‘Retrieve credentials from node’.</p>
+
+<p>在菜单 “系统管理 -&gt; 系统配置” 中，启用 “Pipeline: AWS Steps” 的 “Retrieve credentials from node”。</p>
+
+<h2 id="node-settings-节点设置jenkins-运行节点">Node settings 节点设置（Jenkins 运行节点）</h2>
 
 <p>My Jenkins is installed in an EC2 instace and the workers in EC2 also.</p>
 
 <p>Firstly, Bind a role to the EC2. Choose the Jenkins EC2, then choose Actions -&gt; Security -&gt; Modify IAM role.</p>
+
+<p>现在设置 Jenkins 所在的 EC2 的角色。</p>
+
+<p>选择目标 EC2，并选择如图的菜单：</p>
 
 <p><img src="/assets/posts/devops/Jenkins-assume-01.png" alt="Set EC2 Role" /></p>
 
@@ -118,11 +126,17 @@
 
 <p>When you update the IAM role of EC2, your Jenkins will be granted the role.</p>
 
-<h2 id="create-an-iam-role-in-another-account">Create an IAM Role in another account</h2>
+<p>现在请选择一个 role，或者创建一个新的。</p>
+
+<p>选择好之后，更新 EC2 的 Role。</p>
+
+<h2 id="create-an-iam-role-in-another-account-在另一个账号中创建角色">Create an IAM Role in another account （在另一个账号中创建角色）</h2>
 
 <p>Now, We can login to the production account.</p>
 
 <p>Create a new role:</p>
+
+<p>现在登录到生产账号。并创建一个角色。</p>
 
 <ul>
   <li>Trusted entity type: Amazon Web Services account</li>
@@ -136,6 +150,10 @@
 <p>Now back to the Jenkins account. Modify the ec2 role.</p>
 
 <p>In the “Permisions” tab, choose “Add permissions -&gt; Create inline policy”:</p>
+
+<p>现在返回 Jenkins 所在的账号，给刚刚 EC2 的角色进行角色扮演。</p>
+
+<p>在角色设置面板设置一个内联策略，进入 “Permisions” tab, 选择 “Add permissions -&gt; Create inline policy”:</p>
 
 <p>The policy is like:</p>
 
@@ -152,6 +170,8 @@
 <h2 id="jenkinsfile">Jenkinsfile</h2>
 
 <p>Now the Jenkinsfile maybe as:</p>
+
+<p>Jenkinsfile 这么写就行:</p>
 
 <div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pipeline</span> <span class="o">{</span>
   <span class="n">agent</span> <span class="n">any</span>
@@ -172,6 +192,8 @@
 </code></pre></div></div>
 
 <p>You will see the file uploaded to the target s3 bucket if the permissions are right.</p>
+
+<p>如果权限设置合理，就可以看到 Jenkins 成功上传文件到另一个账号了。</p>
 
 <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
 Setting AWS region cn-northwest-1 
@@ -202,6 +224,12 @@ Finished: SUCCESS
 <h2 id="more">More</h2>
 
 <p>Mybe your Jenkins worker runs in a pod. In this situation, you can use <a href="https://docs.aws.amazon.com/zh_cn/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html">IRSA style</a> to assume role between accounts.</p>
+
+<p>If you use AKSK in Jenkins, you can assume the role to the IAM user of AKSK.</p>
+
+<p>如果 Jenkins 安装在 EKS 的 Pod 里，那么可以利用 <a href="https://docs.aws.amazon.com/zh_cn/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html">IRSA 方式</a> 进行角色扮演。</p>
+
+<p>另外一点，如果在 Jenkins 里使用的是 AKSK，那么就把角色扮演到 AKSK 对应的 IAM User 即可。</p>
 
 <hr />
 

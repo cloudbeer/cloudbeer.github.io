@@ -1,4 +1,113 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-02T06:31:28+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Lambda 配合 GuardDuty 事件封禁攻击源</title><link href="https://youbug.cn/2023/02/guardduty-lambda-block.html" rel="alternate" type="text/html" title="使用 Lambda 配合 GuardDuty 事件封禁攻击源" /><published>2023-02-23T05:10:49+00:00</published><updated>2023-02-23T05:10:49+00:00</updated><id>https://youbug.cn/2023/02/guardduty-lambda-block</id><content type="html" xml:base="https://youbug.cn/2023/02/guardduty-lambda-block.html"><![CDATA[<p>在针对 AWS 的网络攻击过程中，有一类攻击是暴力破解 root 账号，此类攻击会被 GuardDuty 监控并记录到。当发生此类暴力破解事件的时候，可以通过 Lambda 来对攻击源进行及时封禁。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-02T07:08:21+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 里，使用 Jenkins 跨账号执行任务</title><link href="https://youbug.cn/2023/03/jenkins-assume-role.html" rel="alternate" type="text/html" title="在 AWS 里，使用 Jenkins 跨账号执行任务" /><published>2023-03-02T07:02:33+00:00</published><updated>2023-03-02T07:02:33+00:00</updated><id>https://youbug.cn/2023/03/jenkins-assume-role</id><content type="html" xml:base="https://youbug.cn/2023/03/jenkins-assume-role.html"><![CDATA[<p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
+
+<h2 id="jenkins-configuration">Jenkins Configuration</h2>
+
+<p>As a Jenkins administator, Menu: Manage Jenkins -&gt; Manage Plugins, Search “Pipeline: AWS Steps”, ensure this Jenkins plugin is installed.</p>
+
+<p>From “System Management -&gt; Configure System” to enable ‘Retrieve credentials from node’.</p>
+
+<h2 id="node-settings">Node settings</h2>
+
+<p>My Jenkins is installed in an EC2 instace and the workers in EC2 also.</p>
+
+<p>Firstly, Bind a role to the EC2. Choose the Jenkins EC2, then choose Actions -&gt; Security -&gt; Modify IAM role.</p>
+
+<p><img src="/assets/posts/devops/Jenkins-assume-01.png" alt="Set EC2 Role" /></p>
+
+<p>Next, you can choose a role, or create a new one.</p>
+
+<p>When you update the IAM role of EC2, your Jenkins will be granted the role.</p>
+
+<h2 id="create-an-iam-role-in-another-account">Create an IAM Role in another account</h2>
+
+<p>Now, We can login to the production account.</p>
+
+<p>Create a new role:</p>
+
+<ul>
+  <li>Trusted entity type: Amazon Web Services account</li>
+  <li>An Amazon Web Services account: Another Amazon Web Services account of the account id of Jenkins installed (number, such as 12345679012).</li>
+  <li>Next choose some permissions policy.</li>
+  <li>Give the role a name, such as ‘for-Jenkins’.</li>
+</ul>
+
+<h2 id="modify-the-jenkins-ec2-role">Modify the Jenkins EC2 role</h2>
+
+<p>Now back to the Jenkins account. Modify the ec2 role.</p>
+
+<p>In the “Permisions” tab, choose “Add permissions -&gt; Create inline policy”:</p>
+
+<p>The policy is like:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"Resource"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arn:aws-cn:iam::&lt;your-prod-account-id&gt;:role/for-Jenkins"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts:AssumeRole"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="jenkinsfile">Jenkinsfile</h2>
+
+<p>Now the Jenkinsfile maybe as:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pipeline</span> <span class="o">{</span>
+  <span class="n">agent</span> <span class="n">any</span>
+  <span class="n">stages</span> <span class="o">{</span>
+    <span class="n">stage</span><span class="o">(</span><span class="s1">'build'</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">steps</span> <span class="o">{</span>
+        <span class="n">script</span> <span class="o">{</span>
+          <span class="n">withAWS</span><span class="o">(</span><span class="nl">role:</span><span class="s1">'for-Jenkins'</span><span class="o">,</span> <span class="nl">roleAccount:</span><span class="s1">'&lt;your-prod-account-id&gt;'</span><span class="o">,</span> <span class="nl">region:</span> <span class="s1">'cn-northwest-1'</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kt">def</span> <span class="n">res</span> <span class="o">=</span> <span class="n">s3Upload</span><span class="o">(</span><span class="nl">file:</span><span class="s1">'readme.md'</span><span class="o">,</span> <span class="nl">bucket:</span><span class="s1">'xxxx'</span><span class="o">,</span> <span class="nl">path:</span><span class="s1">'readme.md'</span><span class="o">)</span>
+            <span class="n">println</span><span class="o">(</span><span class="n">res</span><span class="o">)</span>
+          <span class="o">}</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<p>You will see the file uploaded to the target s3 bucket if the permissions are right.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+Setting AWS region cn-northwest-1 
+ Retrieving credentials from node.
+Requesting assume role
+Assuming role ARN is arn:aws-cn:iam::123456789012:role/ role arn:aws-cn:sts::123456789012:assumed-role/for-Jenkins/Jenkins-Jenkins-withAWS-gitee-16 with <span class="nb">id </span>AROATUJBXHIVWAC6AZW3X:Jenkins-Jenkins-withAWS-gitee-16 
+ <span class="o">[</span>Pipeline] <span class="o">{</span>
+<span class="o">[</span>Pipeline] s3Upload
+Uploading file:/var/Jenkins_home/workspace/Jenkins-withAWS_gitee/readme.md to s3://xxxxx/readme.md 
+Finished: Uploading to xxxxx/readme.md
+Upload <span class="nb">complete</span>
+<span class="o">[</span>Pipeline] <span class="nb">echo
+</span>s3://xxxxx/readme.md
+<span class="o">[</span>Pipeline] <span class="o">}</span>
+<span class="o">[</span>Pipeline] // withAWS
+<span class="o">[</span>Pipeline] <span class="o">}</span>
+<span class="o">[</span>Pipeline] <span class="o">}</span>
+<span class="o">[</span>Pipeline] // stage
+<span class="o">[</span>Pipeline] <span class="o">}</span>
+<span class="o">[</span>Pipeline] // withEnv
+<span class="o">[</span>Pipeline] <span class="o">}</span>
+<span class="o">[</span>Pipeline] // node
+<span class="o">[</span>Pipeline] End of Pipeline
+Finished: SUCCESS
+...
+</code></pre></div></div>
+
+<h2 id="more">More</h2>
+
+<p>Mybe your Jenkins worker runs in a pod. In this situation, you can use <a href="https://docs.aws.amazon.com/zh_cn/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html">IRSA style</a> to assume role between accounts.</p>
+
+<hr />
+
+<p>References：</p>
+
+<p><a href="https://plugins.Jenkins.io/pipeline-aws/">Jenkins plugin: Pipeline: AWS Steps</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="aws" /><summary type="html"><![CDATA[在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。]]></summary></entry><entry><title type="html">使用 Lambda 配合 GuardDuty 事件封禁攻击源</title><link href="https://youbug.cn/2023/02/guardduty-lambda-block.html" rel="alternate" type="text/html" title="使用 Lambda 配合 GuardDuty 事件封禁攻击源" /><published>2023-02-23T05:10:49+00:00</published><updated>2023-02-23T05:10:49+00:00</updated><id>https://youbug.cn/2023/02/guardduty-lambda-block</id><content type="html" xml:base="https://youbug.cn/2023/02/guardduty-lambda-block.html"><![CDATA[<p>在针对 AWS 的网络攻击过程中，有一类攻击是暴力破解 root 账号，此类攻击会被 GuardDuty 监控并记录到。当发生此类暴力破解事件的时候，可以通过 Lambda 来对攻击源进行及时封禁。</p>
 
 <h2 id="lambda-函数">Lambda 函数</h2>
 
@@ -2042,179 +2151,4 @@ Job succeeded
 
 <p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
 
-<p>A whole new node purchase time is about 1 min 30s, Karpenter will always look for the cheapest instance.</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton (ARM) is the most cost-effective in AWS (up to 40% savings), while Spot instances are suitable for task-type workloads and can save up to 90%. Gitlab Runner can easily schedule build tasks to Graviton + Spot instances.]]></summary></entry><entry><title type="html">使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact</title><link href="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html" rel="alternate" type="text/html" title="使用 Gitlab in K8S 构建 Maven 类库到 AWS CodeArtifact" /><published>2022-12-12T12:59:33+00:00</published><updated>2022-12-12T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact</id><content type="html" xml:base="https://youbug.cn/2022/12/build-maven-artifact-to-codeartifact.html"><![CDATA[<p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
-
-<h2 id="创建-codeartifact">创建 CodeArtifact</h2>
-
-<p>打开控制台进行创建: <a href="https://console.aws.amazon.com/codesuite/codeartifact/getting-started">https://console.aws.amazon.com/codesuite/codeartifact/getting-started</a>，选择 maven-central-store。</p>
-
-<p>记得选择合适的 region，与您 Gitlab 部署地点尽量靠近。</p>
-
-<p><img src="/assets/posts/devops/code-artifact.png" alt="CodeArtifact Create" /></p>
-
-<p>创建完成后，可以查看连接说明。</p>
-
-<h2 id="配置-maven-的-settings">配置 Maven 的 settings</h2>
-
-<p>官方文档是将 settings.xml 配置到了宿主机，但在 k8s 中，可以考虑动态配置此文件。</p>
-
-<p>我们将 settings.xml 的内容先丢到 Gitlab 的变量中去。我存在 <code class="language-plaintext highlighter-rouge">M2_SETTINGS</code> 变量里了。</p>
-
-<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;settings&gt;</span>
-  <span class="nt">&lt;profiles&gt;</span>
-    <span class="nt">&lt;profile&gt;</span>
-      <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
-      <span class="nt">&lt;activation&gt;</span>
-        <span class="nt">&lt;activeByDefault&gt;</span>true<span class="nt">&lt;/activeByDefault&gt;</span>
-      <span class="nt">&lt;/activation&gt;</span>
-      <span class="nt">&lt;repositories&gt;</span>
-        <span class="nt">&lt;repository&gt;</span>
-          <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
-          <span class="nt">&lt;url&gt;</span>$${ARTIFACT_URL}<span class="nt">&lt;/url&gt;</span>
-        <span class="nt">&lt;/repository&gt;</span>
-      <span class="nt">&lt;/repositories&gt;</span>
-    <span class="nt">&lt;/profile&gt;</span>
-  <span class="nt">&lt;/profiles&gt;</span>
-  <span class="nt">&lt;servers&gt;</span>
-    <span class="nt">&lt;server&gt;</span>
-      <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
-      <span class="nt">&lt;username&gt;</span>aws<span class="nt">&lt;/username&gt;</span>
-      <span class="nt">&lt;password&gt;</span>$${CODEARTIFACT_AUTH_TOKEN}<span class="nt">&lt;/password&gt;</span>
-    <span class="nt">&lt;/server&gt;</span>
-  <span class="nt">&lt;/servers&gt;</span>
-<span class="nt">&lt;/settings&gt;</span>
-</code></pre></div></div>
-
-<ul>
-  <li>此变量会以环境变量 <code class="language-plaintext highlighter-rouge">M2_SETTINGS</code> 出现在 Pod 中。</li>
-  <li>ARTIFACT_URL 会直接被 Gitlab 的替换，CODEARTIFACT_AUTH_TOKEN 会在 CI 过程中动态获取。</li>
-  <li>这里不能用 <code class="language-plaintext highlighter-rouge">${CODEARTIFACT_AUTH_TOKEN}</code> 这样方式，会被 CI 过程替提前换掉，转义字符是 <strong>$$</strong>。</li>
-</ul>
-
-<h2 id="设置-gitlab-ci">设置 Gitlab CI</h2>
-
-<p>添加如下的 <code class="language-plaintext highlighter-rouge">.gitlab-ci.yml</code> 文件：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">mvn-deploy</span>
-
-<span class="na">build</span><span class="pi">:</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">mvn-deploy</span>
-  <span class="na">before_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">mkdir -p ~/.m2/repository</span>
-    <span class="pi">-</span> <span class="s">apt update</span>
-    <span class="pi">-</span> <span class="s">apt install unzip</span>
-    <span class="pi">-</span> <span class="s">cd /tmp</span>
-    <span class="pi">-</span> <span class="s">curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"</span>
-    <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
-    <span class="pi">-</span> <span class="s">./aws/install</span>
-    <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
-    <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
-</code></pre></div></div>
-
-<ul>
-  <li>使用了 maven 作为编译镜像，并安装了 aws cli 命令行工具。</li>
-  <li>通过 shell 脚本将动态 CODEARTIFACT_AUTH_TOKEN 和仓库地址 ARTIFACT_URL 替换掉并写入 <code class="language-plaintext highlighter-rouge">.m2/settings.xml</code> 配置信息中。</li>
-  <li><code class="language-plaintext highlighter-rouge">-Daether.checksums.algorithms=MD5</code> 这个解决上传过程的 checksum 警告信息。</li>
-</ul>
-
-<blockquote>
-  <p>本文中，设置了如下的环境变量：</p>
-
-  <ul>
-    <li>ARTIFACT_URL: Maven / CodeArtifact 仓库地址</li>
-    <li>M2_SETTINGS: Maven 的 .m2/settings.xml 配置</li>
-    <li>AWS_ACCESS_KEY_ID</li>
-    <li>AWS_SECRET_ACCESS_KEY</li>
-    <li>AWS_REGION</li>
-    <li>AWS_ACCOUNT_ID</li>
-  </ul>
-</blockquote>
-
-<h2 id="build-by-tag">Build by Tag</h2>
-
-<p>正式版本类库我们只想被 tag 触发。</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git tag v1.0.0
-git push origin v1.0.0
-</code></pre></div></div>
-
-<p>可以添加 <code class="language-plaintext highlighter-rouge">only: tags</code> 触发标记，整体如下：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">mvn-deploy</span>
-
-<span class="na">build</span><span class="pi">:</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">maven:latest</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">mvn-deploy</span>
-  <span class="na">only</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">tags</span>
-  <span class="na">before_script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">mkdir -p ~/.m2/repository</span>
-    <span class="pi">-</span> <span class="s">apt update</span>
-    <span class="pi">-</span> <span class="s">apt install unzip</span>
-    <span class="pi">-</span> <span class="s">cd /tmp</span>
-    <span class="pi">-</span> <span class="s">curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"</span>
-    <span class="pi">-</span> <span class="s">unzip awscliv2.zip</span>
-    <span class="pi">-</span> <span class="s">./aws/install</span>
-    <span class="pi">-</span> <span class="s">export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain cloudbeer --domain-owner $AWS_ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text`</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">cd $CI_PROJECT_DIR</span>
-    <span class="pi">-</span> <span class="s">mvn deploy "-Daether.checksums.algorithms=MD5"</span>
-</code></pre></div></div>
-
-<blockquote>
-  <p>请注意，设置了 protected 的环境变量默认不能被传入 tags 触发的构建过程。</p>
-
-  <p>这个可以修改，在项目的 Settings -&gt; Repository -&gt; Protected tags，可以将 tag 为 <code class="language-plaintext highlighter-rouge">v*</code> 或者 <code class="language-plaintext highlighter-rouge">*-release</code> 的保护起来。</p>
-
-  <p>比如：您需要查询一下 <code class="language-plaintext highlighter-rouge">*-release</code>，然后选择最底下的 Create wildcard 才能创建匹配规则。</p>
-
-  <p><img src="/assets/posts/devops/gitlab-protected-tags.png" alt="Protected tags" /></p>
-</blockquote>
-
-<p>同时 Java 项目的 pom.xml 可以写成这样：</p>
-
-<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
-<span class="nt">&lt;project</span> <span class="na">xmlns=</span><span class="s">"http://maven.apache.org/POM/4.0.0"</span>
-    <span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span> <span class="na">xsi:schemaLocation=</span><span class="s">"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"</span><span class="nt">&gt;</span>
-    <span class="nt">&lt;modelVersion&gt;</span>4.0.0<span class="nt">&lt;/modelVersion&gt;</span>
-
-    <span class="nt">&lt;groupId&gt;</span>com.amazon.devax<span class="nt">&lt;/groupId&gt;</span>
-    <span class="nt">&lt;artifactId&gt;</span>eshop-commons<span class="nt">&lt;/artifactId&gt;</span>
-    <span class="nt">&lt;version&gt;</span>${version}<span class="nt">&lt;/version&gt;</span>
-
-    <span class="nt">&lt;packaging&gt;</span>jar<span class="nt">&lt;/packaging&gt;</span>
-    <span class="nt">&lt;properties&gt;</span>
-        <span class="nt">&lt;version</span> <span class="na">default-value=</span><span class="s">"1.0.0-SNAPSHOT"</span><span class="nt">&gt;</span>${env.CI_COMMIT_TAG}<span class="nt">&lt;/version&gt;</span>
-    <span class="nt">&lt;/properties&gt;</span>
-
-    <span class="nt">&lt;dependencies&gt;</span>
-    <span class="nt">&lt;/dependencies&gt;</span>
-    <span class="nt">&lt;distributionManagement&gt;</span>
-        <span class="nt">&lt;repository&gt;</span>
-            <span class="nt">&lt;id&gt;</span>cloudbeer-mvn<span class="nt">&lt;/id&gt;</span>
-            <span class="nt">&lt;url&gt;</span>${env.ARTIFACT_URL}<span class="nt">&lt;/url&gt;</span>
-        <span class="nt">&lt;/repository&gt;</span>
-    <span class="nt">&lt;/distributionManagement&gt;</span>
-<span class="nt">&lt;/project&gt;</span>
-
-</code></pre></div></div>
-
-<ul>
-  <li>version 这个属性取自环境变量 CI_COMMIT_TAG 这个值，这个环境变量就是 git commit 的 tag 名称。</li>
-  <li>最后 deploy 的时候，会发现 release artifact 的版本号和 git 的 tag 保持一致。</li>
-</ul>
-
-<hr />
-
-<p>参考文档：</p>
-
-<ul>
-  <li><a href="https://docs.gitlab.com/ee/user/packages/maven_repository/">Maven packages in the Package Repository</a></li>
-  <li><a href="https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html">安装或更新最新版本的 AWS CLI</a></li>
-  <li><a href="https://docs.aws.amazon.com/codeartifact/latest/ug/maven-mvn.html">Use CodeArtifact with mvn</a></li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。]]></summary></entry></feed>
+<p>A whole new node purchase time is about 1 min 30s, Karpenter will always look for the cheapest instance.</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton (ARM) is the most cost-effective in AWS (up to 40% savings), while Spot instances are suitable for task-type workloads and can save up to 90%. Gitlab Runner can easily schedule build tasks to Graviton + Spot instances.]]></summary></entry></feed>

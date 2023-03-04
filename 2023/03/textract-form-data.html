@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>使用 Java 组装 Amazon Textract 解析出来的键值对 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="使用 Java 组装 Amazon Textract 解析出来的键值对" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。" />
+<meta property="og:description" content="Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。" />
+<link rel="canonical" href="https://youbug.cn/2023/03/textract-form-data.html" />
+<meta property="og:url" content="https://youbug.cn/2023/03/textract-form-data.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-03-04T05:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="使用 Java 组装 Amazon Textract 解析出来的键值对" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-03-04T05:10:49+00:00","datePublished":"2023-03-04T05:10:49+00:00","description":"Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。","headline":"使用 Java 组装 Amazon Textract 解析出来的键值对","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/03/textract-form-data.html"},"url":"https://youbug.cn/2023/03/textract-form-data.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">使用 Java 组装 Amazon Textract 解析出来的键值对</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-03-04T05:10:49+00:00" itemprop="datePublished">2023-03-04
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。</p>
+
+<h2 id="java-的-block-输出">Java 的 Block 输出</h2>
+
+<p>先打印一下看看:</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="o">(</span><span class="nc">Block</span> <span class="n">block</span> <span class="o">:</span> <span class="n">blocks</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"The block type is "</span> <span class="o">+</span> <span class="n">block</span><span class="o">.</span><span class="na">blockType</span><span class="o">().</span><span class="na">toString</span><span class="o">());</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">block</span><span class="o">);</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"----------\n"</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>下面是打印的原始 Block 部分信息（实际上有一大坨，这里一个类型留了一个）：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+The block type is PAGE
+Block(BlockType=PAGE, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.8405368, Height=1.0, Left=0.09841533, Top=0.0), Polygon=[Point(X=0.09841533, Y=0.0), Point(X=0.9389521, Y=0.0), Point(X=0.9229099, Y=1.0), Point(X=0.11533637, Y=1.0)]), Id=bbede76c-e163-45ee-81d4-82afc8bad5ad, Relationships=[Relationship(Type=CHILD, Ids=[e694910a-dc8c-4bd4-9b4e-d6262b549705, c959f258-1e33-4591-8394-dce960cc7e55, 82c3e843-c149-4f8b-b3bc-0e3299f6d551, 4932758c-12a7-4bc3-90a4-87a135c54d6e, 01aa9893-ccb2-4b0a-b2a0-ea954b35fe4b, 2975d587-f5de-4436-92f3-480f1c9aa656, 951fca1a-7f9d-475b-8aff-e9e0ef9000d5, ....])])
+----------
+
+The block type is LINE
+Block(BlockType=LINE, Confidence=70.37652, Text=xxxxxxxxxxx - mail@frankonia.de, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.2087112, Height=0.023847194, Left=0.58435017, Top=0.03585644), Polygon=[Point(X=0.58439976, Y=0.03585644), Point(X=0.7930614, Y=0.036802612), Point(X=0.7928248, Y=0.059703637), Point(X=0.58435017, Y=0.058780655)]), Id=e694910a-dc8c-4bd4-9b4e-d6262b549705, Relationships=[Relationship(Type=CHILD, Ids=[3d1c10aa-9ee9-4efa-8f24-eb4487fcc927, 7e653065-ecf4-47a5-9518-aa4b70fcd7ea, d103f1ac-25ab-48cf-9824-0ff6277e59e2])])
+----------
+
+The block type is WORD
+Block(BlockType=WORD, Confidence=98.42162, Text=Fax, TextType=PRINTED, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.018412054, Height=0.01635857, Left=0.6832591, Top=0.061593868), Polygon=[Point(X=0.68335754, Y=0.061593868), Point(X=0.7016712, Y=0.061674744), Point(X=0.70156115, Y=0.07795244), Point(X=0.6832591, Y=0.07787301)]), Id=66db8d1e-a1b6-40c4-8a77-afc4fc250870)
+----------
+
+The block type is WORD
+Block(BlockType=WORD, Confidence=98.718414, Text=€, TextType=PRINTED, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.0076815123, Height=0.018535566, Left=0.8544621, Top=0.87233585), Polygon=[Point(X=0.8547062, Y=0.87233585), Point(X=0.8621436, Y=0.8723405), Point(X=0.86189395, Y=0.8908714), Point(X=0.8544621, Y=0.8908674)]), Id=db9dcabb-8aa6-4bb7-b924-5f91add0530b)
+----------
+
+
+The block type is KEY_VALUE_SET
+Block(BlockType=KEY_VALUE_SET, Confidence=86.59171, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.08317889, Height=0.024558436, Left=0.6154753, Top=0.7993664), Polygon=[Point(X=0.6155607, Y=0.7993664), Point(X=0.6986542, Y=0.79944664), Point(X=0.69848675, Y=0.8239249), Point(X=0.6154753, Y=0.82385427)]), Id=89664d58-b1eb-4ad3-912f-705500e4b08b, Relationships=[Relationship(Type=VALUE, Ids=[0df283e1-7079-46ef-baea-fafedc580ee4]), Relationship(Type=CHILD, Ids=[11a76d29-860a-43f4-bf8a-816b5993ae9c, 47f62df8-6fb1-4b09-b4ff-ac8901f230a3])], EntityTypes=[KEY])
+----------
+
+The block type is KEY_VALUE_SET
+Block(BlockType=KEY_VALUE_SET, Confidence=86.59171, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.056614958, Height=0.023218233, Left=0.81078696, Top=0.7957822), Polygon=[Point(X=0.8110504, Y=0.7957822), Point(X=0.8674019, Y=0.7958376), Point(X=0.8670859, Y=0.8190004), Point(X=0.81078696, Y=0.8189512)]), Id=0df283e1-7079-46ef-baea-fafedc580ee4, Relationships=[Relationship(Type=CHILD, Ids=[2f71d668-e883-40dc-9d73-0a50d5954e84, 904205cd-0eeb-4bd6-a4e1-05c1dd168182])], EntityTypes=[VALUE])
+----------
+
+</code></pre></div></div>
+
+<h2 id="数据结构分析">数据结构分析</h2>
+
+<p>这真是个费眼睛的活儿，对比 python 的代码，分析出 KEY_VALUE_SET 部分的结构为：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">KEY_VALUE_SET</code> 分类 <code class="language-plaintext highlighter-rouge">KEY</code> 和 <code class="language-plaintext highlighter-rouge">VALUE</code>, 这个记录在 <code class="language-plaintext highlighter-rouge">blockType()</code> 为 <code class="language-plaintext highlighter-rouge">KEY_VALUE_SET</code> 的 <code class="language-plaintext highlighter-rouge">EntityTypes</code> 字段里了。</li>
+  <li>通过 <code class="language-plaintext highlighter-rouge">KEY</code> 的 block 的 <code class="language-plaintext highlighter-rouge">Relationships</code> 中的 <code class="language-plaintext highlighter-rouge">CHILD</code> 的 <code class="language-plaintext highlighter-rouge">Ids</code> 去找到对应的 <code class="language-plaintext highlighter-rouge">WORD</code>，<code class="language-plaintext highlighter-rouge">text()</code> 就是 <code class="language-plaintext highlighter-rouge">KEY</code> 的值了。</li>
+  <li><code class="language-plaintext highlighter-rouge">KEY</code> block 的 <code class="language-plaintext highlighter-rouge">Relationships</code> 里有一个 <code class="language-plaintext highlighter-rouge">VALUE</code> 的关系，value block 的 <code class="language-plaintext highlighter-rouge">Ids</code> 就存在这里。</li>
+  <li>通过上面的 id 匹配 block 的 <code class="language-plaintext highlighter-rouge">Id</code> 字段得到对应的 value block。</li>
+  <li>然后通过 value block <code class="language-plaintext highlighter-rouge">Relationships</code> 的 <code class="language-plaintext highlighter-rouge">CHILD</code> 再寻找为 <code class="language-plaintext highlighter-rouge">WORD</code> 类型的 block 的值。</li>
+  <li><code class="language-plaintext highlighter-rouge">LINE</code> 类型暂时没用上。</li>
+</ul>
+
+<h2 id="完整代码">完整代码</h2>
+
+<p>然后就可以写出 java 对应的代码：</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">aws.cloudbeer</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.regions.Region</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.services.textract.TextractClient</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.services.textract.model.*</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.HashMap</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Optional</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.stream.Collectors</span><span class="o">;</span>
+
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Main</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="nc">Region</span> <span class="n">region</span> <span class="o">=</span> <span class="nc">Region</span><span class="o">.</span><span class="na">US_EAST_1</span><span class="o">;</span>
+        <span class="nc">TextractClient</span> <span class="n">textractClient</span> <span class="o">=</span> <span class="nc">TextractClient</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                <span class="o">.</span><span class="na">region</span><span class="o">(</span><span class="n">region</span><span class="o">)</span>
+                <span class="o">.</span><span class="na">credentialsProvider</span><span class="o">(</span><span class="nc">ProfileCredentialsProvider</span><span class="o">.</span><span class="na">create</span><span class="o">())</span>
+                <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+        <span class="n">analyzeDocS3</span><span class="o">(</span><span class="n">textractClient</span><span class="o">,</span> <span class="s">"cloudbeer-textract"</span><span class="o">,</span> <span class="s">"1.jpg"</span><span class="o">);</span>
+        <span class="n">textractClient</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+    <span class="o">}</span>
+
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">analyzeDocS3</span><span class="o">(</span><span class="nc">TextractClient</span> <span class="n">textractClient</span><span class="o">,</span> <span class="nc">String</span> <span class="n">bucketName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">docName</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">S3Object</span> <span class="n">s3Object</span> <span class="o">=</span> <span class="nc">S3Object</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                    <span class="o">.</span><span class="na">bucket</span><span class="o">(</span><span class="n">bucketName</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">name</span><span class="o">(</span><span class="n">docName</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+            <span class="nc">Document</span> <span class="n">myDoc</span> <span class="o">=</span> <span class="nc">Document</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                    <span class="o">.</span><span class="na">s3Object</span><span class="o">(</span><span class="n">s3Object</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">FeatureType</span><span class="o">&gt;</span> <span class="n">featureTypes</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;</span><span class="nc">FeatureType</span><span class="o">&gt;();</span>
+            <span class="n">featureTypes</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">FeatureType</span><span class="o">.</span><span class="na">FORMS</span><span class="o">);</span>
+<span class="c1">//            featureTypes.add(FeatureType.TABLES);</span>
+<span class="c1">//            featureTypes.add(FeatureType.QUERIES);</span>
+<span class="c1">//            featureTypes.add(FeatureType.SIGNATURES);</span>
+
+
+            <span class="nc">AnalyzeDocumentRequest</span> <span class="n">analyzeDocumentRequest</span> <span class="o">=</span> <span class="nc">AnalyzeDocumentRequest</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                    <span class="o">.</span><span class="na">featureTypes</span><span class="o">(</span><span class="n">featureTypes</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">document</span><span class="o">(</span><span class="n">myDoc</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+            <span class="nc">AnalyzeDocumentResponse</span> <span class="n">analyzeDocument</span> <span class="o">=</span> <span class="n">textractClient</span><span class="o">.</span><span class="na">analyzeDocument</span><span class="o">(</span><span class="n">analyzeDocumentRequest</span><span class="o">);</span>
+
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">docInfo</span> <span class="o">=</span> <span class="n">analyzeDocument</span><span class="o">.</span><span class="na">blocks</span><span class="o">();</span>
+
+            <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Object</span><span class="o">&gt;</span> <span class="n">kvSets</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+
+
+            <span class="k">for</span> <span class="o">(</span><span class="nc">Block</span> <span class="n">block</span> <span class="o">:</span> <span class="n">docInfo</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">block</span><span class="o">.</span><span class="na">blockType</span><span class="o">()</span> <span class="o">==</span> <span class="nc">BlockType</span><span class="o">.</span><span class="na">KEY_VALUE_SET</span> <span class="o">&amp;&amp;</span> <span class="n">block</span><span class="o">.</span><span class="na">entityTypes</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="nc">EntityType</span><span class="o">.</span><span class="na">KEY</span><span class="o">))</span> <span class="o">{</span>
+
+                    <span class="nc">StringBuilder</span> <span class="n">key</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+                    <span class="nc">StringBuilder</span> <span class="n">val</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+
+                    <span class="k">for</span> <span class="o">(</span><span class="nc">Relationship</span> <span class="n">relationship</span> <span class="o">:</span> <span class="n">block</span><span class="o">.</span><span class="na">relationships</span><span class="o">())</span> <span class="o">{</span>
+                        <span class="c1">// 通过 KeySet  的关系中的 CHILD 去找Key的的值</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">relationship</span><span class="o">.</span><span class="na">type</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RelationshipType</span><span class="o">.</span><span class="na">CHILD</span><span class="o">)</span> <span class="o">{</span>
+                            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span> <span class="o">=</span> <span class="n">relationship</span><span class="o">.</span><span class="na">ids</span><span class="o">();</span>
+                            <span class="n">key</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">findKeyWord</span><span class="o">(</span><span class="n">docInfo</span><span class="o">,</span> <span class="n">ids</span><span class="o">)).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+                        <span class="o">}</span>
+                        <span class="c1">// 通过 KeySet 的关系中的 VALUE 去找 VALUE 的 block，在通过 VALUE 的 CHILD 去找值</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">relationship</span><span class="o">.</span><span class="na">type</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RelationshipType</span><span class="o">.</span><span class="na">VALUE</span><span class="o">)</span> <span class="o">{</span>
+                            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span> <span class="o">=</span> <span class="n">relationship</span><span class="o">.</span><span class="na">ids</span><span class="o">();</span>
+                            <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">id</span> <span class="o">:</span> <span class="n">ids</span><span class="o">)</span> <span class="o">{</span>
+                                <span class="n">val</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">findValueWord</span><span class="o">(</span><span class="n">docInfo</span><span class="o">,</span> <span class="n">ids</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">))).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+                            <span class="o">}</span>
+
+                        <span class="o">}</span>
+                    <span class="o">}</span>
+                    <span class="n">kvSets</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="n">val</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">kvSets</span><span class="o">);</span>
+
+
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">TextractException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">err</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">getMessage</span><span class="o">());</span>
+            <span class="nc">System</span><span class="o">.</span><span class="na">exit</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">findValueWord</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">blocks</span><span class="o">,</span> <span class="nc">String</span> <span class="n">keyId</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">StringBuilder</span> <span class="n">rtn</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+        <span class="nc">Optional</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">valBlock</span> <span class="o">=</span> <span class="n">blocks</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">filter</span><span class="o">(</span><span class="n">s</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">.</span><span class="na">blockType</span><span class="o">()</span> <span class="o">==</span> <span class="nc">BlockType</span><span class="o">.</span><span class="na">KEY_VALUE_SET</span> <span class="o">&amp;&amp;</span> <span class="n">keyId</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">id</span><span class="o">())).</span><span class="na">findFirst</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">valBlock</span><span class="o">.</span><span class="na">isPresent</span><span class="o">())</span> <span class="o">{</span>
+             <span class="nc">Block</span> <span class="n">block</span> <span class="o">=</span> <span class="n">valBlock</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+            <span class="k">for</span> <span class="o">(</span><span class="nc">Relationship</span> <span class="n">relationship</span> <span class="o">:</span> <span class="n">block</span><span class="o">.</span><span class="na">relationships</span><span class="o">())</span> <span class="o">{</span>
+                <span class="c1">// 通过 KeySet  的关系 儿子去找Key的的值</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">relationship</span><span class="o">.</span><span class="na">type</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RelationshipType</span><span class="o">.</span><span class="na">CHILD</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span> <span class="o">=</span> <span class="n">relationship</span><span class="o">.</span><span class="na">ids</span><span class="o">();</span>
+                    <span class="n">rtn</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">findKeyWord</span><span class="o">(</span><span class="n">blocks</span><span class="o">,</span> <span class="n">ids</span><span class="o">)).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">rtn</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">findKeyWord</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">blocks</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="nc">StringBuilder</span> <span class="n">rtn</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">id</span> <span class="o">:</span> <span class="n">ids</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">vBlocks</span> <span class="o">=</span> <span class="n">blocks</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">filter</span><span class="o">(</span><span class="n">s</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">.</span><span class="na">blockType</span><span class="o">()</span> <span class="o">==</span> <span class="nc">BlockType</span><span class="o">.</span><span class="na">WORD</span> <span class="o">&amp;&amp;</span> <span class="n">id</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">id</span><span class="o">())).</span><span class="na">collect</span><span class="o">(</span><span class="nc">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">vBlocks</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">rtn</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">vBlocks</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">).</span><span class="na">text</span><span class="o">()).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">rtn</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<hr />
+<p>参考：</p>
+
+<p>Textract JAVA Demo <a href="https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/javav2/example_code/textract">https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/javav2/example_code/textract</a></p>
+
+<p>Python Extract KV Pairs <a href="https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html">https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/03/textract-form-data.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

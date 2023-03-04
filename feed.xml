@@ -1,4 +1,194 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-02T07:31:07+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 里，使用 Jenkins 跨账号执行任务</title><link href="https://youbug.cn/2023/03/jenkins-assume-role.html" rel="alternate" type="text/html" title="在 AWS 里，使用 Jenkins 跨账号执行任务" /><published>2023-03-02T07:02:33+00:00</published><updated>2023-03-02T07:02:33+00:00</updated><id>https://youbug.cn/2023/03/jenkins-assume-role</id><content type="html" xml:base="https://youbug.cn/2023/03/jenkins-assume-role.html"><![CDATA[<p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-04T16:14:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Java 组装 Amazon Textract 解析出来的键值对</title><link href="https://youbug.cn/2023/03/textract-form-data.html" rel="alternate" type="text/html" title="使用 Java 组装 Amazon Textract 解析出来的键值对" /><published>2023-03-04T05:10:49+00:00</published><updated>2023-03-04T05:10:49+00:00</updated><id>https://youbug.cn/2023/03/textract-form-data</id><content type="html" xml:base="https://youbug.cn/2023/03/textract-form-data.html"><![CDATA[<p>Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。</p>
+
+<h2 id="java-的-block-输出">Java 的 Block 输出</h2>
+
+<p>先打印一下看看:</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="o">(</span><span class="nc">Block</span> <span class="n">block</span> <span class="o">:</span> <span class="n">blocks</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"The block type is "</span> <span class="o">+</span> <span class="n">block</span><span class="o">.</span><span class="na">blockType</span><span class="o">().</span><span class="na">toString</span><span class="o">());</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">block</span><span class="o">);</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"----------\n"</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>下面是打印的原始 Block 部分信息（实际上有一大坨，这里一个类型留了一个）：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+The block type is PAGE
+Block(BlockType=PAGE, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.8405368, Height=1.0, Left=0.09841533, Top=0.0), Polygon=[Point(X=0.09841533, Y=0.0), Point(X=0.9389521, Y=0.0), Point(X=0.9229099, Y=1.0), Point(X=0.11533637, Y=1.0)]), Id=bbede76c-e163-45ee-81d4-82afc8bad5ad, Relationships=[Relationship(Type=CHILD, Ids=[e694910a-dc8c-4bd4-9b4e-d6262b549705, c959f258-1e33-4591-8394-dce960cc7e55, 82c3e843-c149-4f8b-b3bc-0e3299f6d551, 4932758c-12a7-4bc3-90a4-87a135c54d6e, 01aa9893-ccb2-4b0a-b2a0-ea954b35fe4b, 2975d587-f5de-4436-92f3-480f1c9aa656, 951fca1a-7f9d-475b-8aff-e9e0ef9000d5, ....])])
+----------
+
+The block type is LINE
+Block(BlockType=LINE, Confidence=70.37652, Text=xxxxxxxxxxx - mail@frankonia.de, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.2087112, Height=0.023847194, Left=0.58435017, Top=0.03585644), Polygon=[Point(X=0.58439976, Y=0.03585644), Point(X=0.7930614, Y=0.036802612), Point(X=0.7928248, Y=0.059703637), Point(X=0.58435017, Y=0.058780655)]), Id=e694910a-dc8c-4bd4-9b4e-d6262b549705, Relationships=[Relationship(Type=CHILD, Ids=[3d1c10aa-9ee9-4efa-8f24-eb4487fcc927, 7e653065-ecf4-47a5-9518-aa4b70fcd7ea, d103f1ac-25ab-48cf-9824-0ff6277e59e2])])
+----------
+
+The block type is WORD
+Block(BlockType=WORD, Confidence=98.42162, Text=Fax, TextType=PRINTED, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.018412054, Height=0.01635857, Left=0.6832591, Top=0.061593868), Polygon=[Point(X=0.68335754, Y=0.061593868), Point(X=0.7016712, Y=0.061674744), Point(X=0.70156115, Y=0.07795244), Point(X=0.6832591, Y=0.07787301)]), Id=66db8d1e-a1b6-40c4-8a77-afc4fc250870)
+----------
+
+The block type is WORD
+Block(BlockType=WORD, Confidence=98.718414, Text=€, TextType=PRINTED, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.0076815123, Height=0.018535566, Left=0.8544621, Top=0.87233585), Polygon=[Point(X=0.8547062, Y=0.87233585), Point(X=0.8621436, Y=0.8723405), Point(X=0.86189395, Y=0.8908714), Point(X=0.8544621, Y=0.8908674)]), Id=db9dcabb-8aa6-4bb7-b924-5f91add0530b)
+----------
+
+
+The block type is KEY_VALUE_SET
+Block(BlockType=KEY_VALUE_SET, Confidence=86.59171, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.08317889, Height=0.024558436, Left=0.6154753, Top=0.7993664), Polygon=[Point(X=0.6155607, Y=0.7993664), Point(X=0.6986542, Y=0.79944664), Point(X=0.69848675, Y=0.8239249), Point(X=0.6154753, Y=0.82385427)]), Id=89664d58-b1eb-4ad3-912f-705500e4b08b, Relationships=[Relationship(Type=VALUE, Ids=[0df283e1-7079-46ef-baea-fafedc580ee4]), Relationship(Type=CHILD, Ids=[11a76d29-860a-43f4-bf8a-816b5993ae9c, 47f62df8-6fb1-4b09-b4ff-ac8901f230a3])], EntityTypes=[KEY])
+----------
+
+The block type is KEY_VALUE_SET
+Block(BlockType=KEY_VALUE_SET, Confidence=86.59171, Geometry=Geometry(BoundingBox=BoundingBox(Width=0.056614958, Height=0.023218233, Left=0.81078696, Top=0.7957822), Polygon=[Point(X=0.8110504, Y=0.7957822), Point(X=0.8674019, Y=0.7958376), Point(X=0.8670859, Y=0.8190004), Point(X=0.81078696, Y=0.8189512)]), Id=0df283e1-7079-46ef-baea-fafedc580ee4, Relationships=[Relationship(Type=CHILD, Ids=[2f71d668-e883-40dc-9d73-0a50d5954e84, 904205cd-0eeb-4bd6-a4e1-05c1dd168182])], EntityTypes=[VALUE])
+----------
+
+</code></pre></div></div>
+
+<h2 id="数据结构分析">数据结构分析</h2>
+
+<p>这真是个费眼睛的活儿，对比 python 的代码，分析出 KEY_VALUE_SET 部分的结构为：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">KEY_VALUE_SET</code> 分类 <code class="language-plaintext highlighter-rouge">KEY</code> 和 <code class="language-plaintext highlighter-rouge">VALUE</code>, 这个记录在 <code class="language-plaintext highlighter-rouge">blockType()</code> 为 <code class="language-plaintext highlighter-rouge">KEY_VALUE_SET</code> 的 <code class="language-plaintext highlighter-rouge">EntityTypes</code> 字段里了。</li>
+  <li>通过 <code class="language-plaintext highlighter-rouge">KEY</code> 的 block 的 <code class="language-plaintext highlighter-rouge">Relationships</code> 中的 <code class="language-plaintext highlighter-rouge">CHILD</code> 的 <code class="language-plaintext highlighter-rouge">Ids</code> 去找到对应的 <code class="language-plaintext highlighter-rouge">WORD</code>，<code class="language-plaintext highlighter-rouge">text()</code> 就是 <code class="language-plaintext highlighter-rouge">KEY</code> 的值了。</li>
+  <li><code class="language-plaintext highlighter-rouge">KEY</code> block 的 <code class="language-plaintext highlighter-rouge">Relationships</code> 里有一个 <code class="language-plaintext highlighter-rouge">VALUE</code> 的关系，value block 的 <code class="language-plaintext highlighter-rouge">Ids</code> 就存在这里。</li>
+  <li>通过上面的 id 匹配 block 的 <code class="language-plaintext highlighter-rouge">Id</code> 字段得到对应的 value block。</li>
+  <li>然后通过 value block <code class="language-plaintext highlighter-rouge">Relationships</code> 的 <code class="language-plaintext highlighter-rouge">CHILD</code> 再寻找为 <code class="language-plaintext highlighter-rouge">WORD</code> 类型的 block 的值。</li>
+  <li><code class="language-plaintext highlighter-rouge">LINE</code> 类型暂时没用上。</li>
+</ul>
+
+<h2 id="完整代码">完整代码</h2>
+
+<p>然后就可以写出 java 对应的代码：</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">aws.cloudbeer</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.regions.Region</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.services.textract.TextractClient</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">software.amazon.awssdk.services.textract.model.*</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.HashMap</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Optional</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.stream.Collectors</span><span class="o">;</span>
+
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Main</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="nc">Region</span> <span class="n">region</span> <span class="o">=</span> <span class="nc">Region</span><span class="o">.</span><span class="na">US_EAST_1</span><span class="o">;</span>
+        <span class="nc">TextractClient</span> <span class="n">textractClient</span> <span class="o">=</span> <span class="nc">TextractClient</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                <span class="o">.</span><span class="na">region</span><span class="o">(</span><span class="n">region</span><span class="o">)</span>
+                <span class="o">.</span><span class="na">credentialsProvider</span><span class="o">(</span><span class="nc">ProfileCredentialsProvider</span><span class="o">.</span><span class="na">create</span><span class="o">())</span>
+                <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+        <span class="n">analyzeDocS3</span><span class="o">(</span><span class="n">textractClient</span><span class="o">,</span> <span class="s">"cloudbeer-textract"</span><span class="o">,</span> <span class="s">"1.jpg"</span><span class="o">);</span>
+        <span class="n">textractClient</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+    <span class="o">}</span>
+
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">analyzeDocS3</span><span class="o">(</span><span class="nc">TextractClient</span> <span class="n">textractClient</span><span class="o">,</span> <span class="nc">String</span> <span class="n">bucketName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">docName</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">S3Object</span> <span class="n">s3Object</span> <span class="o">=</span> <span class="nc">S3Object</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                    <span class="o">.</span><span class="na">bucket</span><span class="o">(</span><span class="n">bucketName</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">name</span><span class="o">(</span><span class="n">docName</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+            <span class="nc">Document</span> <span class="n">myDoc</span> <span class="o">=</span> <span class="nc">Document</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                    <span class="o">.</span><span class="na">s3Object</span><span class="o">(</span><span class="n">s3Object</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">FeatureType</span><span class="o">&gt;</span> <span class="n">featureTypes</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;</span><span class="nc">FeatureType</span><span class="o">&gt;();</span>
+            <span class="n">featureTypes</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">FeatureType</span><span class="o">.</span><span class="na">FORMS</span><span class="o">);</span>
+<span class="c1">//            featureTypes.add(FeatureType.TABLES);</span>
+<span class="c1">//            featureTypes.add(FeatureType.QUERIES);</span>
+<span class="c1">//            featureTypes.add(FeatureType.SIGNATURES);</span>
+
+
+            <span class="nc">AnalyzeDocumentRequest</span> <span class="n">analyzeDocumentRequest</span> <span class="o">=</span> <span class="nc">AnalyzeDocumentRequest</span><span class="o">.</span><span class="na">builder</span><span class="o">()</span>
+                    <span class="o">.</span><span class="na">featureTypes</span><span class="o">(</span><span class="n">featureTypes</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">document</span><span class="o">(</span><span class="n">myDoc</span><span class="o">)</span>
+                    <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+            <span class="nc">AnalyzeDocumentResponse</span> <span class="n">analyzeDocument</span> <span class="o">=</span> <span class="n">textractClient</span><span class="o">.</span><span class="na">analyzeDocument</span><span class="o">(</span><span class="n">analyzeDocumentRequest</span><span class="o">);</span>
+
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">docInfo</span> <span class="o">=</span> <span class="n">analyzeDocument</span><span class="o">.</span><span class="na">blocks</span><span class="o">();</span>
+
+            <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Object</span><span class="o">&gt;</span> <span class="n">kvSets</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+
+
+            <span class="k">for</span> <span class="o">(</span><span class="nc">Block</span> <span class="n">block</span> <span class="o">:</span> <span class="n">docInfo</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">block</span><span class="o">.</span><span class="na">blockType</span><span class="o">()</span> <span class="o">==</span> <span class="nc">BlockType</span><span class="o">.</span><span class="na">KEY_VALUE_SET</span> <span class="o">&amp;&amp;</span> <span class="n">block</span><span class="o">.</span><span class="na">entityTypes</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="nc">EntityType</span><span class="o">.</span><span class="na">KEY</span><span class="o">))</span> <span class="o">{</span>
+
+                    <span class="nc">StringBuilder</span> <span class="n">key</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+                    <span class="nc">StringBuilder</span> <span class="n">val</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+
+                    <span class="k">for</span> <span class="o">(</span><span class="nc">Relationship</span> <span class="n">relationship</span> <span class="o">:</span> <span class="n">block</span><span class="o">.</span><span class="na">relationships</span><span class="o">())</span> <span class="o">{</span>
+                        <span class="c1">// 通过 KeySet  的关系中的 CHILD 去找Key的的值</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">relationship</span><span class="o">.</span><span class="na">type</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RelationshipType</span><span class="o">.</span><span class="na">CHILD</span><span class="o">)</span> <span class="o">{</span>
+                            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span> <span class="o">=</span> <span class="n">relationship</span><span class="o">.</span><span class="na">ids</span><span class="o">();</span>
+                            <span class="n">key</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">findKeyWord</span><span class="o">(</span><span class="n">docInfo</span><span class="o">,</span> <span class="n">ids</span><span class="o">)).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+                        <span class="o">}</span>
+                        <span class="c1">// 通过 KeySet 的关系中的 VALUE 去找 VALUE 的 block，在通过 VALUE 的 CHILD 去找值</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">relationship</span><span class="o">.</span><span class="na">type</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RelationshipType</span><span class="o">.</span><span class="na">VALUE</span><span class="o">)</span> <span class="o">{</span>
+                            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span> <span class="o">=</span> <span class="n">relationship</span><span class="o">.</span><span class="na">ids</span><span class="o">();</span>
+                            <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">id</span> <span class="o">:</span> <span class="n">ids</span><span class="o">)</span> <span class="o">{</span>
+                                <span class="n">val</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">findValueWord</span><span class="o">(</span><span class="n">docInfo</span><span class="o">,</span> <span class="n">ids</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">))).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+                            <span class="o">}</span>
+
+                        <span class="o">}</span>
+                    <span class="o">}</span>
+                    <span class="n">kvSets</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="n">val</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">kvSets</span><span class="o">);</span>
+
+
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">TextractException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+
+            <span class="nc">System</span><span class="o">.</span><span class="na">err</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">getMessage</span><span class="o">());</span>
+            <span class="nc">System</span><span class="o">.</span><span class="na">exit</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">findValueWord</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">blocks</span><span class="o">,</span> <span class="nc">String</span> <span class="n">keyId</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">StringBuilder</span> <span class="n">rtn</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+        <span class="nc">Optional</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">valBlock</span> <span class="o">=</span> <span class="n">blocks</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">filter</span><span class="o">(</span><span class="n">s</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">.</span><span class="na">blockType</span><span class="o">()</span> <span class="o">==</span> <span class="nc">BlockType</span><span class="o">.</span><span class="na">KEY_VALUE_SET</span> <span class="o">&amp;&amp;</span> <span class="n">keyId</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">id</span><span class="o">())).</span><span class="na">findFirst</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">valBlock</span><span class="o">.</span><span class="na">isPresent</span><span class="o">())</span> <span class="o">{</span>
+             <span class="nc">Block</span> <span class="n">block</span> <span class="o">=</span> <span class="n">valBlock</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+            <span class="k">for</span> <span class="o">(</span><span class="nc">Relationship</span> <span class="n">relationship</span> <span class="o">:</span> <span class="n">block</span><span class="o">.</span><span class="na">relationships</span><span class="o">())</span> <span class="o">{</span>
+                <span class="c1">// 通过 KeySet  的关系 儿子去找Key的的值</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">relationship</span><span class="o">.</span><span class="na">type</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RelationshipType</span><span class="o">.</span><span class="na">CHILD</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span> <span class="o">=</span> <span class="n">relationship</span><span class="o">.</span><span class="na">ids</span><span class="o">();</span>
+                    <span class="n">rtn</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">findKeyWord</span><span class="o">(</span><span class="n">blocks</span><span class="o">,</span> <span class="n">ids</span><span class="o">)).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">rtn</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="nc">String</span> <span class="nf">findKeyWord</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">blocks</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">ids</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="nc">StringBuilder</span> <span class="n">rtn</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">id</span> <span class="o">:</span> <span class="n">ids</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Block</span><span class="o">&gt;</span> <span class="n">vBlocks</span> <span class="o">=</span> <span class="n">blocks</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">filter</span><span class="o">(</span><span class="n">s</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">.</span><span class="na">blockType</span><span class="o">()</span> <span class="o">==</span> <span class="nc">BlockType</span><span class="o">.</span><span class="na">WORD</span> <span class="o">&amp;&amp;</span> <span class="n">id</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">id</span><span class="o">())).</span><span class="na">collect</span><span class="o">(</span><span class="nc">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">vBlocks</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">rtn</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">vBlocks</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">).</span><span class="na">text</span><span class="o">()).</span><span class="na">append</span><span class="o">(</span><span class="s">" "</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">rtn</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<hr />
+<p>参考：</p>
+
+<p>Textract JAVA Demo <a href="https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/javav2/example_code/textract">https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/javav2/example_code/textract</a></p>
+
+<p>Python Extract KV Pairs <a href="https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html">https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html</a></p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="tucao" /><summary type="html"><![CDATA[Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。]]></summary></entry><entry><title type="html">在 AWS 里，使用 Jenkins 跨账号执行任务</title><link href="https://youbug.cn/2023/03/jenkins-assume-role.html" rel="alternate" type="text/html" title="在 AWS 里，使用 Jenkins 跨账号执行任务" /><published>2023-03-02T07:02:33+00:00</published><updated>2023-03-02T07:02:33+00:00</updated><id>https://youbug.cn/2023/03/jenkins-assume-role</id><content type="html" xml:base="https://youbug.cn/2023/03/jenkins-assume-role.html"><![CDATA[<p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
 
 <h2 id="jenkins-configuration-jenkins-设置">Jenkins Configuration （Jenkins 设置）</h2>
 
@@ -1985,198 +2175,4 @@ Job succeeded
 
 <p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
 
-<p>Karpenter 会购买最便宜的机型，全新节点的购买时间约 1 分 30 秒。</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。]]></summary></entry><entry><title type="html">The cheapest way to build applications (Gitlab CI) on AWS</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-en.html" rel="alternate" type="text/html" title="The cheapest way to build applications (Gitlab CI) on AWS" /><published>2022-12-18T12:59:33+00:00</published><updated>2022-12-18T12:59:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-en</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-en.html"><![CDATA[<p>Graviton (ARM) is the most cost-effective in AWS (up to 40% savings), while Spot instances are suitable for task-type workloads and can save up to 90%. Gitlab Runner can easily schedule build tasks to Graviton + Spot instances.</p>
-
-<h2 id="config-gitlab-runner">Config Gitlab runner</h2>
-
-<p>First, we need to tag the Gitlab runner. Here I set the tag to arm. Later we will schedule the task to the runner.</p>
-
-<p>Here is the CDK code:</p>
-
-<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
-  <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">0.48.0</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-  <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
-    <span class="na">runnerRegistrationToken</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-runner-token&gt;</span><span class="dl">"</span><span class="p">,</span>
-    <span class="na">gitlabUrl</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-gitlab-url&gt;</span><span class="dl">"</span><span class="p">,</span>
-    <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-    <span class="na">rbac</span><span class="p">:</span> <span class="p">{</span>
-      <span class="na">create</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-      <span class="na">rules</span><span class="p">:</span> <span class="p">[</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">watch</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/exec</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/log</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/attach</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">secrets</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">configmaps</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">}</span>
-      <span class="p">]</span>
-    <span class="p">},</span>
-    <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
-      <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
-      <span class="na">tags</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm, mass</span><span class="dl">"</span><span class="p">,</span>
-      <span class="na">runUntagged</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-      <span class="na">helpers</span><span class="p">:</span> <span class="p">{</span>
-        <span class="na">image</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab/gitlab-runner-helper:arm64-v14.10.2</span><span class="dl">"</span>
-      <span class="p">},</span>
-      <span class="na">config</span><span class="p">:</span> <span class="s2">`
-    [[runners]]
-    name = "arm-runner"
-    environment = ["FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=true"]
-    executor = "kubernetes"
-    [runners.kubernetes]
-      image = "ubuntu:22.04"
-      privileged = true
-    [[runners.kubernetes.volumes.empty_dir]]
-      name = "docker-certs"
-      mount_path = "/certs/client"
-      medium = "Memory"
-    [[runners.kubernetes.volumes.empty_dir]]
-      name = "dind-storage"
-      mount_path = "/var/lib/docker"
-    [[runners.kubernetes.volumes.host_path]]
-      name = "hostpath-modules"
-      mount_path = "/lib/modules"
-      read_only = true
-      host_path = "/lib/modules"
-    [[runners.kubernetes.volumes.host_path]]
-      name = "hostpath-hosts"
-      mount_path = "/etc/hosts"
-      read_only = true
-      host_path = "/etc/hosts"
-    [[runners.kubernetes.volumes.host_path]]
-      name = "hostpath-cgroup"
-      mount_path = "/sys/fs/cgroup"
-      host_path = "/sys/fs/cgroup"
-    [runners.kubernetes.node_selector]
-      "karpenter-arch" = "arm64" 
-    `</span>
-    <span class="p">},</span>
-  <span class="p">}</span>
-<span class="p">});</span>
-</code></pre></div></div>
-
-<p>Some notices:</p>
-
-<ul>
-  <li>Under ARM env, we need to specify the gitlab-runner-helper image, because the helper image is single-arch, default pattern is X86. This image will run as a sidecar for the build task.</li>
-  <li><code class="language-plaintext highlighter-rouge">FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY</code> must be sett to true to execute pod.</li>
-  <li><code class="language-plaintext highlighter-rouge">[runners.kubernetes.node_selector]</code> is prepared for K8S pod scheduling, which means the build tasks will be scheduled to the node node of the corresponding tag.</li>
-</ul>
-
-<h2 id="karpenter-provisioner">Karpenter Provisioner</h2>
-
-<p><a href="https://karpenter.sh/">Karpenter</a> is a K8S node auto scaler built by AWS.</p>
-
-<p>Here is the Karpenter Provisioner code.</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.sh/v1alpha5</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Provisioner</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">arm-builder</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">requirements</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">karpenter.k8s.aws/instance-category"</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">c"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">m"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">r"</span><span class="pi">]</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">karpenter.sh/capacity-type</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">spot"</span><span class="pi">]</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">kubernetes.io/arch"</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">arm64"</span><span class="pi">]</span>
-  <span class="na">limits</span><span class="pi">:</span>
-    <span class="na">resources</span><span class="pi">:</span>
-      <span class="na">cpu</span><span class="pi">:</span> <span class="m">1000</span>
-  <span class="na">labels</span><span class="pi">:</span>
-    <span class="na">karpenter-arch</span><span class="pi">:</span> <span class="s">arm64</span>
-  <span class="na">providerRef</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
-  <span class="na">ttlSecondsAfterEmpty</span><span class="pi">:</span> <span class="m">30</span>
-
-
-<span class="nn">---</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.k8s.aws/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">AWSNodeTemplate</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">amiFamily</span><span class="pi">:</span> <span class="s">Bottlerocket</span>
-  <span class="na">subnetSelector</span><span class="pi">:</span>
-    <span class="s2">"</span><span class="s">aws:cloudformation:stack-name"</span><span class="err">:</span> <span class="s">gitlab</span>
-    <span class="s">"aws-cdk:subnet-type": Private</span>
-  <span class="na">securityGroupSelector</span><span class="pi">:</span>
-    <span class="s2">"</span><span class="s">kubernetes.io/cluster/gitlab"</span><span class="err">:</span> <span class="s">owned</span>
-
-</code></pre></div></div>
-
-<p>Notices:</p>
-
-<ul>
-  <li>You can specify instance categories, CPU types, payment types, etc.</li>
-  <li>We choose arm cpu and spot capacity type, this combination is the cheapest.</li>
-  <li>It is recommended to use Bottlerocket as the os of node. Using Amazon Linux will throw an error that “Cannot resolve DNS address of the git repository”.</li>
-</ul>
-
-<h2 id="gitlab-ci-config">Gitlab CI config</h2>
-
-<p>Now we need to schedule the build task to this runner.</p>
-
-<p>Here is an example <code class="language-plaintext highlighter-rouge">.gitlab-ci.yml</code> code:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">Build</span>
-
-<span class="na">frontend-build</span><span class="pi">:</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">Build</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">node:16.16.0-alpine</span>
-  <span class="na">tags</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">arm</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">npm install</span>
-    <span class="pi">-</span> <span class="s">npm run build</span>
-  <span class="na">artifacts</span><span class="pi">:</span>
-    <span class="na">paths</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s">build/</span>
-</code></pre></div></div>
-
-<p>You only need to specify the tags for the build task.</p>
-
-<h2 id="summary">Summary</h2>
-
-<p>Through the above three configurations, the overall CI process is as follows:</p>
-
-<p>Trigger Gitlab build -&gt; Look for runner with arm tag -&gt; Start build task (pod) -&gt; Look for <code class="language-plaintext highlighter-rouge">karpenter-arch: arm64</code> node -&gt; No arm node, pod pending -&gt; Karpenter purchase arm + spot node -&gt; The build task starts -&gt; The task ends and the node is released.</p>
-
-<p>As shown in the figure below:</p>
-
-<p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
-
-<p>A whole new node purchase time is about 1 min 30s, Karpenter will always look for the cheapest instance.</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton (ARM) is the most cost-effective in AWS (up to 40% savings), while Spot instances are suitable for task-type workloads and can save up to 90%. Gitlab Runner can easily schedule build tasks to Graviton + Spot instances.]]></summary></entry></feed>
+<p>Karpenter 会购买最便宜的机型，全新节点的购买时间约 1 分 30 秒。</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。]]></summary></entry></feed>

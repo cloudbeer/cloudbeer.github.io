@@ -46,6 +46,7 @@
 
       <div class="trigger">
 
+        <a class="page-link" href="/aiml/">AI/ML</a>
         <a class="page-link" href="/container/">容器</a>
         <a class="page-link" href="/devops/">DevOps</a>
         <a class="page-link" href="/observability/">可观测</a>
@@ -94,8 +95,7 @@
     <p class="post-meta">
       <time class="dt-published" datetime="2022-12-06T08:09:00+00:00" itemprop="datePublished">2022-12-06
       </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
-          itemprop="name">啤酒云</span></span></p>
-  </header>
+          itemprop="name">啤酒云</span></span></p></header>
 
   <div class="post-content e-content" itemprop="articleBody">
     <p>在应用开发中，我们不应把远程服务的 ip 硬编码到应用中。有些同学习惯使用域名来标定远程服务，通过修改解析，来区分开发测试和生产环境，这是一个挺好的习惯。在 k8s 系统中，我们使用服务名来调用服务，并通过 coredns 来进行解析。但那些集群外的服务，并且已经被硬编码的域名如何访问呢？</p>

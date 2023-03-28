@@ -1,4 +1,201 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-04T16:14:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Java 组装 Amazon Textract 解析出来的键值对</title><link href="https://youbug.cn/2023/03/textract-form-data.html" rel="alternate" type="text/html" title="使用 Java 组装 Amazon Textract 解析出来的键值对" /><published>2023-03-04T05:10:49+00:00</published><updated>2023-03-04T05:10:49+00:00</updated><id>https://youbug.cn/2023/03/textract-form-data</id><content type="html" xml:base="https://youbug.cn/2023/03/textract-form-data.html"><![CDATA[<p>Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-28T06:30:13+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AI/ML Bookmarks</title><link href="https://youbug.cn/2023/03/aiml-awsome-projects.html" rel="alternate" type="text/html" title="AI/ML Bookmarks" /><published>2023-03-28T02:10:49+00:00</published><updated>2023-03-28T02:10:49+00:00</updated><id>https://youbug.cn/2023/03/aiml-awsome-projects</id><content type="html" xml:base="https://youbug.cn/2023/03/aiml-awsome-projects.html"><![CDATA[<p>本文就是 Bookmarks，是我体验过的(🦋)，正在体验的或准备体验的一些现成的库和链接。本文近期可能随时更新。</p>
+
+<h2 id="-中文语言大模型">🐝 中文语言大模型</h2>
+
+<h3 id="chatglm-">ChatGLM 🦋</h3>
+
+<p>清华大学的大语言模型。</p>
+
+<p>ChatGLM-6B 是一个开源的、支持中英双语的对话语言模型。</p>
+
+<p><a href="https://github.com/THUDM/ChatGLM-6B">https://github.com/THUDM/ChatGLM-6B</a></p>
+
+<p><a href="https://huggingface.co/THUDM">https://huggingface.co/THUDM</a></p>
+
+<h3 id="chatyuan-">ChatYuan 🦋</h3>
+
+<p>Large Language Model for Dialogue in Chinese and English，是一个支持中英双语的功能型对话语言大模型。</p>
+
+<p><a href="https://github.com/clue-ai/ChatYuan">https://github.com/clue-ai/ChatYuan</a></p>
+
+<p><a href="https://www.clueai.cn/">https://www.clueai.cn/</a></p>
+
+<p><a href="https://huggingface.co/ClueAI">https://huggingface.co/ClueAI</a></p>
+
+<h2 id="--虚拟主播">🐝  虚拟主播</h2>
+
+<h3 id="sadtalker-">SadTalker 🦋</h3>
+
+<p>Learning Realistic 3D Motion Coefficients for Stylized Audio-Driven Single Image Talking Face Animation</p>
+
+<p>输入图片文件，声音文件，生成符合口型的播音视频。</p>
+
+<p><a href="https://github.com/Winfredy/SadTalker">https://github.com/Winfredy/SadTalker</a></p>
+
+<blockquote>
+  <p>当前特性：</p>
+
+  <ul>
+    <li>3D 效果</li>
+    <li>可以眨眼睛</li>
+    <li>
+      <p>镜头，眼神转移</p>
+    </li>
+    <li>输入图片会被截取脸部放大 (2023-03-28)</li>
+    <li>生成的视频偏小  (2023-03-28)</li>
+    <li>程序运行环境较为苛刻，需要 N 卡， cudnn 等 (2023-03-28)</li>
+  </ul>
+</blockquote>
+
+<h3 id="wav2lip">Wav2Lip</h3>
+
+<p>Accurately Lip-syncing Videos In The Wild.</p>
+
+<p><a href="https://github.com/Rudrabha/Wav2Lip">https://github.com/Rudrabha/Wav2Lip</a></p>
+
+<p><a href="https://www.youtube.com/watch?v=Ic0TBhfuOrA">https://www.youtube.com/watch?v=Ic0TBhfuOrA</a></p>
+
+<h2 id="--试穿try-on">🐝  试穿(Try-On)</h2>
+
+<h3 id="dressing-in-order-dior">Dressing in Order (DiOr)</h3>
+
+<p>Dressing in Order: Recurrent Person Image Generation for Pose Transfer, Virtual Try-on and Outfit Editing.</p>
+
+<p>可以多件衣服。</p>
+
+<p><a href="https://github.com/cuiaiyu/dressing-in-order">https://github.com/cuiaiyu/dressing-in-order</a></p>
+
+<h3 id="hr-viton">HR-VITON</h3>
+
+<p><a href="https://github.com/sangyun884/HR-VITON">https://github.com/sangyun884/HR-VITON</a></p>
+
+<p><a href="https://github.com/shadow2496/VITON-HD">https://github.com/shadow2496/VITON-HD</a></p>
+
+<h3 id="pidm">PIDM</h3>
+
+<p>Person Image Synthesis via Denoising Diffusion Model Open</p>
+
+<p>可以控制姿态。提供 ipynb 文件。</p>
+
+<p><a href="https://github.com/ankanbhunia/PIDM">https://github.com/ankanbhunia/PIDM</a></p>
+
+<h2 id="--开源-ui">🐝  开源 UI</h2>
+
+<h3 id="stable-diffusion-web-ui-">Stable Diffusion web UI 🦋</h3>
+
+<p>Diffussion 生图 and More，无需多言。</p>
+
+<p><a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">https://github.com/AUTOMATIC1111/stable-diffusion-webui</a></p>
+
+<h3 id="invokeai-">InvokeAI 🦋</h3>
+
+<p>Diffussion 生图，界面精美。</p>
+
+<p><a href="https://github.com/invoke-ai/InvokeAI">https://github.com/invoke-ai/InvokeAI</a></p>
+
+<p><a href="https://invoke-ai.github.io/InvokeAI/">https://invoke-ai.github.io/InvokeAI/</a></p>
+
+<h2 id="--商业在线应用">🐝  商业/在线应用</h2>
+
+<h3 id="openai">OpenAI</h3>
+
+<p>ChatGPT</p>
+
+<p>DALL.E</p>
+
+<p>…</p>
+
+<h3 id="midjourney-">midjourney 🦋</h3>
+
+<p>Diffussion 生图，在 Discord 内使用。</p>
+
+<p><a href="https://www.midjourney.com/">https://www.midjourney.com/</a></p>
+
+<h3 id="leonardoai">Leonardo.ai</h3>
+
+<p>Diffussion 生图，在 Discord 内使用。</p>
+
+<p><a href="https://leonardo.ai/">https://leonardo.ai/</a></p>
+
+<h3 id="playground-ai-">Playground AI 🦋</h3>
+
+<p>每天免费 1000 张，限定模型为 SD 1.5, SD 2.1。Prompt 参考。</p>
+
+<p><a href="https://playgroundai.com/">https://playgroundai.com/</a></p>
+
+<h3 id="prompthero">PromptHero</h3>
+
+<p>Prompt 参考，Pro 版本提供 SD 模型生产。</p>
+
+<p><a href="https://prompthero.com/">https://prompthero.com/</a></p>
+
+<h3 id="runaway-ml">runaway ml</h3>
+
+<p>在线视频工具 <a href="https://app.runwayml.com/">https://app.runwayml.com/</a></p>
+
+<p>开源：<a href="https://github.com/runwayml">https://github.com/runwayml</a></p>
+
+<h3 id="d-id-">D-ID 🦋</h3>
+
+<p>数字人合成。</p>
+
+<p><a href="https://www.d-id.com/">https://www.d-id.com/</a></p>
+
+<h3 id="百度文心">百度文心</h3>
+
+<p>文心大模型</p>
+
+<p><a href="https://wenxin.baidu.com/">https://wenxin.baidu.com/</a></p>
+
+<p>文心一言</p>
+
+<p><a href="https://yiyan.baidu.com/">https://yiyan.baidu.com/</a></p>
+
+<p>文心一格 🦋</p>
+
+<p><a href="https://yige.baidu.com/">https://yige.baidu.com/</a></p>
+
+<h2 id="网易">网易</h2>
+
+<p>天音 - 音乐创作平台</p>
+
+<p><a href="https://tianyin.163.com/">https://tianyin.163.com/</a></p>
+
+<h2 id="--视频">🐝  视频</h2>
+
+<h3 id="film">FILM</h3>
+
+<p>Frame Interpolation for Large Motion，视频插帧。</p>
+
+<p><a href="https://github.com/google-research/frame-interpolation">https://github.com/google-research/frame-interpolation</a></p>
+
+<h3 id="rife">RIFE</h3>
+
+<p>Real-Time Intermediate Flow Estimation for Video Frame Interpolation.</p>
+
+<p>ECCV 2022 - 视频插帧中的实时中间流估计，旷世科技。</p>
+
+<p><a href="https://github.com/megvii-research/ECCV2022-RIFE">https://github.com/megvii-research/ECCV2022-RIFE</a></p>
+
+<p><a href="https://zhuanlan.zhihu.com/p/568553080">https://zhuanlan.zhihu.com/p/568553080</a></p>
+
+<h3 id="humannerf">HumanNeRF</h3>
+
+<p>Free-viewpoint Rendering of Moving People from Monocular Video (CVPR 2022)</p>
+
+<p><a href="https://github.com/chungyiweng/humannerf">https://github.com/chungyiweng/humannerf</a></p>
+
+<p><a href="https://github.com/zhaofuq/HumanNeRF">https://github.com/zhaofuq/HumanNeRF</a></p>
+
+<p><a href="https://github.com/Chen-Lehan/HumanNeRF">https://github.com/Chen-Lehan/HumanNeRF</a></p>
+
+<h3 id="sysmocap">SysMocap</h3>
+
+<p>A cross-platform real-time video-driven motion capture and 3D virtual character rendering system for VTuber/Live/AR/VR.</p>
+
+<p>跨平台的实时视频驱动动作捕捉及3D虚拟形象生成系统 for VTuber/Live/AR/VR.</p>
+
+<p><a href="https://github.com/xianfei/SysMocap">https://github.com/xianfei/SysMocap</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[本文就是 Bookmarks，是我体验过的(🦋)，正在体验的或准备体验的一些现成的库和链接。本文近期可能随时更新。]]></summary></entry><entry><title type="html">使用 Java 组装 Amazon Textract 解析出来的键值对</title><link href="https://youbug.cn/2023/03/textract-form-data.html" rel="alternate" type="text/html" title="使用 Java 组装 Amazon Textract 解析出来的键值对" /><published>2023-03-04T05:10:49+00:00</published><updated>2023-03-04T05:10:49+00:00</updated><id>https://youbug.cn/2023/03/textract-form-data</id><content type="html" xml:base="https://youbug.cn/2023/03/textract-form-data.html"><![CDATA[<p>Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。</p>
 
 <h2 id="java-的-block-输出">Java 的 Block 输出</h2>
 
@@ -1983,196 +2180,4 @@ Job succeeded
   <li>对于脚本类型的语言，完全可以用这种方式构建，依赖包安装也应该在 Dockerfile 中进行。</li>
   <li>Java 的普通运行包可以使用直接拷贝的方式，X86 环境下构建的 jar 包可以直接运行在 ARM 的 jdk 中。</li>
   <li>Dockerfile 的底包也应该是多架构的，请不要强制指定具体的 digest 值。</li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container," /><category term="tucao," /><category term="gitlab" /><summary type="html"><![CDATA[现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。]]></summary></entry><entry><title type="html">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</title><link href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html" rel="alternate" type="text/html" title="在 AWS 构建应用 (Gitlab CI) 最便宜的姿势" /><published>2022-12-19T03:40:33+00:00</published><updated>2022-12-19T03:40:33+00:00</updated><id>https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn</id><content type="html" xml:base="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html"><![CDATA[<p>Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。</p>
-
-<h2 id="安装-gitlab-runner">安装 Gitlab runner</h2>
-
-<p>首先，我们需要为 Gitlab runner 打一个标签。这里我设置了标签为 arm。稍后我们会将任务调度到这个 runner。</p>
-
-<p>下面是 CDK 代码:</p>
-
-<div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">cluster</span><span class="p">.</span><span class="nx">addHelmChart</span><span class="p">(</span><span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
-  <span class="na">chart</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab-runner</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">repository</span><span class="p">:</span> <span class="dl">"</span><span class="s2">http://charts.gitlab.io/</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">version</span><span class="p">:</span> <span class="dl">"</span><span class="s2">0.48.0</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">namespace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">release</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
-  <span class="na">createNamespace</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-  <span class="na">values</span><span class="p">:</span> <span class="p">{</span>
-    <span class="na">runnerRegistrationToken</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-runner-token&gt;</span><span class="dl">"</span><span class="p">,</span>
-    <span class="na">gitlabUrl</span><span class="p">:</span> <span class="dl">"</span><span class="s2">&lt;your-gitlab-url&gt;</span><span class="dl">"</span><span class="p">,</span>
-    <span class="na">privileged</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-    <span class="na">rbac</span><span class="p">:</span> <span class="p">{</span>
-      <span class="na">create</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-      <span class="na">rules</span><span class="p">:</span> <span class="p">[</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">watch</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/exec</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/log</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">pods/attach</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">secrets</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="na">apiGroups</span><span class="p">:</span> <span class="p">[</span><span class="dl">""</span><span class="p">],</span>
-          <span class="na">resources</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">configmaps</span><span class="dl">"</span><span class="p">],</span>
-          <span class="na">verbs</span><span class="p">:</span> <span class="p">[</span><span class="dl">"</span><span class="s2">list</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">get</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">create</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">update</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">delete</span><span class="dl">"</span><span class="p">],</span>
-        <span class="p">}</span>
-      <span class="p">]</span>
-    <span class="p">},</span>
-    <span class="na">runners</span><span class="p">:</span> <span class="p">{</span>
-      <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm-runner</span><span class="dl">"</span><span class="p">,</span>
-      <span class="na">tags</span><span class="p">:</span> <span class="dl">"</span><span class="s2">arm, mass</span><span class="dl">"</span><span class="p">,</span>
-      <span class="na">runUntagged</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-      <span class="na">helpers</span><span class="p">:</span> <span class="p">{</span>
-        <span class="na">image</span><span class="p">:</span> <span class="dl">"</span><span class="s2">gitlab/gitlab-runner-helper:arm64-v14.10.2</span><span class="dl">"</span>
-      <span class="p">},</span>
-      <span class="na">config</span><span class="p">:</span> <span class="s2">`
-    [[runners]]
-    name = "arm-runner"
-    environment = ["FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=true"]
-    executor = "kubernetes"
-    [runners.kubernetes]
-      image = "ubuntu:22.04"
-      privileged = true
-    [[runners.kubernetes.volumes.empty_dir]]
-      name = "docker-certs"
-      mount_path = "/certs/client"
-      medium = "Memory"
-    [[runners.kubernetes.volumes.empty_dir]]
-      name = "dind-storage"
-      mount_path = "/var/lib/docker"
-    [[runners.kubernetes.volumes.host_path]]
-      name = "hostpath-modules"
-      mount_path = "/lib/modules"
-      read_only = true
-      host_path = "/lib/modules"
-    [[runners.kubernetes.volumes.host_path]]
-      name = "hostpath-hosts"
-      mount_path = "/etc/hosts"
-      read_only = true
-      host_path = "/etc/hosts"
-    [[runners.kubernetes.volumes.host_path]]
-      name = "hostpath-cgroup"
-      mount_path = "/sys/fs/cgroup"
-      host_path = "/sys/fs/cgroup"
-    [runners.kubernetes.node_selector]
-      "karpenter-arch" = "arm64" 
-    `</span>
-    <span class="p">},</span>
-  <span class="p">}</span>
-<span class="p">});</span>
-</code></pre></div></div>
-
-<p>配置中需要着重关注以下:</p>
-
-<ul>
-  <li>在 ARM 环境下，需要指定 gitlab-runner-helper 的镜像，因为 这个镜像是单架构的，而默认的图样使的是 X86 的镜像。这个镜像会作为 构建任务的 sidecar 运行。</li>
-  <li><code class="language-plaintext highlighter-rouge">FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY</code> 必须设置为 true 才能调度 pod 任务。</li>
-  <li>配置中 <code class="language-plaintext highlighter-rouge">[runners.kubernetes.node_selector]</code> 是为 K8S 调度做准备的，此处表示后续的构建任务会调度到相应 tag 的 node 节点。</li>
-</ul>
-
-<h2 id="karpenter-节点池">Karpenter 节点池</h2>
-
-<p><a href="https://karpenter.sh/">Karpenter</a>  是 AWS 最新的节点伸缩工具，非常好用。</p>
-
-<p>Kapennter 的安装和入门就不做过多说明了。直接看代码：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.sh/v1alpha5</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Provisioner</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">arm-builder</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">requirements</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">karpenter.k8s.aws/instance-category"</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">c"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">m"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">r"</span><span class="pi">]</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">karpenter.sh/capacity-type</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">spot"</span><span class="pi">]</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">kubernetes.io/arch"</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">arm64"</span><span class="pi">]</span>
-  <span class="na">limits</span><span class="pi">:</span>
-    <span class="na">resources</span><span class="pi">:</span>
-      <span class="na">cpu</span><span class="pi">:</span> <span class="m">1000</span>
-  <span class="na">labels</span><span class="pi">:</span>
-    <span class="na">karpenter-arch</span><span class="pi">:</span> <span class="s">arm64</span>
-  <span class="na">providerRef</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
-  <span class="na">ttlSecondsAfterEmpty</span><span class="pi">:</span> <span class="m">30</span>
-
-<span class="nn">---</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.k8s.aws/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">AWSNodeTemplate</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">amiFamily</span><span class="pi">:</span> <span class="s">Bottlerocket</span>
-  <span class="na">subnetSelector</span><span class="pi">:</span>
-    <span class="s2">"</span><span class="s">aws:cloudformation:stack-name"</span><span class="err">:</span> <span class="s">gitlab</span>
-    <span class="s">"aws-cdk:subnet-type": Private</span>
-  <span class="na">securityGroupSelector</span><span class="pi">:</span>
-    <span class="s2">"</span><span class="s">kubernetes.io/cluster/gitlab"</span><span class="err">:</span> <span class="s">owned</span>
-
-</code></pre></div></div>
-
-<p>代码说明:</p>
-
-<ul>
-  <li>创建了节点池(Provisioner)，可以指定节点的机型范围，CPU 类型，付费类型等。指定 arm 就可以选择 Graviton 机型，指定 spot 可以只购买竞价实例。</li>
-  <li>这里建议使用 Bottlerocket 作为 node 的操作系统，使用 Amazon Linux 会抛出一个无法解析 git 仓库的地址的错误。</li>
-</ul>
-
-<h2 id="gitlab-ci-配置">Gitlab CI 配置</h2>
-
-<p>现在需要将构建任务调度到这个 runner 上。</p>
-
-<p>下面是 .gitlab-ci.yml 的示例：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">stages</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">Build</span>
-
-<span class="na">frontend-build</span><span class="pi">:</span>
-  <span class="na">stage</span><span class="pi">:</span> <span class="s">Build</span>
-  <span class="na">image</span><span class="pi">:</span> <span class="s">node:16.16.0-alpine</span>
-  <span class="na">tags</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">arm</span>
-  <span class="na">script</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">npm install</span>
-    <span class="pi">-</span> <span class="s">npm run build</span>
-  <span class="na">artifacts</span><span class="pi">:</span>
-    <span class="na">paths</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s">build/</span>
-</code></pre></div></div>
-
-<p>上面的代码很简单，只需要给构建任务指定 tags 标签即可</p>
-
-<h2 id="总结">总结</h2>
-
-<p>通过以上的三段配置，整体的 CI 流程如下：</p>
-
-<p>触发 Gitlab 构建 -&gt; 寻找有 arm 标记的 runner -&gt; 启动构建任务(pod) -&gt; 寻找 <code class="language-plaintext highlighter-rouge">karpenter-arch: arm64</code> 的节点 -&gt; 没有符合条件的节点，pod pending -&gt; Karpenter 购买 arm + spot 节点 -&gt; 构建任务开始调度成功 -&gt; 执行构建任务 -&gt; 任务结束，释放 node 节点。</p>
-
-<p>如图：</p>
-
-<p><img src="/assets/posts/devops/gitlab-ci-karpenter.png" alt="Gitlab CI with karpenter" /></p>
-
-<p>Karpenter 会购买最便宜的机型，全新节点的购买时间约 1 分 30 秒。</p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="gitlab," /><category term="devops," /><category term="container" /><summary type="html"><![CDATA[Graviton 在 AWS 是性价比最高的（最高节约 40%），而 Spot 实例适合任务类型的负载，最高能有 90% 的节省。而 Gitlab Runner 可以轻松将构建任务调度到这种类型的节点上。]]></summary></entry></feed>
+</ul>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container," /><category term="tucao," /><category term="gitlab" /><summary type="html"><![CDATA[现在很多软件发行的 Docker 镜像都会支持多架构，Docker 官方也有教程教大家如何实现，并且提供了一个 buildx 插件方便大家实现。本文使用 Gitlab CI 试了一下此插件，主要命令是 docker buildx build --platform...。]]></summary></entry></feed>

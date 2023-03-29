@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "AI/ML Bookmarks"
-date:   2023-03-28 10:10:49 +0800
+date:   2023-03-29 10:10:49 +0800
 author: 啤酒云
 categories: aiml
 cover: /assets/cover/aiml.png
@@ -77,7 +77,7 @@ This repo currently support:
 
 > - 通过文本生产声音
 > - 也可以生成音乐
-> - 效果一般 (2023-03-29)
+> - 当前默认的 model 效果一般，不知道自己练会怎样 (2023-03-29)
 
 ## 🐝  试穿(Try-On)
 

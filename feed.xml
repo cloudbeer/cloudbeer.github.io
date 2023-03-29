@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-29T02:22:56+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AI/ML Bookmarks</title><link href="https://youbug.cn/2023/03/aiml-awsome-projects.html" rel="alternate" type="text/html" title="AI/ML Bookmarks" /><published>2023-03-28T02:10:49+00:00</published><updated>2023-03-28T02:10:49+00:00</updated><id>https://youbug.cn/2023/03/aiml-awsome-projects</id><content type="html" xml:base="https://youbug.cn/2023/03/aiml-awsome-projects.html"><![CDATA[<p>本文就是 Bookmarks，是我体验过的(🦋)，正在体验的或准备体验的一些现成的库和链接。本文近期可能随时更新。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-29T02:38:28+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AI/ML Bookmarks</title><link href="https://youbug.cn/2023/03/aiml-awsome-projects.html" rel="alternate" type="text/html" title="AI/ML Bookmarks" /><published>2023-03-29T02:10:49+00:00</published><updated>2023-03-29T02:10:49+00:00</updated><id>https://youbug.cn/2023/03/aiml-awsome-projects</id><content type="html" xml:base="https://youbug.cn/2023/03/aiml-awsome-projects.html"><![CDATA[<p>本文就是 Bookmarks，是我体验过的(🦋)，正在体验的或准备体验的一些现成的库和链接。本文近期可能随时更新。</p>
 
 <h2 id="-中文语言大模型">🐝 中文语言大模型</h2>
 
@@ -77,7 +77,7 @@
   <ul>
     <li>通过文本生产声音</li>
     <li>也可以生成音乐</li>
-    <li>效果一般 (2023-03-29)</li>
+    <li>当前默认的 model 效果一般，不知道自己练会怎样 (2023-03-29)</li>
   </ul>
 </blockquote>
 

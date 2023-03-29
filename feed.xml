@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-28T06:30:13+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AI/ML Bookmarks</title><link href="https://youbug.cn/2023/03/aiml-awsome-projects.html" rel="alternate" type="text/html" title="AI/ML Bookmarks" /><published>2023-03-28T02:10:49+00:00</published><updated>2023-03-28T02:10:49+00:00</updated><id>https://youbug.cn/2023/03/aiml-awsome-projects</id><content type="html" xml:base="https://youbug.cn/2023/03/aiml-awsome-projects.html"><![CDATA[<p>本文就是 Bookmarks，是我体验过的(🦋)，正在体验的或准备体验的一些现成的库和链接。本文近期可能随时更新。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-03-29T02:22:56+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">AI/ML Bookmarks</title><link href="https://youbug.cn/2023/03/aiml-awsome-projects.html" rel="alternate" type="text/html" title="AI/ML Bookmarks" /><published>2023-03-28T02:10:49+00:00</published><updated>2023-03-28T02:10:49+00:00</updated><id>https://youbug.cn/2023/03/aiml-awsome-projects</id><content type="html" xml:base="https://youbug.cn/2023/03/aiml-awsome-projects.html"><![CDATA[<p>本文就是 Bookmarks，是我体验过的(🦋)，正在体验的或准备体验的一些现成的库和链接。本文近期可能随时更新。</p>
 
 <h2 id="-中文语言大模型">🐝 中文语言大模型</h2>
 
@@ -54,6 +54,32 @@
 <p><a href="https://github.com/Rudrabha/Wav2Lip">https://github.com/Rudrabha/Wav2Lip</a></p>
 
 <p><a href="https://www.youtube.com/watch?v=Ic0TBhfuOrA">https://www.youtube.com/watch?v=Ic0TBhfuOrA</a></p>
+
+<h2 id="-声音">🐝 声音</h2>
+
+<h3 id="audioldm-">audioldm 🦋</h3>
+
+<p>Generate speech, sound effects, music and beyond.</p>
+
+<p>This repo currently support:</p>
+
+<ul>
+  <li>Text-to-Audio Generation: Generate audio given text input.</li>
+  <li>Audio-to-Audio Generation: Given an audio, generate another audio that contain the same type of sound.</li>
+  <li>Text-guided Audio-to-Audio Style Transfer: Transfer the sound of an audio into another one using the text description.</li>
+</ul>
+
+<p><a href="https://github.com/haoheliu/AudioLDM">https://github.com/haoheliu/AudioLDM</a></p>
+
+<p><a href="https://audioldm.github.io/">https://audioldm.github.io/</a></p>
+
+<blockquote>
+  <ul>
+    <li>通过文本生产声音</li>
+    <li>也可以生成音乐</li>
+    <li>效果一般 (2023-03-29)</li>
+  </ul>
+</blockquote>
 
 <h2 id="--试穿try-on">🐝  试穿(Try-On)</h2>
 
@@ -155,13 +181,13 @@
 
 <p><a href="https://yige.baidu.com/">https://yige.baidu.com/</a></p>
 
-<h2 id="网易">网易</h2>
+<h3 id="网易">网易</h3>
 
 <p>天音 - 音乐创作平台</p>
 
 <p><a href="https://tianyin.163.com/">https://tianyin.163.com/</a></p>
 
-<h2 id="--视频">🐝  视频</h2>
+<h2 id="--其他">🐝  其他</h2>
 
 <h3 id="film">FILM</h3>
 

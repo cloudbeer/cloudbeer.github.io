@@ -59,6 +59,26 @@ Accurately Lip-syncing Videos In The Wild.
 
 <https://www.youtube.com/watch?v=Ic0TBhfuOrA>
 
+## 🐝 声音
+
+### audioldm 🦋
+
+Generate speech, sound effects, music and beyond.
+
+This repo currently support:
+
+- Text-to-Audio Generation: Generate audio given text input.
+- Audio-to-Audio Generation: Given an audio, generate another audio that contain the same type of sound.
+- Text-guided Audio-to-Audio Style Transfer: Transfer the sound of an audio into another one using the text description.
+
+<https://github.com/haoheliu/AudioLDM>
+
+<https://audioldm.github.io/>
+
+> - 通过文本生产声音
+> - 也可以生成音乐
+> - 效果一般 (2023-03-29)
+
 ## 🐝  试穿(Try-On)
 
 ### Dressing in Order (DiOr)
@@ -159,13 +179,13 @@ Prompt 参考，Pro 版本提供 SD 模型生产。
 
 <https://yige.baidu.com/>
 
-## 网易
+### 网易
 
 天音 - 音乐创作平台
 
 <https://tianyin.163.com/>
 
-## 🐝  视频
+## 🐝  其他
 
 ### FILM
 

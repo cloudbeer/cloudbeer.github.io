@@ -4,7 +4,7 @@ title:  "使用 QuickSight 自动展示 S3 的 Excel 文件"
 date:   2023-04-02 11:10:49 +0800
 author: 啤酒云
 categories: aws
-cover: /assets/cover/quicksight.jpg
+cover: /assets/cover/quicksight-s3.jpg
 ---
 
 Amazon QuickSight 是 AWS 数据分析的前端展示平台，支持使用 Amazon S3 存储桶的 Excel 文件作为数据集。本文介绍了如何设置 S3 和 如何配置自动刷新。

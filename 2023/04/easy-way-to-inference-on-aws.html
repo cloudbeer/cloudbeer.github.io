@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>在 AWS 部署 AI 文生图为 Restful API 的最简单方式 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="在 AWS 部署 AI 文生图为 Restful API 的最简单方式" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。" />
+<meta property="og:description" content="当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。" />
+<link rel="canonical" href="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html" />
+<meta property="og:url" content="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-04-03T08:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="在 AWS 部署 AI 文生图为 Restful API 的最简单方式" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-04-03T08:10:49+00:00","datePublished":"2023-04-03T08:10:49+00:00","description":"当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。","headline":"在 AWS 部署 AI 文生图为 Restful API 的最简单方式","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html"},"url":"https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">在 AWS 部署 AI 文生图为 Restful API 的最简单方式</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-04-03T08:10:49+00:00" itemprop="datePublished">2023-04-03
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p><img src="/assets/cover/cyborg_tiger.jpg" alt="在 AWS 部署 AI 文生图为 Restful API 的最简单方式" class="cover" /></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。</p>
+
+<h2 id="流程">流程</h2>
+
+<p><img src="/assets/posts/aiml/sagemaker-s3-restful.png" alt="SageMaker restful" /></p>
+
+<ol>
+  <li>
+    <p>用户请求 API Gateway, prompt 包含在 Url 中。</p>
+  </li>
+  <li>
+    <p>API Gateway 将请求传向 Lambda。</p>
+  </li>
+  <li>
+    <p>Lambda 请求 SageMaker 的 Endpoint。</p>
+  </li>
+  <li>
+    <p>SageMaker 响应请求，返回 图片和 prompt 信息。</p>
+  </li>
+  <li>
+    <p>Lambda 将图片上传到 S3。</p>
+  </li>
+  <li>
+    <p>上传完成后，Lambda 对 S3 Object 进行 Url 签名。</p>
+  </li>
+  <li>
+    <p>返回结果</p>
+  </li>
+  <li>
+    <p>返回结果</p>
+  </li>
+</ol>
+
+<h2 id="在-sagemaker-中部署模型">在 SageMaker 中部署模型</h2>
+
+<p>进入 AWS 控制台的 SageMaker Studio，从左侧菜单选择 SageMaker JumpStart - Models, notebooks, solutions。</p>
+
+<p>这里有非常多的现成的模型，选择一个，如 Stable Diffusion 2.1 base，进入之后，选择 “Deploy”。</p>
+
+<p>稍等 “片刻”，等待 Endpoint 生产完成。</p>
+
+<p>完成后，可以在左侧菜单的 Deployments - Endpoints 里看到 Endpoint 的 Name，这个 Name 就是下面代码中的 endpoint_name。</p>
+
+<h2 id="编写-lambda">编写 Lambda</h2>
+
+<p>直接看代码好了，解析在代码末尾，本段 Lambda 使用 Python 编写：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+
+<span class="n">endpoint_name</span> <span class="o">=</span> <span class="s">'jumpstart-name'</span>
+<span class="n">bucket_name</span> <span class="o">=</span> <span class="s">'cloudbeer-aigc-works'</span>
+
+<span class="n">s3_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'s3'</span><span class="p">)</span>
+<span class="n">sagemaker_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'runtime.sagemaker'</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">query_endpoint</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s">"prompt"</span><span class="p">:</span><span class="n">text</span><span class="p">,</span> <span class="s">"width"</span><span class="p">:</span><span class="mi">512</span><span class="p">,</span> <span class="s">"height"</span><span class="p">:</span><span class="mi">512</span><span class="p">}</span>
+    <span class="n">query_response</span> <span class="o">=</span> <span class="n">sagemaker_client</span><span class="p">.</span><span class="n">invoke_endpoint</span><span class="p">(</span>
+              <span class="n">EndpointName</span><span class="o">=</span><span class="n">endpoint_name</span><span class="p">,</span> 
+              <span class="n">ContentType</span><span class="o">=</span><span class="s">'application/json'</span><span class="p">,</span> 
+              <span class="n">Body</span><span class="o">=</span><span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">).</span><span class="n">encode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">),</span> 
+              <span class="n">Accept</span> <span class="o">=</span> <span class="s">'application/json;jpeg'</span><span class="p">)</span>
+    <span class="n">generated_images</span><span class="p">,</span> <span class="n">prompt</span> <span class="o">=</span> <span class="n">parse_response_multiple_images</span><span class="p">(</span><span class="n">query_response</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">generated_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">parse_response_multiple_images</span><span class="p">(</span><span class="n">query_response</span><span class="p">):</span>
+    <span class="n">response_dict</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">query_response</span><span class="p">[</span><span class="s">'Body'</span><span class="p">].</span><span class="n">read</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">response_dict</span><span class="p">[</span><span class="s">'generated_images'</span><span class="p">],</span> <span class="n">response_dict</span><span class="p">[</span><span class="s">'prompt'</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">save_s3</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
+    <span class="n">object_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">())</span> <span class="o">+</span> <span class="s">'.jpg'</span>
+    <span class="n">resPut</span> <span class="o">=</span> <span class="n">s3_client</span><span class="p">.</span><span class="n">put_object</span><span class="p">(</span>
+        <span class="n">ContentType</span><span class="o">=</span><span class="s">"image/jpeg"</span><span class="p">,</span>
+        <span class="n">Body</span><span class="o">=</span><span class="n">base64</span><span class="p">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">image</span><span class="p">),</span>
+        <span class="n">Bucket</span><span class="o">=</span><span class="n">bucket_name</span><span class="p">,</span>
+        <span class="n">Key</span><span class="o">=</span><span class="n">object_name</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">s3_client</span><span class="p">.</span><span class="n">generate_presigned_url</span><span class="p">(</span><span class="s">'get_object'</span><span class="p">,</span>
+                                                    <span class="n">Params</span><span class="o">=</span><span class="p">{</span><span class="s">'Bucket'</span><span class="p">:</span> <span class="n">bucket_name</span><span class="p">,</span>
+                                                            <span class="s">'Key'</span><span class="p">:</span> <span class="n">object_name</span><span class="p">},</span>
+                                                    <span class="n">ExpiresIn</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="p">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">response</span>
+    
+<span class="k">def</span> <span class="nf">lambda_handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s">"queryStringParameters"</span><span class="p">][</span><span class="s">'prompt'</span><span class="p">]</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">query_endpoint</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">'statusCode'</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
+        <span class="s">'body'</span><span class="p">:</span>  <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+            <span class="s">"url"</span><span class="p">:</span> <span class="n">save_s3</span><span class="p">(</span><span class="n">image</span><span class="p">),</span>
+            <span class="s">"prompt"</span><span class="p">:</span> <span class="n">prompt</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>上面的代码非常的简单，做了如下的事情：</p>
+
+<ul>
+  <li>定义了 2 个变量，分别是 模型的 Endpoint 和 S3 桶的名称。</li>
+  <li>query_endpoint 和 parse_response_multiple_images 这两个函数直接使用了 SageMaker 的 Notebook 中的 Python 函数。这俩函数用来调用推理，并解析推理结果。</li>
+  <li>save_s3 这个函数将图片上传到 S3 的存储桶，并生成一个 Presigned Url 作为输出结果。query_endpoint 的图片结果是图片的 byte 数组 base64 encode 之后的字符串，在上传 S3 的时候需要将字符串 decode 成 byte 数组。</li>
+  <li>最后把结果组装一下就可以了， 参数：prompt 获取自 Querystring: <code class="language-plaintext highlighter-rouge">event["queryStringParameters"]['prompt']</code>。</li>
+  <li>这个代码如果需要生产环境使用，请注意如下问题：
+    <ul>
+      <li>图片大小为 512*512，此尺寸可以直接在代码中修改，图片的尺寸会直接关系到生成速度和资源占用。</li>
+      <li>Lambda 的执行超时时间需要调整。</li>
+      <li>S3 文件的 Key 没有创建子目录，都在根下。</li>
+      <li>S3 的文件名使用了时间戳，并发大的时候，有可能会有重复名称。</li>
+      <li>S3 的签名过期时间是 5 分钟。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="权限">权限</h2>
+
+<p>在 Lambda 的 Configuration 的 Tab 里，可以看到一个 Execution role，点击具体的 role 进入 IAM 中，在这个 role 中需要分别加入 SageMaker 和 S3 的权限。</p>
+
+<p>如，S3 的 Inline Policy 可以如下配置：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"Sid"</span><span class="p">:</span><span class="w"> </span><span class="s2">"AccessAiGC"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"s3:*"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Resource"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="s2">"arn:aws:s3:::cloudbeer-aigc-works"</span><span class="p">,</span><span class="w">
+                </span><span class="s2">"arn:aws:s3:::cloudbeer-aigc-works/*"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>你亦可以配置相应的 SageMaker 权限。</p>
+
+<h2 id="api-gateway">API Gateway</h2>
+
+<p>新建一个 API Gateway，把他指向 Lambda 就好了。</p>
+
+<p>现在访问如下的 API Gateway 的 Url 就可以看到结果了：</p>
+
+<p><a href="https://xxxxxxxxxxx.execute-api.region.amazonaws.com/route?prompt=cyborg_tiger">https://xxxxxxxxxxx.execute-api.region.amazonaws.com/route?prompt=cyborg_tiger</a>  假的，不要点。</p>
+
+<p>结果为：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://xxxxxxx.s3.amazonaws.com/xxxxxxxx.jpg?AWSAccessKeyId=...."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"prompt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cyborg_tiger"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>上面的 url 就是 AIGC 的输出结果，你应该看到了一只赛博老虎。😄</p>
+
+<hr />
+
+<p>参考：</p>
+
+<p><a href="https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/">https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/04/easy-way-to-inference-on-aws.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

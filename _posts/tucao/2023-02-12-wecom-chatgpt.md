@@ -3,7 +3,7 @@ layout: post
 title:  "企业微信集成 ChatGPT 开发笔记"
 date:   2023-02-12 18:09:44 +0800
 author: 啤酒云
-categories: tucao
+categories: tucao, aiml
 ---
 
 原来是想使用企业微信的机器人来集成 ChatGPT，但... 这玩意不支持收消息，只能推送消息，所以只能另寻他法。

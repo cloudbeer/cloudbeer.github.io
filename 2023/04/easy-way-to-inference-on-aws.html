@@ -216,11 +216,12 @@
       <li>S3 文件的 Key 没有创建子目录，都在根下。</li>
       <li>S3 的文件名使用了时间戳，并发大的时候，有可能会有重复名称。</li>
       <li>S3 的签名过期时间是 5 分钟。</li>
+      <li>记得加上权限认证，把这个服务提供给你真正的客户，毕竟 GPU 有点贵。</li>
     </ul>
   </li>
 </ul>
 
-<h2 id="权限">权限</h2>
+<h2 id="iam-权限">IAM 权限</h2>
 
 <p>在 Lambda 的 Configuration 的 Tab 里，可以看到一个 Execution role，点击具体的 role 进入 IAM 中，在这个 role 中需要分别加入 SageMaker 和 S3 的权限。</p>
 

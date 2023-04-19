@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>ChatGLM-6B 的 Lora 微调 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="ChatGLM-6B 的 Lora 微调" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。" />
+<meta property="og:description" content="本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。" />
+<link rel="canonical" href="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" />
+<meta property="og:url" content="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-04-19T02:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ChatGLM-6B 的 Lora 微调" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-04-19T02:10:49+00:00","datePublished":"2023-04-19T02:10:49+00:00","description":"本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。","headline":"ChatGLM-6B 的 Lora 微调","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"},"url":"https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">ChatGLM-6B 的 Lora 微调</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-04-19T02:10:49+00:00" itemprop="datePublished">2023-04-19
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p><img src="/assets/cover/finetuning_lora.jpg" alt="ChatGLM-6B 的 Lora 微调" class="cover" /></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。</p>
+
+<h2 id="项目信息">项目信息</h2>
+
+<p>相关脚本地址：<a href="https://github.com/mymusise/ChatGLM-Tuning">https://github.com/mymusise/ChatGLM-Tuning</a></p>
+
+<p>这个项目提供了如下的脚本：</p>
+
+<p>转化 alpaca 数据集为 jsonl，tokenization 脚本，训练等。</p>
+
+<h2 id="数据准备">数据准备</h2>
+
+<p>使用了 stanford_alpaca 的数据集格式，格式如下:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"instruction"</span><span class="p">:</span><span class="w"> </span><span class="s2">"帮我总结一下论文？"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"input"</span><span class="p">:</span><span class="w"> </span><span class="s2">"这里是论文的内容"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"总结的内容"</span><span class="w"> 
+   </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>如果只是问答类型的数据，input 可以留空。</p>
+
+<h2 id="数据集转换">数据集转换</h2>
+
+<p>上述数据集 文件名是: <code class="language-plaintext highlighter-rouge">answers.json</code></p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python cover_alpaca2jsonl.py <span class="se">\</span>
+    <span class="nt">--data_path</span> data/answers.json <span class="se">\</span>
+    <span class="nt">--save_path</span> data/answers.jsonl
+
+python tokenize_dataset_rows.py <span class="se">\</span>
+    <span class="nt">--jsonl_path</span> data/answers.jsonl <span class="se">\</span>
+    <span class="nt">--save_path</span> data/answer <span class="se">\</span>
+    <span class="nt">--skip_overlength</span> True
+</code></pre></div></div>
+
+<h2 id="开始训练">开始训练</h2>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python finetune.py <span class="se">\</span>
+      <span class="nt">--dataset_path</span> data/answer     <span class="se">\</span>
+      <span class="nt">--lora_rank</span> 8     <span class="se">\</span>
+      <span class="nt">--per_device_train_batch_size</span> 6     <span class="se">\</span>
+      <span class="nt">--gradient_accumulation_steps</span> 1     <span class="se">\</span>
+      <span class="nt">--max_steps</span> 400     <span class="se">\</span>
+      <span class="nt">--save_steps</span> 100     <span class="se">\</span>
+      <span class="nt">--save_total_limit</span> 2     <span class="se">\</span>
+      <span class="nt">--learning_rate</span> 1e-4     <span class="se">\</span>
+      <span class="nt">--fp16</span>     <span class="se">\</span>
+      <span class="nt">--remove_unused_columns</span> <span class="nb">false</span>     <span class="se">\</span>
+      <span class="nt">--logging_steps</span> 50     <span class="se">\</span>
+      <span class="nt">--output_dir</span> output
+
+</code></pre></div></div>
+
+<p>训练比较耗时，所以这一步是最 “难” 的：如果参数不佳，需要调整参数重来一遍。</p>
+
+<h2 id="使用刚刚训练-lora-模型">使用刚刚训练 Lora 模型</h2>
+
+<p>下面的代码可以将 Lora 模型叠加到基础模型上去。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s">"ChatGLM-path"</span><span class="p">,</span> <span class="n">trust_remote_code</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">PeftModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s">"&lt;Your_Path&gt;/ChatGLM-Tuning/output"</span><span class="p">,</span> <span class="n">fan_in_fan_out</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</code></pre></div></div>
+
+  </div>
+
+  <a class="u-url" href="/2023/04/chatglm-6b-finetune-lora.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

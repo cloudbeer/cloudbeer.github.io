@@ -1,4 +1,69 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-03T10:46:12+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 部署 AI 文生图为 Restful API 的最简单方式</title><link href="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html" rel="alternate" type="text/html" title="在 AWS 部署 AI 文生图为 Restful API 的最简单方式" /><published>2023-04-03T08:10:49+00:00</published><updated>2023-04-03T08:10:49+00:00</updated><id>https://youbug.cn/2023/04/easy-way-to-inference-on-aws</id><content type="html" xml:base="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html"><![CDATA[<p>当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-19T03:41:34+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">ChatGLM-6B 的 Lora 微调</title><link href="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" rel="alternate" type="text/html" title="ChatGLM-6B 的 Lora 微调" /><published>2023-04-19T02:10:49+00:00</published><updated>2023-04-19T02:10:49+00:00</updated><id>https://youbug.cn/2023/04/chatglm-6b-finetune-lora</id><content type="html" xml:base="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"><![CDATA[<p>本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。</p>
+
+<h2 id="项目信息">项目信息</h2>
+
+<p>相关脚本地址：<a href="https://github.com/mymusise/ChatGLM-Tuning">https://github.com/mymusise/ChatGLM-Tuning</a></p>
+
+<p>这个项目提供了如下的脚本：</p>
+
+<p>转化 alpaca 数据集为 jsonl，tokenization 脚本，训练等。</p>
+
+<h2 id="数据准备">数据准备</h2>
+
+<p>使用了 stanford_alpaca 的数据集格式，格式如下:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"instruction"</span><span class="p">:</span><span class="w"> </span><span class="s2">"帮我总结一下论文？"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"input"</span><span class="p">:</span><span class="w"> </span><span class="s2">"这里是论文的内容"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"总结的内容"</span><span class="w"> 
+   </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>如果只是问答类型的数据，input 可以留空。</p>
+
+<h2 id="数据集转换">数据集转换</h2>
+
+<p>上述数据集 文件名是: <code class="language-plaintext highlighter-rouge">answers.json</code></p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python cover_alpaca2jsonl.py <span class="se">\</span>
+    <span class="nt">--data_path</span> data/answers.json <span class="se">\</span>
+    <span class="nt">--save_path</span> data/answers.jsonl
+
+python tokenize_dataset_rows.py <span class="se">\</span>
+    <span class="nt">--jsonl_path</span> data/answers.jsonl <span class="se">\</span>
+    <span class="nt">--save_path</span> data/answer <span class="se">\</span>
+    <span class="nt">--skip_overlength</span> True
+</code></pre></div></div>
+
+<h2 id="开始训练">开始训练</h2>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python finetune.py <span class="se">\</span>
+      <span class="nt">--dataset_path</span> data/answer     <span class="se">\</span>
+      <span class="nt">--lora_rank</span> 8     <span class="se">\</span>
+      <span class="nt">--per_device_train_batch_size</span> 6     <span class="se">\</span>
+      <span class="nt">--gradient_accumulation_steps</span> 1     <span class="se">\</span>
+      <span class="nt">--max_steps</span> 400     <span class="se">\</span>
+      <span class="nt">--save_steps</span> 100     <span class="se">\</span>
+      <span class="nt">--save_total_limit</span> 2     <span class="se">\</span>
+      <span class="nt">--learning_rate</span> 1e-4     <span class="se">\</span>
+      <span class="nt">--fp16</span>     <span class="se">\</span>
+      <span class="nt">--remove_unused_columns</span> <span class="nb">false</span>     <span class="se">\</span>
+      <span class="nt">--logging_steps</span> 50     <span class="se">\</span>
+      <span class="nt">--output_dir</span> output
+
+</code></pre></div></div>
+
+<p>训练比较耗时，所以这一步是最 “难” 的：如果参数不佳，需要调整参数重来一遍。</p>
+
+<h2 id="使用刚刚训练-lora-模型">使用刚刚训练 Lora 模型</h2>
+
+<p>下面的代码可以将 Lora 模型叠加到基础模型上去。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s">"ChatGLM-path"</span><span class="p">,</span> <span class="n">trust_remote_code</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">PeftModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s">"&lt;Your_Path&gt;/ChatGLM-Tuning/output"</span><span class="p">,</span> <span class="n">fan_in_fan_out</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</code></pre></div></div>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。]]></summary></entry><entry><title type="html">在 AWS 部署 AI 文生图为 Restful API 的最简单方式</title><link href="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html" rel="alternate" type="text/html" title="在 AWS 部署 AI 文生图为 Restful API 的最简单方式" /><published>2023-04-03T08:10:49+00:00</published><updated>2023-04-03T08:10:49+00:00</updated><id>https://youbug.cn/2023/04/easy-way-to-inference-on-aws</id><content type="html" xml:base="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html"><![CDATA[<p>当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。</p>
 
 <h2 id="流程">流程</h2>
 
@@ -116,11 +181,12 @@
       <li>S3 文件的 Key 没有创建子目录，都在根下。</li>
       <li>S3 的文件名使用了时间戳，并发大的时候，有可能会有重复名称。</li>
       <li>S3 的签名过期时间是 5 分钟。</li>
+      <li>记得加上权限认证，把这个服务提供给你真正的客户，毕竟 GPU 有点贵。</li>
     </ul>
   </li>
 </ul>
 
-<h2 id="权限">权限</h2>
+<h2 id="iam-权限">IAM 权限</h2>
 
 <p>在 Lambda 的 Configuration 的 Tab 里，可以看到一个 Execution role，点击具体的 role 进入 IAM 中，在这个 role 中需要分别加入 SageMaker 和 S3 的权限。</p>
 
@@ -1633,242 +1699,4 @@ mysql&gt;
   <li>免费账号 ChatGPT 测会经常报 429 Too Many Requests 的错误。</li>
   <li>微信可能会被封，建议使用新注册的微信小号作为机器人。（暂且不清楚微信侧触发机制）</li>
   <li>重启应用会重新加载微信的会话，导致重复调用 ChatGPT API，并由可能导致微信被封，重启应用的时候多等一会儿，让会话过期，或者修改两个bot 的名字后重启。</li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="container" /><category term="容器" /><summary type="html"><![CDATA[本文是一个集成了 ChatGPT 的简单微信机器人的部署文档，使用了现有的 github 仓库，并进行适当修改，并发布成公共镜像包。当前文档说明为 2.0 镜像包。]]></summary></entry><entry><title type="html">调度 Jenkins 任务到 Karpenter 节点池</title><link href="https://youbug.cn/2023/01/jenkins-job-with-karpenter.html" rel="alternate" type="text/html" title="调度 Jenkins 任务到 Karpenter 节点池" /><published>2023-01-02T07:12:33+00:00</published><updated>2023-01-02T07:12:33+00:00</updated><id>https://youbug.cn/2023/01/jenkins-job-with-karpenter</id><content type="html" xml:base="https://youbug.cn/2023/01/jenkins-job-with-karpenter.html"><![CDATA[<p>本文介绍了如何调度 Jenkins 任务到 EKS 集群的 Karpenter 虚拟节点。Karpenter 强大的 Node 组织能力，可以最大程度节约任务运行的成本。</p>
-
-<h2 id="插件配置">插件配置</h2>
-
-<p>首先确认 Jenkins 的 Kubernetes 插件已经安装:</p>
-
-<p>以管理员身份进入 Manage Jenkins -&gt; Manage Plugins, 搜索 Kubernetes，确认插件已经安装。</p>
-
-<p>然后，进行 Node 配置:</p>
-
-<p>进入 Manage Jenkins -&gt; Manage Nodes and Clouds -&gt; Config Clouds, 展开 Kubernetes Cloud details…</p>
-
-<p>如果您的 Jenkins 安装在 EKS 集群里，并且工作任务也要调度到这个集群，可以按照如下配置：</p>
-
-<ul>
-  <li>Kubernetes 地址: <a href="https://kubernetes.default">https://kubernetes.default</a></li>
-  <li>Kubernetes 命名空间: jenkins</li>
-  <li>Jenkins 地址: <a href="http://jenkins.jenkins.svc.cluster.local:8080">http://jenkins.jenkins.svc.cluster.local:8080</a></li>
-  <li>Jenkins 通道: jenkins-agent.jenkins.svc.cluster.local:50000</li>
-</ul>
-
-<p>如果是非本地集群，还需要配置合适的地址和权限。</p>
-
-<h2 id="任务配置">任务配置</h2>
-
-<p>现在在项目（业务）根目录编写如下的一个 Jenkinsfile：</p>
-
-<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">podTemplate</span><span class="o">(</span><span class="nl">yaml:</span> <span class="s1">'''
-    apiVersion: v1
-    kind: Pod
-    spec:
-      nodeSelector:
-        karpenter-arch: arm64
-      containers:
-      - name: maven
-        image: maven
-        command:
-        - sleep
-        args:
-        - 99d
-      - name: golang
-        image: golang
-        command:
-        - sleep
-        args:
-        - 99d
-'''</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">node</span><span class="o">(</span><span class="n">POD_LABEL</span><span class="o">)</span> <span class="o">{</span>
-      <span class="n">stage</span><span class="o">(</span><span class="s1">'Get a Maven project'</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">container</span><span class="o">(</span><span class="s1">'maven'</span><span class="o">)</span> <span class="o">{</span>
-          <span class="n">stage</span><span class="o">(</span><span class="s1">'Build a Maven project'</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">sh</span> <span class="s1">'mvn --version'</span>
-          <span class="o">}</span>
-        <span class="o">}</span>
-      <span class="o">}</span>
-
-      <span class="n">stage</span><span class="o">(</span><span class="s1">'Get a Golang project'</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">git</span> <span class="nl">url:</span> <span class="s1">'https://github.com/aws-code-sample/demo-jenkins.git'</span><span class="o">,</span> <span class="nl">branch:</span> <span class="s1">'main'</span>
-        <span class="n">container</span><span class="o">(</span><span class="s1">'golang'</span><span class="o">)</span> <span class="o">{</span>
-          <span class="n">stage</span><span class="o">(</span><span class="s1">'Build a Go project'</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">sh</span> <span class="s1">'''
-            go version
-            ls
-          '''</span>
-          <span class="o">}</span>
-        <span class="o">}</span>
-      <span class="o">}</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</code></pre></div></div>
-
-<p>在上面的代码中 Pod 的描述中，有一个 <code class="language-plaintext highlighter-rouge">nodeSelector: {karpenter-arch: 'arm64'}</code> 的选择器，表示这个 Pod 要部署到有 karpenter-arch: ‘arm64’ 标签的节点。这个节点是通过 Karpenter 来定义的，具体如下：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.sh/v1alpha5</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Provisioner</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">arm-builder</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">requirements</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s">karpenter.sh/capacity-type</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">spot"</span><span class="pi">]</span>
-    <span class="pi">-</span> <span class="na">key</span><span class="pi">:</span> <span class="s2">"</span><span class="s">kubernetes.io/arch"</span>
-      <span class="na">operator</span><span class="pi">:</span> <span class="s">In</span>
-      <span class="na">values</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">arm64"</span><span class="pi">]</span>
-  <span class="na">limits</span><span class="pi">:</span>
-    <span class="na">resources</span><span class="pi">:</span>
-      <span class="na">cpu</span><span class="pi">:</span> <span class="m">1000</span>
-  <span class="na">labels</span><span class="pi">:</span>
-    <span class="na">karpenter-arch</span><span class="pi">:</span> <span class="s">arm64</span>
-  <span class="na">providerRef</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
-  <span class="na">ttlSecondsAfterEmpty</span><span class="pi">:</span> <span class="m">90</span>
-
-<span class="nn">---</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">karpenter.k8s.aws/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">AWSNodeTemplate</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">amiFamily</span><span class="pi">:</span> <span class="s">Bottlerocket</span>
-  <span class="na">subnetSelector</span><span class="pi">:</span>
-    <span class="s2">"</span><span class="s">aws:cloudformation:stack-name"</span><span class="err">:</span> <span class="s">CdkEksPocStack</span>
-    <span class="s">"aws-cdk:subnet-type": Private</span>
-  <span class="na">securityGroupSelector</span><span class="pi">:</span>
-    <span class="s2">"</span><span class="s">kubernetes.io/cluster/poc-eks"</span><span class="err">:</span> <span class="s">owned</span>
-</code></pre></div></div>
-
-<p>通过 Karpenter，我们可以动态去购买 ARM + Spot 的实例。</p>
-
-<p>现在在 Jenkins 的 Web UI 上新建一个 Jenkins 任务。</p>
-
-<p>选择 “多分支流水线”，我的 demo 中主要字段配置如下：</p>
-
-<p>分支源</p>
-
-<ul>
-  <li>项目仓库地址：<a href="https://github.com/aws-code-sample/demo-jenkins">https://github.com/aws-code-sample/demo-jenkins</a></li>
-</ul>
-
-<p>Build Configuration</p>
-
-<ul>
-  <li>
-    <p>Mode: By Jenkinsfile</p>
-  </li>
-  <li>
-    <p>脚本路径: Jenkinsfile</p>
-  </li>
-</ul>
-
-<h2 id="运行结果">运行结果</h2>
-
-<p>点击 “立即构建” 后，可以看到如下日志（部分）：</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Started by user Jenkins Admin
- &gt; git rev-parse --resolve-git-dir /var/jenkins_home/caches/git-cfff1181f69195f8b158693b85c23bf9/.git # timeout=10
-Setting origin to https://github.com/aws-code-sample/demo-jenkins
-...
-Seen branch in repository origin/main
-Seen 1 remote branch
-Obtained Jenkinsfile from b7f6d7cb4db0b89577a60faf5023d710798311e9
-[Pipeline] Start of Pipeline
-[Pipeline] podTemplate
-[Pipeline] {
-[Pipeline] node
-Created Pod: kubernetes jenkins/demo-jenkins-main-10-1kw6t-mzbkc-6r4qk
-Still waiting to schedule task
-‘demo-jenkins-main-10-1kw6t-mzbkc-6r4qk’ is offline
-
-Running on demo-jenkins-main-10-1kw6t-mzbkc-6r4qk in /home/jenkins/agent/workspace/demo-jenkins_main
-[Pipeline] {
-[Pipeline] stage
-[Pipeline] { (Get a Maven project)
-[Pipeline] container
-[Pipeline] {
-[Pipeline] stage
-[Pipeline] { (Build a Maven project)
-[Pipeline] sh
-+ mvn --version
-Apache Maven 3.8.7 (b89d5959fcde851dcb1c8946a785a163f14e1e29)
-Maven home: /usr/share/maven
-Java version: 17.0.6, vendor: Eclipse Adoptium, runtime: /opt/java/openjdk
-Default locale: en_US, platform encoding: UTF-8
-OS name: "linux", version: "5.15.79", arch: "aarch64", family: "unix"
-[Pipeline] }
-[Pipeline] // stage
-[Pipeline] }
-[Pipeline] // container
-[Pipeline] }
-[Pipeline] // stage
-[Pipeline] stage
-[Pipeline] { (Get a Golang project)
-[Pipeline] git
-Selected Git installation does not exist. Using Default
-The recommended git tool is: NONE
-No credentials specified
-Cloning the remote Git repository
-Cloning repository https://github.com/aws-code-sample/demo-jenkins.git
- &gt; git init /home/jenkins/agent/workspace/demo-jenkins_main # timeout=10
-Fetching upstream changes from https://github.com/aws-code-sample/demo-jenkins.git
- &gt; git --version # timeout=10
- &gt; git --version # 'git version 2.30.2'
- &gt; git fetch --tags --force --progress -- https://github.com/aws-code-sample/demo-jenkins.git +refs/heads/*:refs/remotes/origin/* # timeout=10
-Avoid second fetch
-Checking out Revision b7f6d7cb4db0b89577a60faf5023d710798311e9 (refs/remotes/origin/main)
- &gt; git config remote.origin.url https://github.com/aws-code-sample/demo-jenkins.git # timeout=10
- &gt; git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
- &gt; git rev-parse refs/remotes/origin/main^{commit} # timeout=10
- &gt; git config core.sparsecheckout # timeout=10
- &gt; git checkout -f b7f6d7cb4db0b89577a60faf5023d710798311e9 # timeout=10
- &gt; git branch -a -v --no-abbrev # timeout=10
- &gt; git checkout -b main b7f6d7cb4db0b89577a60faf5023d710798311e9 # timeout=10
-Commit message: "sh"
- &gt; git rev-list --no-walk b7f6d7cb4db0b89577a60faf5023d710798311e9 # timeout=10
-[Pipeline] container
-[Pipeline] {
-[Pipeline] stage
-[Pipeline] { (Build a Go project)
-[Pipeline] sh
-+ go version
-go version go1.19.5 linux/arm64
-+ ls
-Jenkinsfile
-readme.md
-[Pipeline] }
-[Pipeline] // stage
-[Pipeline] }
-[Pipeline] // container
-[Pipeline] }
-[Pipeline] // stage
-[Pipeline] }
-[Pipeline] // node
-[Pipeline] }
-[Pipeline] // podTemplate
-[Pipeline] End of Pipeline
-Finished: SUCCESS
-</code></pre></div></div>
-
-<p>从上述 log 中，可以看到运行过程如下：</p>
-
-<ul>
-  <li>任务启动后，由于没有合适的 Node 可以选择，pod offline。</li>
-  <li>此时 Karpenter 购买 EC2 并安装 OS 和必要 pod，此过程大约 90 秒左右。</li>
-  <li>然后启动任务，从输出结果中可以看到 使用了 arm 架构（aarch64 或 arm64）</li>
-  <li>描述 node（或在 AWS 控制台）可显示相应的 EC2 为 Spot 实例。</li>
-</ul>
-
-<hr />
-
-<p>相关阅读：</p>
-
-<p><a href="https://plugins.jenkins.io/kubernetes/">Jenkins 的 Kubernetes 插件</a></p>
-
-<p><a href="https://karpenter.sh/">Karpenter 官网</a></p>
-
-<p><a href="https://youbug.cn/2022/12/the-cheapest-way-to-ci-cn.html">在 AWS 构建应用 (Gitlab CI) 最便宜的姿势</a></p>
-
-<p><a href="https://youbug.cn/2022/11/cdk-install-karpenter-1.9.2.html">使用 CDK 安装 Karpenter 新版</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="container" /><summary type="html"><![CDATA[本文介绍了如何调度 Jenkins 任务到 EKS 集群的 Karpenter 虚拟节点。Karpenter 强大的 Node 组织能力，可以最大程度节约任务运行的成本。]]></summary></entry></feed>
+</ul>]]></content><author><name>啤酒云</name></author><category term="container" /><category term="容器" /><summary type="html"><![CDATA[本文是一个集成了 ChatGPT 的简单微信机器人的部署文档，使用了现有的 github 仓库，并进行适当修改，并发布成公共镜像包。当前文档说明为 2.0 镜像包。]]></summary></entry></feed>

@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-19T03:41:34+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">ChatGLM-6B 的 Lora 微调</title><link href="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" rel="alternate" type="text/html" title="ChatGLM-6B 的 Lora 微调" /><published>2023-04-19T02:10:49+00:00</published><updated>2023-04-19T02:10:49+00:00</updated><id>https://youbug.cn/2023/04/chatglm-6b-finetune-lora</id><content type="html" xml:base="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"><![CDATA[<p>本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-20T01:29:56+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">DevAX Gaming Day</title><link href="https://youbug.cn/2023/04/devax-gaming.html" rel="alternate" type="text/html" title="DevAX Gaming Day" /><published>2023-04-20T01:10:49+00:00</published><updated>2023-04-20T01:10:49+00:00</updated><id>https://youbug.cn/2023/04/devax-gaming</id><content type="html" xml:base="https://youbug.cn/2023/04/devax-gaming.html"><![CDATA[<h2 id="这里进入">这里进入</h2>
+
+<p><a href="https://catalog.us-east-1.prod.workshops.aws/workshops/518de899-dddc-49fa-ae00-aa375d359d1e/zh-CN">https://catalog.us-east-1.prod.workshops.aws/workshops/518de899-dddc-49fa-ae00-aa375d359d1e/zh-CN</a></p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[这里进入]]></summary></entry><entry><title type="html">ChatGLM-6B 的 Lora 微调</title><link href="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" rel="alternate" type="text/html" title="ChatGLM-6B 的 Lora 微调" /><published>2023-04-19T02:10:49+00:00</published><updated>2023-04-19T02:10:49+00:00</updated><id>https://youbug.cn/2023/04/chatglm-6b-finetune-lora</id><content type="html" xml:base="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"><![CDATA[<p>本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。</p>
 
 <h2 id="项目信息">项目信息</h2>
 
@@ -1596,107 +1598,4 @@ mysql&gt;
 
 <p><a href="https://developer.work.weixin.qq.com/document/path/90236">https://developer.work.weixin.qq.com/document/path/90236</a></p>
 
-<p><a href="https://github.com/WecomTeam/InnerAppCodeSample/tree/main/server">https://github.com/WecomTeam/InnerAppCodeSample/tree/main/server</a></p>]]></content><author><name>啤酒云</name></author><category term="tucao" /><summary type="html"><![CDATA[原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。]]></summary></entry><entry><title type="html">一个现成的 ChatGPT 微信机器人</title><link href="https://youbug.cn/2023/02/chatgpt-wechat-bot.html" rel="alternate" type="text/html" title="一个现成的 ChatGPT 微信机器人" /><published>2023-02-09T11:09:00+00:00</published><updated>2023-02-09T11:09:00+00:00</updated><id>https://youbug.cn/2023/02/chatgpt-wechat-bot</id><content type="html" xml:base="https://youbug.cn/2023/02/chatgpt-wechat-bot.html"><![CDATA[<p>本文是一个集成了 ChatGPT 的简单微信机器人的部署文档，使用了现有的 github 仓库，并进行适当修改，并发布成公共镜像包。当前文档说明为 2.0 镜像包。</p>
-
-<h2 id="说明">说明</h2>
-
-<p>在这个项目（<a href="https://github.com/wangrongding/wechat-bot">https://github.com/wangrongding/wechat-bot</a>）的基础上进行的修改：</p>
-
-<ul>
-  <li>从 openai 改回了 chatgpt 的调用。</li>
-  <li>修改了 chatgpt 的对话模型，现在有两种机器人: 群机器人和私人机器人。</li>
-  <li>在群里，用群机器人开头的文字会训练群机器人，用私人机器人名字开头的可以训练私有机器人。</li>
-  <li>与机器人私聊也要以机器人的名字开头，私聊的时候用两种机器人名字开头都会训练私有机器人。</li>
-  <li>增加了错误处理，当出错的时候，现在机器人能做出响应了。</li>
-</ul>
-
-<p>镜像地址：</p>
-
-<p><a href="https://hub.docker.com/r/cloudbeer/wx-chatbot/tags">https://hub.docker.com/r/cloudbeer/wx-chatbot/tags</a></p>
-
-<h2 id="部署">部署</h2>
-
-<h3 id="在-k8s-中部署">在 K8S 中部署</h3>
-
-<p>部署 YAML 参考如下：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
-  <span class="na">labels</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">containers</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">wx-chatbot</span>
-          <span class="na">image</span><span class="pi">:</span> <span class="s">cloudbeer/wx-chatbot:2.0</span>
-          <span class="na">env</span><span class="pi">:</span>
-            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">OPENAI_API_KEY</span>
-              <span class="na">value</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">your-api-key</span><span class="pi">]</span>
-            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">BOT_NAME</span>
-              <span class="na">value</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">your-bot-name</span><span class="pi">]</span>
-            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ROOM_BOT_NAME</span>
-              <span class="na">value</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">your-room-bot-name</span><span class="pi">]</span>
-          <span class="na">command</span><span class="pi">:</span>
-            <span class="pi">-</span> <span class="s">node</span>
-            <span class="pi">-</span> <span class="s">index.js</span>
-</code></pre></div></div>
-
-<p>修改上面代码中的环境变量 <code class="language-plaintext highlighter-rouge">[your-api-key]</code>, <code class="language-plaintext highlighter-rouge">[your-bot-name]</code>，<code class="language-plaintext highlighter-rouge">[your-room-bot-name]</code>：</p>
-
-<ul>
-  <li>
-    <p>OPENAI_API_KEY: 在 openai 网站申请的 API_KEY，当前申请地址是： <a href="https://platform.openai.com/account/api-keys">https://platform.openai.com/account/api-keys</a></p>
-  </li>
-  <li>
-    <p>BOT_NAME: 私人机器人的名字，当发送以这个名字开头的文字的时候，会调用 chatgpt，如 BOT_NAME 为 <code class="language-plaintext highlighter-rouge">hisiri</code> 的时候，发送：<code class="language-plaintext highlighter-rouge">hisiri 你好</code> 会得到 ChatGPT 的响应。</p>
-  </li>
-  <li>
-    <p>ROOM_BOT_NAME: 群机器人名字，这个机器人的会话是基于群的，群内的所有人都可以训练同一个机器人。</p>
-  </li>
-  <li>
-    <p>你可以在群里分别和两个机器人对话。</p>
-  </li>
-</ul>
-
-<p>部署完成之后，使用 logs 命令查看二维码，相关的命令如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl logs wx-chatbot-xxxxxxx <span class="nt">-f</span>
-</code></pre></div></div>
-
-<ul>
-  <li>-f 可以持续打印日志，查看控制台信息。</li>
-  <li>使用微信扫码之后，当前扫码的微信会成为 ChatGPT 机器人。你可以和他私聊或者拉到群里。</li>
-  <li>聊天的时候需要分别以 2 个机器人的名字开头才能做出响应。</li>
-</ul>
-
-<h2 id="docker-启动">Docker 启动</h2>
-
-<p>Docker 启动不再赘述，使用如下命令即可：</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--rm</span> <span class="nt">-it</span> <span class="nt">--name</span> wx-chatgpt-bot <span class="se">\</span>
-  <span class="nt">-e</span> <span class="nv">OPENAI_API_KEY</span><span class="o">=</span>abc <span class="nt">-e</span> <span class="nv">BOT_NAME</span><span class="o">=</span>小米 <span class="nt">-e</span> <span class="nv">ROOM_BOT_NAME</span><span class="o">=</span>大米 <span class="se">\</span>
-  cloudbeer/wx-chatbot:2.0 node index.js
-</code></pre></div></div>
-
-<ul>
-  <li>记得修改三个环境变量：<code class="language-plaintext highlighter-rouge">-e OPENAI_API_KEY=abc -e BOT_NAME=@siri</code>。</li>
-  <li>注意：此命令在 MAC 启动有bug。用 linux 系统无虞。</li>
-</ul>
-
-<h2 id="问题和改进点">问题和改进点</h2>
-
-<ul>
-  <li>免费账号 ChatGPT 测会经常报 429 Too Many Requests 的错误。</li>
-  <li>微信可能会被封，建议使用新注册的微信小号作为机器人。（暂且不清楚微信侧触发机制）</li>
-  <li>重启应用会重新加载微信的会话，导致重复调用 ChatGPT API，并由可能导致微信被封，重启应用的时候多等一会儿，让会话过期，或者修改两个bot 的名字后重启。</li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="container" /><category term="容器" /><summary type="html"><![CDATA[本文是一个集成了 ChatGPT 的简单微信机器人的部署文档，使用了现有的 github 仓库，并进行适当修改，并发布成公共镜像包。当前文档说明为 2.0 镜像包。]]></summary></entry></feed>
+<p><a href="https://github.com/WecomTeam/InnerAppCodeSample/tree/main/server">https://github.com/WecomTeam/InnerAppCodeSample/tree/main/server</a></p>]]></content><author><name>啤酒云</name></author><category term="tucao," /><category term="aiml" /><summary type="html"><![CDATA[原来是想使用企业微信的机器人来集成 ChatGPT，但… 这玩意不支持收消息，只能推送消息，所以只能另寻他法。]]></summary></entry></feed>

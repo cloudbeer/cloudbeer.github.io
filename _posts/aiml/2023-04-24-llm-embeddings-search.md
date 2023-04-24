@@ -181,7 +181,7 @@ for (const index in datasets){
 5: Mockito 的懒验证方式
 ```
 
-现在我们试试查询，查询函数为，返回了 2 条相关结果：
+下面是查询函数，返回了 2 条相关结果，最接近的数据排在了最前面：
 
 ```javascript
 // 通过向量查询
@@ -208,7 +208,7 @@ const  searchVec = async vq =>{
 // 封装成关键字，这里又问了 OpenAI 一下。
 const  search = async q=>{
     const qVec = await toVec(q);
-    return await aos.searchVec(qVec);
+    return await searchVec(qVec);
   };
 
 ```
@@ -230,7 +230,7 @@ search("微软").then(res => {
 
 我存入的向量值都是通过英文计算出来的，现在我们就可以按照语义理解来查询了。
 
-下面列举了查询的词语和和第一条结果。
+下面列举了查询的词语和和第一条结果。结果中的 brief 是使用 AI 帮忙总结的文章内容，并且 embeddings 值也是通过他计算出来的。
 
  "微软"：
 

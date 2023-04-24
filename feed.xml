@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-24T08:50:03+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 LLM embeddings 进行数据存储和检索的新姿势</title><link href="https://youbug.cn/2023/04/llm-embeddings-search.html" rel="alternate" type="text/html" title="使用 LLM embeddings 进行数据存储和检索的新姿势" /><published>2023-04-24T04:13:33+00:00</published><updated>2023-04-24T04:13:33+00:00</updated><id>https://youbug.cn/2023/04/llm-embeddings-search</id><content type="html" xml:base="https://youbug.cn/2023/04/llm-embeddings-search.html"><![CDATA[<p>大语言模型可以将文字转化为 embeddings, embeddings 是一个向量(浮点数) 数组。把向量数组存到数据库，然后我们通过搜索最接近的向量就可以得到搜索结果了。本文试验了这一方式。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-24T09:08:42+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 LLM embeddings 进行数据存储和检索的新姿势</title><link href="https://youbug.cn/2023/04/llm-embeddings-search.html" rel="alternate" type="text/html" title="使用 LLM embeddings 进行数据存储和检索的新姿势" /><published>2023-04-24T04:13:33+00:00</published><updated>2023-04-24T04:13:33+00:00</updated><id>https://youbug.cn/2023/04/llm-embeddings-search</id><content type="html" xml:base="https://youbug.cn/2023/04/llm-embeddings-search.html"><![CDATA[<p>大语言模型可以将文字转化为 embeddings, embeddings 是一个向量(浮点数) 数组。把向量数组存到数据库，然后我们通过搜索最接近的向量就可以得到搜索结果了。本文试验了这一方式。</p>
 
 <h2 id="概述">概述</h2>
 
@@ -167,7 +167,7 @@
 5: Mockito 的懒验证方式
 </code></pre>
 
-<p>现在我们试试查询，查询函数为，返回了 2 条相关结果：</p>
+<p>下面是查询函数，返回了 2 条相关结果，最接近的数据排在了最前面：</p>
 
 <div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 通过向量查询</span>
 <span class="kd">const</span>  <span class="nx">searchVec</span> <span class="o">=</span> <span class="k">async</span> <span class="nx">vq</span> <span class="o">=&gt;</span><span class="p">{</span>
@@ -193,7 +193,7 @@
 <span class="c1">// 封装成关键字，这里又问了 OpenAI 一下。</span>
 <span class="kd">const</span>  <span class="nx">search</span> <span class="o">=</span> <span class="k">async</span> <span class="nx">q</span><span class="o">=&gt;</span><span class="p">{</span>
     <span class="kd">const</span> <span class="nx">qVec</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">toVec</span><span class="p">(</span><span class="nx">q</span><span class="p">);</span>
-    <span class="k">return</span> <span class="k">await</span> <span class="nx">aos</span><span class="p">.</span><span class="nx">searchVec</span><span class="p">(</span><span class="nx">qVec</span><span class="p">);</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="nx">searchVec</span><span class="p">(</span><span class="nx">qVec</span><span class="p">);</span>
   <span class="p">};</span>
 
 </code></pre></div></div>
@@ -214,7 +214,7 @@
 
 <p>我存入的向量值都是通过英文计算出来的，现在我们就可以按照语义理解来查询了。</p>
 
-<p>下面列举了查询的词语和和第一条结果。</p>
+<p>下面列举了查询的词语和和第一条结果。结果中的 brief 是使用 AI 帮忙总结的文章内容，并且 embeddings 值也是通过他计算出来的。</p>
 
 <p>“微软”：</p>
 

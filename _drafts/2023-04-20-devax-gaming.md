@@ -6,6 +6,7 @@ author: 啤酒云
 categories: aws
 ---
 
+这里是一个 Workshop。方便进入。
 
 ## 这里进入
 

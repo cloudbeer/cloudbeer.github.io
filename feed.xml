@@ -1,6 +1,282 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-20T01:29:56+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">DevAX Gaming Day</title><link href="https://youbug.cn/2023/04/devax-gaming.html" rel="alternate" type="text/html" title="DevAX Gaming Day" /><published>2023-04-20T01:10:49+00:00</published><updated>2023-04-20T01:10:49+00:00</updated><id>https://youbug.cn/2023/04/devax-gaming</id><content type="html" xml:base="https://youbug.cn/2023/04/devax-gaming.html"><![CDATA[<h2 id="这里进入">这里进入</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-04-24T08:50:03+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 LLM embeddings 进行数据存储和检索的新姿势</title><link href="https://youbug.cn/2023/04/llm-embeddings-search.html" rel="alternate" type="text/html" title="使用 LLM embeddings 进行数据存储和检索的新姿势" /><published>2023-04-24T04:13:33+00:00</published><updated>2023-04-24T04:13:33+00:00</updated><id>https://youbug.cn/2023/04/llm-embeddings-search</id><content type="html" xml:base="https://youbug.cn/2023/04/llm-embeddings-search.html"><![CDATA[<p>大语言模型可以将文字转化为 embeddings, embeddings 是一个向量(浮点数) 数组。把向量数组存到数据库，然后我们通过搜索最接近的向量就可以得到搜索结果了。本文试验了这一方式。</p>
 
-<p><a href="https://catalog.us-east-1.prod.workshops.aws/workshops/518de899-dddc-49fa-ae00-aa375d359d1e/zh-CN">https://catalog.us-east-1.prod.workshops.aws/workshops/518de899-dddc-49fa-ae00-aa375d359d1e/zh-CN</a></p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[这里进入]]></summary></entry><entry><title type="html">ChatGLM-6B 的 Lora 微调</title><link href="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" rel="alternate" type="text/html" title="ChatGLM-6B 的 Lora 微调" /><published>2023-04-19T02:10:49+00:00</published><updated>2023-04-19T02:10:49+00:00</updated><id>https://youbug.cn/2023/04/chatglm-6b-finetune-lora</id><content type="html" xml:base="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"><![CDATA[<p>本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。</p>
+<h2 id="概述">概述</h2>
+
+<p>本文的过程大概如下：</p>
+
+<p><img src="/assets/posts/aiml/llm-vector.png" alt="LLM Vecotor Search" /></p>
+
+<p>本文将代码片段分解在了各小节，你如果要运行此文章的代码，可能需要一点 nodejs 的知识。你也可以直接转跳到最后一小节看效果。</p>
+
+<p>调用本文章的代码需要设置如下这些环境变量：</p>
+
+<ul>
+  <li>OPENAI_API_KEY</li>
+  <li>AWS_ACCESS_KEY_ID</li>
+  <li>AWS_SECRET_ACCESS_KEY</li>
+</ul>
+
+<h2 id="向量计算">向量计算</h2>
+
+<p>首先你要有一个大语言模型，需要将文本计算出向量，你可以部署一个私有的，也可以调用 API。</p>
+
+<p>下面的函数 使用了 OpenAI 的 API 来获取向量值。</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="p">{</span> <span class="nx">OpenAIEmbeddings</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">"</span><span class="s2">langchain/embeddings/openai</span><span class="dl">"</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">embeddings</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">OpenAIEmbeddings</span><span class="p">({</span> <span class="na">temperature</span><span class="p">:</span> <span class="mf">0.9</span> <span class="p">});</span>
+
+<span class="kd">const</span> <span class="nx">toVec</span> <span class="o">=</span>  <span class="k">async</span> <span class="nx">text</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="nx">embeddings</span><span class="p">.</span><span class="nx">embedQuery</span><span class="p">(</span><span class="nx">text</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="向量数据库">向量数据库</h2>
+
+<p>我们需要一个数据库能支持向量的存储和查询，可以使用专门的向量数据库，也可以使用 OpenSearch（Elastic Search），他的 knn 插件即可用来干这个。</p>
+
+<p>我们先去 AWS 开通一个 OpenSearch，验证方式先使用 IAM User，稍后我们通过该 User 的 AKSK 来访问 OpenSearch。</p>
+
+<p>请注意：需要使用 OpenSearch 而不是 OpenSearch Serverless。（OpenSearch Serverless 还不支持 knn 插件，2023-4-24）</p>
+
+<h2 id="建索引">建索引</h2>
+
+<p>首先创建索引，如下面的代码：</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="p">{</span> <span class="nx">defaultProvider</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">@aws-sdk/credential-provider-node</span><span class="dl">'</span><span class="p">);</span> <span class="c1">// V3 SDK.</span>
+<span class="kd">const</span> <span class="p">{</span> <span class="nx">Client</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">@opensearch-project/opensearch</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="p">{</span> <span class="nx">AwsSigv4Signer</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">@opensearch-project/opensearch/aws</span><span class="dl">'</span><span class="p">);</span>
+
+<span class="kd">const</span> <span class="nx">client</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Client</span><span class="p">({</span>
+  <span class="p">...</span><span class="nx">AwsSigv4Signer</span><span class="p">({</span>
+    <span class="na">region</span><span class="p">:</span> <span class="dl">'</span><span class="s1">us-east-1</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">service</span><span class="p">:</span> <span class="dl">'</span><span class="s1">es</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">getCredentials</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">credentialsProvider</span> <span class="o">=</span> <span class="nx">defaultProvider</span><span class="p">();</span>
+      <span class="k">return</span> <span class="nx">credentialsProvider</span><span class="p">();</span>
+    <span class="p">},</span>
+  <span class="p">}),</span>
+  <span class="na">node</span><span class="p">:</span> <span class="dl">"</span><span class="s2">https://xxxxxx.us-east-1.es.amazonaws.com</span><span class="dl">"</span>
+<span class="p">});</span>
+
+
+<span class="kd">var</span> <span class="nx">index_name</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">doc_embeddings</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="kd">const</span> <span class="nx">createIndex</span><span class="p">:</span> <span class="k">async</span> <span class="nx">_</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">client</span><span class="p">.</span><span class="nx">indices</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span>
+    <span class="na">index</span><span class="p">:</span> <span class="nx">index_name</span><span class="p">,</span>
+    <span class="na">body</span><span class="p">:</span> <span class="p">{</span>
+      <span class="dl">"</span><span class="s2">settings</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="dl">"</span><span class="s2">index.knn</span><span class="dl">"</span><span class="p">:</span> <span class="kc">true</span>
+      <span class="p">},</span>
+      <span class="dl">"</span><span class="s2">mappings</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="dl">"</span><span class="s2">properties</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+          <span class="dl">"</span><span class="s2">content_vec</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">knn_vector</span><span class="dl">"</span><span class="p">,</span>
+            <span class="dl">"</span><span class="s2">dimension</span><span class="dl">"</span><span class="p">:</span> <span class="mi">1536</span><span class="p">,</span>
+            <span class="dl">"</span><span class="s2">method</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+              <span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">hnsw</span><span class="dl">"</span><span class="p">,</span>
+              <span class="dl">"</span><span class="s2">space_type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">l2</span><span class="dl">"</span><span class="p">,</span>
+              <span class="dl">"</span><span class="s2">engine</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">nmslib</span><span class="dl">"</span><span class="p">,</span>
+              <span class="dl">"</span><span class="s2">parameters</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="dl">"</span><span class="s2">ef_construction</span><span class="dl">"</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
+                <span class="dl">"</span><span class="s2">m</span><span class="dl">"</span><span class="p">:</span> <span class="mi">24</span>
+              <span class="p">}</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+  <span class="p">});</span>
+
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Creating index:</span><span class="dl">"</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">body</span><span class="p">);</span>
+<span class="p">},</span>
+
+</code></pre></div></div>
+
+<h2 id="插入数据">插入数据</h2>
+
+<p>参考下面的方法：</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">updateData</span> <span class="o">=</span> <span class="k">async</span> <span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">client</span><span class="p">.</span><span class="nx">index</span><span class="p">({</span>
+      <span class="nx">id</span><span class="p">,</span>
+      <span class="na">index</span><span class="p">:</span> <span class="nx">index_name</span><span class="p">,</span>
+      <span class="na">body</span><span class="p">:</span> <span class="nx">data</span><span class="p">,</span>
+      <span class="na">refresh</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="p">});</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Adding document:</span><span class="dl">"</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">body</span><span class="p">);</span>
+  <span class="p">},</span>
+</code></pre></div></div>
+
+<p>现在我想通过 url 直接让 OpenAI 对网址进行概括，并计算出向量值，存入数据库中。</p>
+
+<p>这个是我要抓的 Url：</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">datasets</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="dl">"</span><span class="s2">https://www.pinecone.io/learn/vector-database/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">https://www.infoq.com/news/2023/04/logic-apps-new-data-mapper/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">https://aws.amazon.com/cn/blogs/china/large-scale-dynamodb-table-data-cross-account-migration-guide/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">https://aws.amazon.com/blogs/startups/8-highlights-from-aws-startup-day-miami-you-want-to-experience/</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">https://www.baeldung.com/java-serialization</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">https://www.baeldung.com/mockito-lazy-verification</span><span class="dl">"</span>
+<span class="p">];</span>
+</code></pre></div></div>
+
+<p>调用 OpenAI，让他去帮我们总结文章内容。</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span>  <span class="nx">briefUrl</span> <span class="o">=</span> <span class="k">async</span> <span class="nx">url</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="nx">model</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s2">`Summarize this url in English: </span><span class="p">${</span><span class="nx">url</span><span class="p">}</span><span class="s2">`</span><span class="p">);</span>
+  <span class="p">};</span>
+</code></pre></div></div>
+
+<p>连起来调用：</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">updateDataByUrl</span> <span class="o">=</span> <span class="k">async</span> <span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">url</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">brief</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">briefUrl</span><span class="p">(</span><span class="nx">url</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">content_vec</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">toVec</span><span class="p">(</span><span class="nx">brief</span><span class="p">);</span>
+    <span class="k">await</span> <span class="nx">updateData</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="p">{</span>
+        <span class="nx">id</span><span class="p">,</span>
+        <span class="nx">content_vec</span><span class="p">,</span>
+        <span class="nx">url</span><span class="p">,</span>
+        <span class="nx">brief</span>
+    <span class="p">})</span>
+<span class="p">};</span>
+
+
+<span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">index</span> <span class="k">in</span> <span class="nx">datasets</span><span class="p">){</span>
+    <span class="nx">updateDataByUrl</span><span class="p">(</span>
+        <span class="nx">index</span><span class="p">,</span> 
+        <span class="nx">datasets</span><span class="p">[</span><span class="nx">index</span><span class="p">]</span>
+    <span class="p">).</span><span class="k">catch</span><span class="p">(</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<h2 id="查询">查询</h2>
+
+<p>到此为止，我们已经灌进去了几篇文章，这几篇文章大概是：</p>
+
+<pre><code class="language-plain">0: 介绍向量数据库的
+1: 微软 VS 的一个 Data Mapper 新功能
+2: AWS DynamoDB 的迁移
+3: AWS Miami 创业日的亮点
+4: Java 序列化的方法
+5: Mockito 的懒验证方式
+</code></pre>
+
+<p>现在我们试试查询，查询函数为，返回了 2 条相关结果：</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 通过向量查询</span>
+<span class="kd">const</span>  <span class="nx">searchVec</span> <span class="o">=</span> <span class="k">async</span> <span class="nx">vq</span> <span class="o">=&gt;</span><span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">query</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="na">size</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+      <span class="na">query</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">knn</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">content_vec</span><span class="p">:</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">vector</span><span class="dl">"</span><span class="p">:</span> <span class="nx">vq</span><span class="p">,</span>
+            <span class="dl">"</span><span class="s2">k</span><span class="dl">"</span><span class="p">:</span> <span class="mi">2</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">},</span>
+    <span class="p">};</span>
+
+    <span class="kd">var</span> <span class="nx">response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">client</span><span class="p">.</span><span class="nx">search</span><span class="p">({</span>
+      <span class="na">index</span><span class="p">:</span> <span class="nx">index_name</span><span class="p">,</span>
+      <span class="na">body</span><span class="p">:</span> <span class="nx">query</span><span class="p">,</span>
+    <span class="p">});</span>
+    <span class="k">return</span> <span class="nx">response</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">hits</span><span class="p">;</span>
+  <span class="p">};</span>
+
+<span class="c1">// 封装成关键字，这里又问了 OpenAI 一下。</span>
+<span class="kd">const</span>  <span class="nx">search</span> <span class="o">=</span> <span class="k">async</span> <span class="nx">q</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">qVec</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">toVec</span><span class="p">(</span><span class="nx">q</span><span class="p">);</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="nx">aos</span><span class="p">.</span><span class="nx">searchVec</span><span class="p">(</span><span class="nx">qVec</span><span class="p">);</span>
+  <span class="p">};</span>
+
+</code></pre></div></div>
+
+<p>调用：</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">search</span><span class="p">(</span><span class="dl">"</span><span class="s2">微软</span><span class="dl">"</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">res</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">hits</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">rec</span><span class="o">=&gt;</span><span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">({</span>
+            <span class="na">_id</span><span class="p">:</span> <span class="nx">rec</span><span class="p">.</span><span class="nx">_id</span><span class="p">,</span>
+            <span class="na">_score</span><span class="p">:</span> <span class="nx">rec</span><span class="p">.</span><span class="nx">_score</span><span class="p">,</span>
+            <span class="na">url</span><span class="p">:</span> <span class="nx">rec</span><span class="p">.</span><span class="nx">_source</span><span class="p">.</span><span class="nx">url</span><span class="p">,</span>
+            <span class="na">brief</span><span class="p">:</span> <span class="nx">rec</span><span class="p">.</span><span class="nx">_source</span><span class="p">.</span><span class="nx">brief</span>
+        <span class="p">})</span>
+    <span class="p">})</span>
+<span class="p">}).</span><span class="k">catch</span><span class="p">(</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>我存入的向量值都是通过英文计算出来的，现在我们就可以按照语义理解来查询了。</p>
+
+<p>下面列举了查询的词语和和第一条结果。</p>
+
+<p>“微软”：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">{</span>
+  _id: <span class="s1">'1'</span>,
+  _score: 0.6547316,
+  url: <span class="s1">'https://www.infoq.com/news/2023/04/logic-apps-new-data-mapper/'</span>,
+  brief: <span class="s1">'\n'</span> +
+    <span class="s1">'\n'</span> +
+    <span class="s2">"This article discusses Microsoft's Azure Logic Apps Data Mapper, a new feature that enables developers to easily map data between different sources and applications. The article outlines the various benefits of this tool, such as enabling better data integration and making complex data migrations easier. It also explains how the tool can help organizations migrate to the cloud more quickly and easily."</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>“亚马逊”</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">{</span>
+  _id: <span class="s1">'3'</span>,
+  _score: 0.6621346,
+  url: <span class="s1">'https://aws.amazon.com/blogs/startups/8-highlights-from-aws-startup-day-miami-you-want-to-experience/'</span>,
+  brief: <span class="s1">'\n'</span> +
+    <span class="s1">'\n'</span> +
+    <span class="s1">'This article summarizes the highlights from AWS Startup Day in Miami. It includes topics such as inspiring stories from entrepreneurs, tips on how to succeed in the startup world, and additional resources for those in the tech industry.'</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>“データベース” - 数据库的日语</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">{</span>
+  _id: <span class="s1">'0'</span>,
+  _score: 0.6666581,
+  url: <span class="s1">'https://www.pinecone.io/learn/vector-database/'</span>,
+  brief: <span class="s1">'\n'</span> +
+    <span class="s1">'\n'</span> +
+    <span class="s1">'This article provides an introduction to vector databases, which are databases that store and process data in vector, rather than the traditional tabular, form. It outlines the advantages of using vector databases, such as faster query performance and more powerful analysis capabilities, and describes the components of a vector database and how they function.'</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>“如何迁移亚马逊云的数据”</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">{</span>
+  _id: <span class="s1">'2'</span>,
+  _score: 0.69728285,
+  url: <span class="s1">'https://aws.amazon.com/cn/blogs/china/large-scale-dynamodb-table-data-cross-account-migration-guide/'</span>,
+  brief: <span class="s1">'\n'</span> +
+    <span class="s1">'\n'</span> +
+    <span class="s1">'This website provides a guide for those wishing to migrate large amounts of data from one DynamoDB table to another, between different AWS accounts. It covers topics such as what data can be migrated, best practices, and step-by-step instructions.'</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>我还测试了几个，比如 “I have no time” 查到了 懒加载，”怎么做生意” 查询到了 aws 创业日。</p>
+
+<p>从整个逻辑可以看到 <strong>LLM 语言模型的能力越强，你的数据库系统的语言理解能力越强</strong>，然后就是要看数据库向量检索的能力了，现在市面上已经有很多的向量数据库了。</p>
+
+<p>在 AIGC 和大模型的当下，还有很多事情可以做！大家加油！</p>
+
+<hr />
+
+<p>参考：</p>
+
+<p><a href="https://docs.langchain.com/">https://docs.langchain.com/</a></p>
+
+<p><a href="https://opensearch.org/docs/latest/search-plugins/knn/knn-index/">https://opensearch.org/docs/latest/search-plugins/knn/knn-index/</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws," /><category term="container" /><summary type="html"><![CDATA[大语言模型可以将文字转化为 embeddings, embeddings 是一个向量(浮点数) 数组。把向量数组存到数据库，然后我们通过搜索最接近的向量就可以得到搜索结果了。本文试验了这一方式。]]></summary></entry><entry><title type="html">ChatGLM-6B 的 Lora 微调</title><link href="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html" rel="alternate" type="text/html" title="ChatGLM-6B 的 Lora 微调" /><published>2023-04-19T02:10:49+00:00</published><updated>2023-04-19T02:10:49+00:00</updated><id>https://youbug.cn/2023/04/chatglm-6b-finetune-lora</id><content type="html" xml:base="https://youbug.cn/2023/04/chatglm-6b-finetune-lora.html"><![CDATA[<p>本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。</p>
 
 <h2 id="项目信息">项目信息</h2>
 

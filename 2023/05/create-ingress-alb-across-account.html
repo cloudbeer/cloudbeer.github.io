@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>EKS Ingress 跨账号创建 ALB | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="EKS Ingress 跨账号创建 ALB" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与外网隔离。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。" />
+<meta property="og:description" content="在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与外网隔离。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。" />
+<link rel="canonical" href="https://youbug.cn/2023/05/create-ingress-alb-across-account.html" />
+<meta property="og:url" content="https://youbug.cn/2023/05/create-ingress-alb-across-account.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-05-06T01:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="EKS Ingress 跨账号创建 ALB" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-05-06T01:10:49+00:00","datePublished":"2023-05-06T01:10:49+00:00","description":"在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与外网隔离。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。","headline":"EKS Ingress 跨账号创建 ALB","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/05/create-ingress-alb-across-account.html"},"url":"https://youbug.cn/2023/05/create-ingress-alb-across-account.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">EKS Ingress 跨账号创建 ALB</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-05-06T01:10:49+00:00" itemprop="datePublished">2023-05-06
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与<strong>外网隔离</strong>。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。</p>
+
+<p>先预设一下：</p>
+
+<ul>
+  <li>对公的账号为 AAAA， VPC 为 10.1.0.0/16</li>
+  <li>EKS 账号为 BBBB，VPC 为 10.0.0.0/16</li>
+</ul>
+
+<p>需要做的工作有：设置组织，设置网络(TGW)，共享，设置 IAM 权限，编写 EKS CRD。</p>
+
+<blockquote>
+  <p>本文是使用 China Region 实现的。</p>
+</blockquote>
+
+<h2 id="创建组织并启用相应权限">创建组织并启用相应权限</h2>
+
+<p>组织是共享子网的前提，通常多账号环境下会使用 组织来管理。</p>
+
+<p>在 AAAA 账号中(在其他账号下亦可)：</p>
+
+<p>进入 AWS 后台的 <a href="https://console.amazonaws.cn/organizations/v2/home/">组织控制台</a>：</p>
+
+<ul>
+  <li>创建组织，并将账号纳入，在 AAAA 账号内邀请，在 BBBB 里接受邀请。</li>
+  <li>开启组织的 RAM 可信访问，进入 Amazon Organizations &gt; 服务 &gt; RAM， 开启可信访问</li>
+</ul>
+
+<p>进入 <a href="https://console.amazonaws.cn/ram/home#Settings:">RAM 控制台</a> 开启组织内共享：</p>
+
+<ul>
+  <li>进入 Resource Access Manager &gt; 设置，开启 ”在以下服务中启用共享： Amazon Organizations “</li>
+</ul>
+
+<h2 id="tgw-打通网络">TGW 打通网络</h2>
+
+<p>在 AAAA 账号里：</p>
+
+<p>创建一个 Transit Gateway:</p>
+
+<ul>
+  <li>进入 VPC 控制台，左侧选择菜单 中转网关，点击 ”创建 Transit Gateway“</li>
+  <li>进入中转网关挂载，”创建 Transit Gateway 挂载“，选择 AAAA 账号下的目标 VPC</li>
+</ul>
+
+<p>共享 tgw</p>
+
+<ul>
+  <li>进入 RAM 控制台 <a href="https://console.amazonaws.cn/ram/home#CreateResourceShare:">创建资源共享</a>
+    <ul>
+      <li>共享的资源选择 中转网关</li>
+      <li>委托人选择 组织，填写组织 ID (组织 ID 在 <a href="https://console.amazonaws.cn/organizations/v2/home/root">组织的界面的 root</a> 下的 ARN 的第二段 /o-xxxx/ 内找到，形如 o-xxxxx)。</li>
+    </ul>
+  </li>
+</ul>
+
+<blockquote>
+  <p>注意，在 AAAA 账号中的 VPC 中，必须至少创建 2 个 Public Subnet</p>
+</blockquote>
+
+<p>在 BBBB 账号里现在可以看到 tgw 实例了：</p>
+
+<ul>
+  <li>进入 VPC，中转网关挂载，挂上 VPC。</li>
+</ul>
+
+<p>分别在 AAAA 和 BBBB 账号里的子网路由里加入 tgw 对端路由（可以从目标子网的路由连接点击进入）：</p>
+
+<ul>
+  <li>在 AAAA 的 路由表里加入 16.0.0.0/16 - tgw-xxxxxx</li>
+  <li>在 BBBB 的 路由表里加入 16.1.0.0/16 - tgw-xxxxxx</li>
+</ul>
+
+<p>至此，网络打通。</p>
+
+<h2 id="共享子网">共享子网</h2>
+
+<p>为了在 EKS Ingress 里能发现 AAAA 账号的子网 ID，还需要共享子网。</p>
+
+<p>在 AAAA 账号里共享对公子网：</p>
+
+<p>在 RAM 中创建新的共享资源，资源里选择 子网，会发现，刚刚绑定了 tgw 的子网出现在共享名单里，选择对组织共享。</p>
+
+<h2 id="安全组">安全组</h2>
+
+<p>在 AAAA 账号中创建安全组，后续创建 Ingress 的时候需要显式指定此安全组。</p>
+
+<h2 id="iam">IAM</h2>
+
+<p>现在需要处理 IAM 权限了。</p>
+
+<p>BBBB 中的 EKS 需要在 AAAA 账号里创建 ALB 等资源，所以需要把 AAAA 的 Role 赋予给  BBBB 的 EKS 的 loadbalancer-controller，下面是创建 IRSA 的过程：</p>
+
+<h3 id="在-aaaa-中加入身份提供商">在 AAAA 中加入身份提供商</h3>
+
+<p>进入 IAM 菜单的 身份提供商，</p>
+
+<ul>
+  <li>点击添加提供商，填写 oidc 的 Url。（这个 Url 可以通过 BBBB 账号的 eks 信息得到）</li>
+  <li>受众填写 sts.amazonaws.com</li>
+  <li>获取指纹，确定…</li>
+</ul>
+
+<h3 id="在-aaaa-中创建-policy">在 AAAA 中创建 Policy</h3>
+
+<p>policy 的 json 文件如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-O</span> https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.4.7/docs/install/iam_policy_cn.json
+</code></pre></div></div>
+
+<p>使用命令创建，或者在控制台把上面的文件内容贴进去：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws iam create-policy <span class="se">\</span>
+    <span class="nt">--policy-name</span> AWSLoadBalancerControllerIAMPolicy <span class="se">\</span>
+    <span class="nt">--policy-document</span> file://iam_policy_cn.json
+</code></pre></div></div>
+
+<h3 id="在-aaaa-中创建-role">在 AAAA 中创建 Role</h3>
+
+<p>现在创建一个 Role，选择 自定义信任策略。</p>
+
+<p>信任策略的 JSON 内容如下：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Principal"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nl">"Federated"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arn:aws-cn:iam::AAAA:oidc-provider/oidc.eks.region.amazonaws.com.cn/id/xxxxxx"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts:AssumeRoleWithWebIdentity"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Condition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nl">"StringEquals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                    </span><span class="nl">"oidc.eks.region.amazonaws.com.cn/id/xxxxxx:aud"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts.amazonaws.com"</span><span class="p">,</span><span class="w">
+                    </span><span class="nl">"oidc.eks.region.amazonaws.com.cn/id/xxxxxx:sub"</span><span class="p">:</span><span class="w"> </span><span class="s2">"system:serviceaccount:kube-system:aws-load-balancer-controller"</span><span class="w">
+                </span><span class="p">}</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>名为 <strong>AmazonEKSLoadBalancerControllerRole</strong>，</p>
+
+<p>在选型策略里添加权限，选择上一步创建的  AWSLoadBalancerControllerIAMPolicy 即可。</p>
+
+<p>现在，我们完成了 IAM 的 Role 创建。</p>
+
+<h2 id="创建-eks-资源">创建 EKS 资源</h2>
+
+<p>下面的操作在 BBBB 账号的 EKS 集群内完成。</p>
+
+<h3 id="serviceaccount">ServiceAccount</h3>
+
+<p>如果你已经安装了 EKS 的 aws-loadbalancer-controller，那么现在可以修改一下:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl edit sa aws-load-balancer-controller <span class="nt">-n</span> kube-system
+</code></pre></div></div>
+
+<p>将 <code class="language-plaintext highlighter-rouge">eks.amazonaws.com/role-arn: arn:aws-cn:iam::BBBB:role/AmazonEKSLoadBalancerControllerRole</code> 修改为 <code class="language-plaintext highlighter-rouge">eks.amazonaws.com/role-arn: arn:aws-cn:iam::AAAA:role/AmazonEKSLoadBalancerControllerRole</code></p>
+
+<h3 id="重新安装-aws-loadbalancer-controller">重新安装 aws-loadbalancer-controller</h3>
+
+<p>安装脚本如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">eksName</span><span class="o">=</span>abc
+<span class="nv">region</span><span class="o">=</span>cn-north-1
+<span class="nv">pubcVpc</span><span class="o">=</span>vpc-in-aaaa
+
+helm <span class="nb">install </span>aws-load-balancer-controller eks/aws-load-balancer-controller <span class="se">\</span>
+  <span class="nt">-n</span> kube-system <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">region</span><span class="o">=</span><span class="k">${</span><span class="nv">region</span><span class="k">}</span> <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">clusterName</span><span class="o">=</span><span class="k">${</span><span class="nv">eksName</span><span class="k">}</span> <span class="se">\</span>
+  <span class="nt">--set</span> serviceAccount.create<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+  <span class="nt">--set</span> serviceAccount.name<span class="o">=</span>aws-load-balancer-controller <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">vpcId</span><span class="o">=</span><span class="k">${</span><span class="nv">pubcVpc</span><span class="k">}</span> <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">enableShield</span><span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">enableWaf</span><span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">enableWafv2</span><span class="o">=</span><span class="nb">false</span>
+
+</code></pre></div></div>
+
+<p>上面的 vpcId 需要填写 AAAA 账号的 vpcId，此 vpc 已经共享到 BBBB 账号，你可以在控制台看到。</p>
+
+<p>如果之前使用 helm 安装过，先卸载一下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm uninstall aws-load-balancer-controller
+</code></pre></div></div>
+
+<p>如果之前没有安装过 aws-load-balancer-controller，你可以先创建一个 ServiceAccount，其中的 role-arn 填写 AAAA 账号的 Role，如下 YAML。</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">annotations</span><span class="pi">:</span>
+    <span class="na">eks.amazonaws.com/role-arn</span><span class="pi">:</span> <span class="s">arn:aws-cn:iam::AAAA:role/AmazonEKSLoadBalancerControllerRole</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">aws-load-balancer-controller</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">kube-system</span>
+</code></pre></div></div>
+
+<p>至此，所有基础层的工作已经全部完成。🎆 🎉🎉🎉🎉🎉</p>
+
+<h3 id="测试-ingress">测试 Ingress</h3>
+
+<p>先创建 Deployment 和 Service 资源(测试用)</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">matchLabels</span><span class="pi">:</span>
+      <span class="na">app</span><span class="pi">:</span> <span class="s">httpbin</span>
+  <span class="na">template</span><span class="pi">:</span>
+    <span class="na">metadata</span><span class="pi">:</span>
+      <span class="na">labels</span><span class="pi">:</span>
+        <span class="na">app</span><span class="pi">:</span> <span class="s">httpbin</span>
+    <span class="na">spec</span><span class="pi">:</span>
+      <span class="na">containers</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
+          <span class="na">image</span><span class="pi">:</span> <span class="s">public.ecr.aws/r2h3l6e4/pingcloud-clustertools/kennethreitz/httpbin:latest</span>
+          <span class="na">resources</span><span class="pi">:</span>
+            <span class="na">requests</span><span class="pi">:</span>
+              <span class="na">cpu</span><span class="pi">:</span> <span class="s">250m</span>
+              <span class="na">memory</span><span class="pi">:</span> <span class="s">250Mi</span>
+<span class="nn">---</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ports</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">http-httpbin</span>
+      <span class="na">port</span><span class="pi">:</span> <span class="m">3000</span>
+      <span class="na">targetPort</span><span class="pi">:</span> <span class="m">80</span>
+  <span class="na">selector</span><span class="pi">:</span>
+    <span class="na">app</span><span class="pi">:</span> <span class="s">httpbin</span>
+</code></pre></div></div>
+
+<p>创建 Ingress</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">networking.k8s.io/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Ingress</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">x-ingress</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="na">annotations</span><span class="pi">:</span>
+    <span class="na">alb.ingress.kubernetes.io/target-type</span><span class="pi">:</span> <span class="s">ip</span>
+    <span class="na">alb.ingress.kubernetes.io/scheme</span><span class="pi">:</span> <span class="s">internet-facing</span>
+    <span class="na">alb.ingress.kubernetes.io/subnets</span><span class="pi">:</span> <span class="s2">"</span><span class="s">subnet-aaaa-pub1,</span><span class="nv"> </span><span class="s">subnet-aaaa-pub2"</span>
+    <span class="na">alb.ingress.kubernetes.io/security-groups</span><span class="pi">:</span> <span class="s2">"</span><span class="s">sg-aaaa-xxxx"</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">ingressClassName</span><span class="pi">:</span> <span class="s">alb</span>
+  <span class="na">rules</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">http</span><span class="pi">:</span>
+        <span class="na">paths</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">path</span><span class="pi">:</span> <span class="s">/</span>
+            <span class="na">pathType</span><span class="pi">:</span> <span class="s">Prefix</span>
+            <span class="na">backend</span><span class="pi">:</span>
+              <span class="na">service</span><span class="pi">:</span>
+                <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
+                <span class="na">port</span><span class="pi">:</span>
+                  <span class="na">number</span><span class="pi">:</span> <span class="m">3000</span>
+</code></pre></div></div>
+
+<p>需要加入如下注解才能把 Ingress 的 ALB 创建到 AAAA 账号：</p>
+
+<ul>
+  <li>alb.ingress.kubernetes.io/target-type 为 ip</li>
+  <li>alb.ingress.kubernetes.io/scheme: internet-facing 表示ALB</li>
+  <li>alb.ingress.kubernetes.io/subnets 选择 AAAA 账号的对公子网</li>
+  <li>alb.ingress.kubernetes.io/security-groups 为 AAAA 账号的安全组</li>
+</ul>
+
+<h3 id="targetgroupbinding">TargetGroupBinding</h3>
+
+<p>如果你想让 EKS 想使用已存在的 ALB，那么只需要将 Service 绑定给目标群组即可。</p>
+
+<p>可以先在 AAAA 账号下创建一个 目标群组/Target groups，并创建如下的 TargetGroupBinding CRD 资源，如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">elbv2.k8s.aws/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">TargetGroupBinding</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">static-alb</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">serviceRef</span><span class="pi">:</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
+    <span class="na">port</span><span class="pi">:</span> <span class="m">3000</span>
+  <span class="na">targetGroupARN</span><span class="pi">:</span> <span class="s">&lt;AAAA-target-goupd-arn&gt;</span>
+</code></pre></div></div>
+
+<p>创建好之后，就会看到该目标群组下 BBBB 账号的 pod 的 ip 了。</p>
+
+<hr />
+<p>参考：</p>
+
+<p>中转网关使用文档：<a href="https://docs.amazonaws.cn/vpc/latest/tgw/tgw-transit-gateways.html">https://docs.amazonaws.cn/vpc/latest/tgw/tgw-transit-gateways.html</a></p>
+
+<p><a href="https://aws.amazon.com/cn/blogs/containers/expose-amazon-eks-pods-through-cross-account-load-balancer/">Expose Amazon EKS pods through cross-account load balancer</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/05/create-ingress-alb-across-account.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

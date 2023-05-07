@@ -1,24 +1,24 @@
 ---
 layout: post
-title:  "TLS 1.1 过期后上传 S3 的策略"
-date:   203-05-07 10:13:33 +0800
+title:  "在 TLS 1.1 过期后上传 S3 的策略"
+date:   2023-05-07 09:10:49 +0800
 author: 啤酒云
 categories: aws
 ---
 
-TLS 1.1 近期全面过期，有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。
+TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。
 
 ## 使用 http
 
 如果您在客户端使用了 S3 的域名，直接把 https 变成 http 即可。
 
-上传文件的过程，得到 S3 签名 url 之后，直接使用 http 亦可以完成上传操作。
+上传文件的时候，得到了 S3 签名 url 之后，直接改为使用 http 亦可以完成上传操作。
 
 ## 使用 Cloudfront 上传 S3
 
-目前 Cloudfront 还会长期支持 TLS 1.1。
+> 目前 Cloudfront 还会长期支持 TLS 1.1。
 
-Cloudfront 一般用于 S3 文件的读取，此处沿用原来的方式即可。
+Cloudfront 一般用于 S3 文件的读取与分发，对于文件分发加速沿用原来的方式即可。
 
 如果您必须使用 https 上传文件，可以 via Cloudfront，可按照如下方式操作：
 
@@ -34,7 +34,7 @@ Cloudfront 一般用于 S3 文件的读取，此处沿用原来的方式即可�
 
 ### 创建 key
 
-创建（本地/上传文件的客户机）key：
+在本地或者上传文件的客户机创建这个 key：
 
 ```ssh
 cd ~/.ssh
@@ -47,13 +47,13 @@ openssl rsa -pubout -in cf.pem -out cf.pub.pem
 - cf.pem 私钥
 - cf.pub.pem 公钥
 
-在 Cloudfront 的 [Key managenent 的 Public keys](https://console.aws.amazon.com/cloudfront/v3/home?#/publickey) 里上传 cf.pub.pem 的内容。
+在 Cloudfront 的 [Key managenent 的 Public keys](https://console.aws.amazon.com/cloudfront/v3/home?#/publickey) 里上传 cf.pub.pem 的内容。上传完成会得到一个 Key ID，这个 ID 后面会用于签名。
 
 并在 Key groups 里创建一个组，把这个 Public key 加入。
 
 ### 创建 Origin
 
-我之前已经创建了对外的读操作的 Cloudfront，现在已有的分发下面继续创建一个 Origin。
+现在已有的分发下面继续创建一个 Origin。
 
 - 选择目标 S3 domain
 - Origin access: Origin access control settings (recommended)
@@ -99,7 +99,7 @@ aws cloudfront sign --url https://xxxxxxxxx.cloudfront.net/upload/6.png \
 现在上传测试：
 
 ```request
-PUT https://d20x1q1mghmz4k.cloudfront.net/upload/6.png?Expires=1731283200&Signature=sj0ykX4c-fmSdXfKDnfeNZbkF7p-twG6VHAvs7BK6oSrycXWITvwkLQm0zNIkM3qX1NdR7D1eMANklGZTfuE916M~Kxgpa0M38tJ13KPCbpY9WqmyxvARyJz7JOOM3xOpB2AlvbVFvjTJAtGGGRHpXoepWPCXvXY3aszsPmeql7a-TADdvWRm8u4TpVBkLcTl3XDXcVl3lXAJmsonkFFXhDENVp42zfL3EhUINdciGO5JsjeTMAe1f9cGVVgfBc9CBnBPdDq6wom57qy~Tl5OnXY8kfi1RoIabbQ93cPUhfqZouoGOutDvUbPUYw5cnuZYSo0Lz7WgN~w7AtGJuV3Q__&Key-Pair-Id=K2R1WNDACEDPH5
+PUT https://d20x1q1mghmz4k.cloudfront.net/upload/6.png?Expires=1731283200&Signature=xxxx__&Key-Pair-Id=KXXXXXEDPH5
 Content-Type: multipart/form-data;
 
 < ./1.png
@@ -107,11 +107,11 @@ Content-Type: multipart/form-data;
 
 成功上传。
 
-> 我这里的 http request 使用的是 VSCODE 的插件 REST Client
+> 我的 http request 测试使用的是 VSCODE 的插件 REST Client
 
-我这里使用了路径 /upload 作为测试路径，当前会把文件上传到 S3 存储桶的 /upload 路径下，并且这个路径下的所以文件都要签名。
+这里使用了路径 /upload 作为测试路径，当前会把文件上传到 S3 存储桶的 /upload 路径下，并且这个路径下的所以文件无论读取和写入都要签名。
 
-如果真实生产环境，可以新建一个 Cloudfront 分发专门用来上传文件，或者使用 rewrite 来重新 /upload 路径。
+如果要分离读和写，可以新建一个 Cloudfront 分发专门用来上传文件，或者使用 rewrite 来重新映射一下 /upload 路径。
 
 ---
 参考：

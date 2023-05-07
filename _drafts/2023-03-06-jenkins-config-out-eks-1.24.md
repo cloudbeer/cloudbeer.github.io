@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Jenkins 使用外部 EKS(1.24) 作为 Agent 的配置细节"
-date:   2023-10-06 21:10:49 +0800
+date:  2023-03-06 21:10:49 +0800
 author: 啤酒云
 categories: aws, devops
 ---

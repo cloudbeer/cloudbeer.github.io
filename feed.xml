@@ -1,4 +1,124 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-06T04:18:42+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">EKS Ingress 跨账号创建 ALB</title><link href="https://youbug.cn/2023/05/create-ingress-alb-across-account.html" rel="alternate" type="text/html" title="EKS Ingress 跨账号创建 ALB" /><published>2023-05-06T01:10:49+00:00</published><updated>2023-05-06T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/create-ingress-alb-across-account</id><content type="html" xml:base="https://youbug.cn/2023/05/create-ingress-alb-across-account.html"><![CDATA[<p>在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与<strong>外网隔离</strong>。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-07T07:32:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 TLS 1.1 过期后上传 S3 的策略</title><link href="https://youbug.cn/2023/05/post-s3-tls-outdate.html" rel="alternate" type="text/html" title="在 TLS 1.1 过期后上传 S3 的策略" /><published>2023-05-07T01:10:49+00:00</published><updated>2023-05-07T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/post-s3-tls-outdate</id><content type="html" xml:base="https://youbug.cn/2023/05/post-s3-tls-outdate.html"><![CDATA[<p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
+
+<h2 id="使用-http">使用 http</h2>
+
+<p>如果您在客户端使用了 S3 的域名，直接把 https 变成 http 即可。</p>
+
+<p>上传文件的时候，得到了 S3 签名 url 之后，直接改为使用 http 亦可以完成上传操作。</p>
+
+<h2 id="使用-cloudfront-上传-s3">使用 Cloudfront 上传 S3</h2>
+
+<blockquote>
+  <p>目前 Cloudfront 还会长期支持 TLS 1.1。</p>
+</blockquote>
+
+<p>Cloudfront 一般用于 S3 文件的读取与分发，对于文件分发加速沿用原来的方式即可。</p>
+
+<p>如果您必须使用 https 上传文件，可以 via Cloudfront，可按照如下方式操作：</p>
+
+<p>1 创建一个 新的 Origin，指向 目标 S3 存储桶。</p>
+
+<p>2 创建新的 behavior，指向刚刚创建的 Origin。</p>
+
+<p>2.1 behavior 里要 Restrict viewer access 打开，这样就可以使用 Cloudfront 签名进行文件上传了。</p>
+
+<h2 id="cloudfront-签名上传的实验过程">Cloudfront 签名上传的实验过程</h2>
+
+<p>打开 Restrict viewer access 需要创建一个 key。</p>
+
+<h3 id="创建-key">创建 key</h3>
+
+<p>在本地或者上传文件的客户机创建这个 key：</p>
+
+<div class="language-ssh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">cd</span> ~/.ssh
+<span class="k">openssl</span> genrsa -out cf.pem <span class="m">2048</span>
+<span class="k">openssl</span> rsa -pubout -in cf.pem -out cf.pub.pem
+</code></pre></div></div>
+
+<p>这样可以得到两个文件：</p>
+
+<ul>
+  <li>cf.pem 私钥</li>
+  <li>cf.pub.pem 公钥</li>
+</ul>
+
+<p>在 Cloudfront 的 <a href="https://console.aws.amazon.com/cloudfront/v3/home?#/publickey">Key managenent 的 Public keys</a> 里上传 cf.pub.pem 的内容。上传完成会得到一个 Key ID，这个 ID 后面会用于签名。</p>
+
+<p>并在 Key groups 里创建一个组，把这个 Public key 加入。</p>
+
+<h3 id="创建-origin">创建 Origin</h3>
+
+<p>现在已有的分发下面继续创建一个 Origin。</p>
+
+<ul>
+  <li>选择目标 S3 domain</li>
+  <li>Origin access: Origin access control settings (recommended)</li>
+</ul>
+
+<p>如果之前没有配置过 S3 的策略，需要按照页面指示，把 policy 配置过去。</p>
+
+<h3 id="创建-behavior">创建 Behavior</h3>
+
+<ul>
+  <li>Path pattern: /upload</li>
+  <li>Origin: 选上一步创建的 Origin</li>
+  <li>Allowed HTTP methods: GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE</li>
+  <li>Restrict viewer access: Yes</li>
+  <li>Key groups 将之前创建的 Key group 加入</li>
+  <li>Response headers policy: 选择 SimpleCORS （此处为了方便浏览器测试）</li>
+</ul>
+
+<h3 id="测试">测试</h3>
+
+<p>直接上传：</p>
+
+<pre><code class="language-request">PUT https://xxxxxxxxxx.cloudfront.net/upload/6.png
+Content-Type: multipart/form-data;
+
+&lt; ./1.png
+</code></pre>
+
+<p>报 403 错误</p>
+
+<p>使用签名 URL 上传</p>
+
+<p>使用 aws cli 进行签名：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws cloudfront sign <span class="nt">--url</span> https://xxxxxxxxx.cloudfront.net/upload/6.png <span class="se">\</span>
+  <span class="nt">--key-pair-id</span> KXXXXXEDPH5 <span class="se">\</span>
+  <span class="nt">--private-key</span> file://~/.ssh/cf.pem <span class="se">\</span>
+  <span class="nt">--date-less-than</span> 2024-11-11
+</code></pre></div></div>
+
+<ul>
+  <li>key-pair-id 是 Cloudfront 后台给你的 Key Pair ID</li>
+  <li>private-key 是本地文件路径，必须以 file:// 开始</li>
+</ul>
+
+<p>现在上传测试：</p>
+
+<pre><code class="language-request">PUT https://d20x1q1mghmz4k.cloudfront.net/upload/6.png?Expires=1731283200&amp;Signature=xxxx__&amp;Key-Pair-Id=KXXXXXEDPH5
+Content-Type: multipart/form-data;
+
+&lt; ./1.png
+</code></pre>
+
+<p>成功上传。</p>
+
+<blockquote>
+  <p>我的 http request 测试使用的是 VSCODE 的插件 REST Client</p>
+</blockquote>
+
+<p>这里使用了路径 /upload 作为测试路径，当前会把文件上传到 S3 存储桶的 /upload 路径下，并且这个路径下的所以文件无论读取和写入都要签名。</p>
+
+<p>如果要分离读和写，可以新建一个 Cloudfront 分发专门用来上传文件，或者使用 rewrite 来重新映射一下 /upload 路径。</p>
+
+<hr />
+<p>参考：</p>
+
+<p><a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs">为 Cloudfront 设置密钥对</a></p>
+
+<p><a href="https://docs.aws.amazon.com/cli/latest/reference/cloudfront/sign.html">aws cloudfront sign</a></p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。]]></summary></entry><entry><title type="html">EKS Ingress 跨账号创建 ALB</title><link href="https://youbug.cn/2023/05/create-ingress-alb-across-account.html" rel="alternate" type="text/html" title="EKS Ingress 跨账号创建 ALB" /><published>2023-05-06T01:10:49+00:00</published><updated>2023-05-06T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/create-ingress-alb-across-account</id><content type="html" xml:base="https://youbug.cn/2023/05/create-ingress-alb-across-account.html"><![CDATA[<p>在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与<strong>外网隔离</strong>。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。</p>
 
 <p>先预设一下：</p>
 
@@ -1690,179 +1810,4 @@ Finished: SUCCESS
   <li>目标选择：Lambda 函数, LockTarget</li>
 </ul>
 
-<p>通过以上的代码和设置，我们即可将攻击源直接隔离。</p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[在针对 AWS 的网络攻击过程中，有一类攻击是暴力破解 root 账号，此类攻击会被 GuardDuty 监控并记录到。当发生此类暴力破解事件的时候，可以通过 Lambda 来对攻击源进行及时封禁。]]></summary></entry><entry><title type="html">SharingSphere-Proxy 入门</title><link href="https://youbug.cn/2023/02/shardingsphere-proxy-start.html" rel="alternate" type="text/html" title="SharingSphere-Proxy 入门" /><published>2023-02-17T03:27:44+00:00</published><updated>2023-02-17T03:27:44+00:00</updated><id>https://youbug.cn/2023/02/shardingsphere-proxy-start</id><content type="html" xml:base="https://youbug.cn/2023/02/shardingsphere-proxy-start.html"><![CDATA[<p>云厂商提供的数据库读写分离，通常会提供多个 url/endpoint 供开发者使用，一般需要应用自己去区分读写场景进行程序改造。现在有了这种数据访问的分布式中间件，自动对 SQL 语句进行检测和路由。本文体验了一下 SharingSphere-Proxy，并记录了一下配置和验证过程。</p>
-
-<h2 id="配置">配置</h2>
-
-<p>首先把 SharingSphere-Proxy 的配置拷贝出来，用官方文档提供的命令即可：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">-d</span> <span class="nt">--name</span> tmp <span class="nt">--entrypoint</span><span class="o">=</span>bash apache/shardingsphere-proxy
-docker <span class="nb">cp </span>tmp:/opt/shardingsphere-proxy/conf /host/path/to/conf
-docker <span class="nb">rm </span>tmp
-</code></pre></div></div>
-
-<ul>
-  <li>/host/path/to/conf 修改成你自己的目录。</li>
-</ul>
-
-<p>对于简单的读写分离，需要 2 个配置文件，内容分别如下：</p>
-
-<p>server.yaml</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">authority</span><span class="pi">:</span>
-  <span class="na">users</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">user</span><span class="pi">:</span> <span class="s">admin</span>
-      <span class="na">password</span><span class="pi">:</span> <span class="s">YourPassword</span>
-  <span class="na">privilege</span><span class="pi">:</span>
-    <span class="na">type</span><span class="pi">:</span> <span class="s">ALL_PERMITTED</span>
-
-<span class="na">transaction</span><span class="pi">:</span>
-  <span class="na">defaultType</span><span class="pi">:</span> <span class="s">XA</span>
-  <span class="na">providerType</span><span class="pi">:</span> <span class="s">Atomikos</span>
-
-<span class="na">sqlParser</span><span class="pi">:</span>
-  <span class="na">sqlCommentParseEnabled</span><span class="pi">:</span> <span class="no">false</span>
-  <span class="na">sqlStatementCache</span><span class="pi">:</span>
-    <span class="na">initialCapacity</span><span class="pi">:</span> <span class="m">2000</span>
-    <span class="na">maximumSize</span><span class="pi">:</span> <span class="m">65535</span>
-  <span class="na">parseTreeCache</span><span class="pi">:</span>
-    <span class="na">initialCapacity</span><span class="pi">:</span> <span class="m">128</span>
-    <span class="na">maximumSize</span><span class="pi">:</span> <span class="m">1024</span>
-
-<span class="na">props</span><span class="pi">:</span>
-  <span class="na">max-connections-size-per-query</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">sql-show</span><span class="pi">:</span> <span class="no">true</span>
-</code></pre></div></div>
-
-<ul>
-  <li>这里的用户配置即是 SharingSphere-Proxy 模拟的 MySQL 引擎账号</li>
-</ul>
-
-<p>config-readwrite-splitting.yaml</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">databaseName</span><span class="pi">:</span> <span class="s">dbname</span>
-
-<span class="na">dataSources</span><span class="pi">:</span>
-  <span class="na">write_ds</span><span class="pi">:</span>
-    <span class="na">url</span><span class="pi">:</span> <span class="s">jdbc:mysql://xxxxxxxxx.rds.cn-northwest-1.amazonaws.com.cn:3306/dbname</span>
-    <span class="na">username</span><span class="pi">:</span> <span class="s">admin</span>
-    <span class="na">password</span><span class="pi">:</span> <span class="s">thisDBPwd</span>
-    <span class="na">connectionTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">30000</span>
-    <span class="na">idleTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">60000</span>
-    <span class="na">maxLifetimeMilliseconds</span><span class="pi">:</span> <span class="m">1800000</span>
-    <span class="na">maxPoolSize</span><span class="pi">:</span> <span class="m">50</span>
-    <span class="na">minPoolSize</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">read_ds_0</span><span class="pi">:</span>
-    <span class="na">url</span><span class="pi">:</span> <span class="s">jdbc:mysql://xxxxxxxxxt.cluster-ro-xxxx.rds.cn-northwest-1.amazonaws.com.cn:3306/dbname</span>
-    <span class="na">username</span><span class="pi">:</span> <span class="s">admin</span>
-    <span class="na">password</span><span class="pi">:</span> <span class="s">thisDBPwd</span>
-    <span class="na">connectionTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">30000</span>
-    <span class="na">idleTimeoutMilliseconds</span><span class="pi">:</span> <span class="m">60000</span>
-    <span class="na">maxLifetimeMilliseconds</span><span class="pi">:</span> <span class="m">1800000</span>
-    <span class="na">maxPoolSize</span><span class="pi">:</span> <span class="m">50</span>
-    <span class="na">minPoolSize</span><span class="pi">:</span> <span class="m">1</span>
-<span class="na">rules</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="kt">!READWRITE_SPLITTING</span>
-    <span class="na">dataSources</span><span class="pi">:</span>
-      <span class="na">readwrite_ds</span><span class="pi">:</span>
-        <span class="na">staticStrategy</span><span class="pi">:</span>
-          <span class="na">writeDataSourceName</span><span class="pi">:</span> <span class="s">write_ds</span>
-          <span class="na">readDataSourceNames</span><span class="pi">:</span>
-            <span class="pi">-</span> <span class="s">read_ds_0</span>
-        <span class="na">loadBalancerName</span><span class="pi">:</span> <span class="s">random</span>
-    <span class="na">loadBalancers</span><span class="pi">:</span>
-      <span class="na">random</span><span class="pi">:</span>
-        <span class="na">type</span><span class="pi">:</span> <span class="s">RANDOM</span>
-
-</code></pre></div></div>
-
-<ul>
-  <li>dbname url 密码这些需要修改成你自己的。</li>
-</ul>
-
-<p>上述配置的具体意思参考官方文档。</p>
-
-<h2 id="启动并验证">启动并验证</h2>
-
-<p>如果源数据使用 MySQL 引擎，需要下载 MySQL 的 JDBC 的驱动包到 ext-lib 中，如：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar
-</code></pre></div></div>
-
-<p>使用 docker 命令启动：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">-it</span> <span class="nt">--rm</span> <span class="se">\</span>
-    <span class="nt">-v</span> <span class="nv">$PWD</span>/conf:/opt/shardingsphere-proxy/conf <span class="se">\</span>
-    <span class="nt">-v</span> <span class="nv">$PWD</span>/ext-lib:/opt/shardingsphere-proxy/ext-lib <span class="se">\</span>
-    <span class="nt">-e</span> <span class="nv">PORT</span><span class="o">=</span>3308 <span class="nt">-p</span> 3306:3308 apache/shardingsphere-proxy
-</code></pre></div></div>
-
-<ul>
-  <li>上述命令启动了 SharingSphere-Proxy，并把端口映射到了主机的 3306 端口。</li>
-</ul>
-
-<p>启动之后，则可以在客户端透明访问 SharingSphere-Proxy 了。</p>
-
-<p>下面使用 MySQL 的标准客户端进行测试，如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mysql <span class="nt">-h</span> 172.31.14.22 <span class="nt">-uadmin</span> <span class="nt">-p</span>
-</code></pre></div></div>
-
-<p>输入密码后，可以直达 MySQL:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ubuntu@ip-172-31-8-115:~<span class="nv">$ </span>mysql <span class="nt">-h</span> 172.31.14.22 <span class="nt">-uadmin</span> <span class="nt">-p</span>
-Enter password:
-Welcome to the MySQL monitor.  Commands end with <span class="p">;</span> or <span class="se">\g</span><span class="nb">.</span>
-Your MySQL connection <span class="nb">id </span>is 2
-Server version: 5.7.22-ShardingSphere-Proxy 5.3.1 MySQL Community Server <span class="o">(</span>GPL<span class="o">)</span>
-
-Copyright <span class="o">(</span>c<span class="o">)</span> 2000, 2023, Oracle and/or its affiliates.
-
-Oracle is a registered trademark of Oracle Corporation and/or its
-affiliates. Other names may be trademarks of their respective
-owners.
-
-Type <span class="s1">'help;'</span> or <span class="s1">'\h'</span> <span class="k">for </span>help. Type <span class="s1">'\c'</span> to clear the current input statement.
-
-mysql&gt;
-</code></pre></div></div>
-
-<p>创建数据库，use 一下，创建一个表。</p>
-
-<pre><code class="language-SQL">CREATE TABLE student 
-( 
-  id int NOT NULL AUTO_INCREMENT, 
-  t varchar(50) NULL, 
-  PRIMARY KEY (id) 
-);
-</code></pre>
-
-<p>测试一下如下的 SQL</p>
-
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">student</span> <span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="s1">'1'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'2'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'3'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'4'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'5'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'6'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'7'</span><span class="p">),</span> <span class="p">(</span><span class="s1">'8'</span><span class="p">);</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">from</span> <span class="n">student</span><span class="p">;</span>
-</code></pre></div></div>
-
-<p>期望的结果是，他能正确路由。SharingSphere-Proxy 的 log 显示如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
-<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.643 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Logic SQL: INSERT INTO student <span class="o">(</span>t<span class="o">)</span> values <span class="o">(</span><span class="s1">'1'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'2'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'3'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'4'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'5'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'6'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'7'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'8'</span><span class="o">)</span>
-<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.644 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Actual SQL: write_ds ::: INSERT INTO student <span class="o">(</span>t<span class="o">)</span> values <span class="o">(</span><span class="s1">'1'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'2'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'3'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'4'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'5'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'6'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'7'</span><span class="o">)</span>, <span class="o">(</span><span class="s1">'8'</span><span class="o">)</span>
-<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.685 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Logic SQL: SELECT <span class="k">*</span> from student
-<span class="o">[</span>INFO <span class="o">]</span> 2023-02-17 03:52:50.685 <span class="o">[</span>Connection-2-ThreadExecutor] ShardingSphere-SQL - Actual SQL: read_ds_0 ::: SELECT <span class="k">*</span> from student
-...
-</code></pre></div></div>
-
-<p>由于同步数据需要一些时间，所以上述测试的 SQL 把 INSERT 和 SELECT 操作写在了一句话里。
-可以看到，插入成功之后，并不总是能直接拿到刚刚插入的结果，这个也证实了查询操作的确路由到了 ro 的 endpoint 上了。</p>
-
-<p>写完收工！</p>
-
-<hr />
-
-<p>参考：</p>
-
-<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/startup/docker/">https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/startup/docker/</a></p>
-
-<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/yaml-config/">https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/yaml-config/</a></p>
-
-<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/readwrite-splitting/">https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/readwrite-splitting/</a></p>]]></content><author><name>啤酒云</name></author><category term="data" /><category term="SharingSphere" /><summary type="html"><![CDATA[云厂商提供的数据库读写分离，通常会提供多个 url/endpoint 供开发者使用，一般需要应用自己去区分读写场景进行程序改造。现在有了这种数据访问的分布式中间件，自动对 SQL 语句进行检测和路由。本文体验了一下 SharingSphere-Proxy，并记录了一下配置和验证过程。]]></summary></entry></feed>
+<p>通过以上的代码和设置，我们即可将攻击源直接隔离。</p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[在针对 AWS 的网络攻击过程中，有一类攻击是暴力破解 root 账号，此类攻击会被 GuardDuty 监控并记录到。当发生此类暴力破解事件的时候，可以通过 Lambda 来对攻击源进行及时封禁。]]></summary></entry></feed>

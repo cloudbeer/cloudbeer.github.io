@@ -1,4 +1,109 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-07T07:32:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 TLS 1.1 过期后上传 S3 的策略</title><link href="https://youbug.cn/2023/05/post-s3-tls-outdate.html" rel="alternate" type="text/html" title="在 TLS 1.1 过期后上传 S3 的策略" /><published>2023-05-07T01:10:49+00:00</published><updated>2023-05-07T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/post-s3-tls-outdate</id><content type="html" xml:base="https://youbug.cn/2023/05/post-s3-tls-outdate.html"><![CDATA[<p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-10T06:15:57+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 SageMaker 上部署 Huggingface 模型</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型" /><published>2023-05-10T02:13:33+00:00</published><updated>2023-05-10T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker.html"><![CDATA[<p>在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。</p>
+
+<h2 id="创建-iam-角色">创建 IAM 角色</h2>
+
+<p>往 SageMaker 部署模型需要一个角色，先创建一个角色，如果你之前运行过 SageMaker，大抵应该有了这个角色。</p>
+
+<ul>
+  <li>Trusted entity type: AWS service</li>
+  <li>Use cases for other AWS services: SageMaker</li>
+  <li>勾选上 SageMaker - Execution</li>
+</ul>
+
+<p>你会看到他已经选择了 AmazonSageMakerFullAccess 策略，点击下一步。</p>
+
+<p>把这个角色命名为 HuggingfaceExecuteRole  或者其他。</p>
+
+<h2 id="代码分段解读">代码分段解读</h2>
+
+<blockquote>
+  <p>你可以在 VSCode 里创建一个 xxx.ipynb 的文件，分段执行下面的代码。VSCode 提供了 python 和 notebook 相关插件。</p>
+
+  <p>另外，你需要在本机配置正确的 AKSK 和 AWS Region。</p>
+
+  <p>boto3 和 sagemaker 这俩依赖库要在本机安装一下。</p>
+</blockquote>
+
+<h3 id="定义模型">定义模型</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
+<span class="kn">from</span> <span class="nn">sagemaker.huggingface</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
+
+<span class="n">hub</span> <span class="o">=</span>  <span class="p">{</span>
+ <span class="s">'HF_MODEL_ID'</span><span class="p">:</span><span class="s">'bert-base-chinese'</span><span class="p">,</span>
+ <span class="s">'HF_TASK'</span><span class="p">:</span><span class="s">'fill-mask'</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>这里定义了模型的名字和需要做的任务名称，SageMaker 会动态拉取 Huggingface 的模型。</li>
+</ul>
+
+<h3 id="部署模型">部署模型</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
+<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)</span>
+
+<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
+ <span class="n">transformers_version</span><span class="o">=</span><span class="s">'4.17.0'</span><span class="p">,</span>
+ <span class="n">pytorch_version</span><span class="o">=</span><span class="s">'1.10.2'</span><span class="p">,</span>
+ <span class="n">py_version</span><span class="o">=</span><span class="s">'py38'</span><span class="p">,</span>
+ <span class="n">env</span><span class="o">=</span><span class="n">hub</span><span class="p">,</span>
+ <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">],</span> 
+<span class="p">)</span>
+
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
+ <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
+ <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.m5.xlarge'</span> 
+<span class="p">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li>这一步我们定义了模型运行的环境，角色和运行的机型，数量。</li>
+  <li>role 这里需要注意一下，他的入参是 Role 的 Arn。</li>
+  <li>这一步完成之后，可以到 SageMaker 后台看到计算资源/Endpoint 已经成功部署，位置在 Inference - Endpoints。</li>
+</ul>
+
+<h3 id="运行推理">运行推理</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
+ <span class="s">'inputs'</span><span class="p">:</span> <span class="s">"哈哈，我正在吃[MASK]。"</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>结果为：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[{</span><span class="s1">'score'</span>: 0.26574137806892395,
+  <span class="s1">'token'</span>: 1450,
+  <span class="s1">'token_str'</span>: <span class="s1">'呢'</span>,
+  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 呢 。'</span><span class="o">}</span>,
+ <span class="o">{</span><span class="s1">'score'</span>: 0.23924605548381805,
+  <span class="s1">'token'</span>: 7649,
+  <span class="s1">'token_str'</span>: <span class="s1">'饭'</span>,
+  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 饭 。'</span><span class="o">}</span>,
+ <span class="o">{</span><span class="s1">'score'</span>: 0.07031755149364471,
+  <span class="s1">'token'</span>: 1557,
+  <span class="s1">'token_str'</span>: <span class="s1">'啊'</span>,
+  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 啊 。'</span><span class="o">}</span>,
+ <span class="o">{</span><span class="s1">'score'</span>: 0.02992616966366768,
+  <span class="s1">'token'</span>: 1521,
+  <span class="s1">'token_str'</span>: <span class="s1">'哦'</span>,
+  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 哦 。'</span><span class="o">}</span>,
+ <span class="o">{</span><span class="s1">'score'</span>: 0.029010694473981857,
+  <span class="s1">'token'</span>: 7613,
+  <span class="s1">'token_str'</span>: <span class="s1">'飯'</span>,
+  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 飯 。'</span><span class="o">}]</span>
+</code></pre></div></div>
+
+<h3 id="清理资源">清理资源</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">delete_endpoint</span><span class="p">()</span>
+</code></pre></div></div>
+
+<h2 id="总结">总结</h2>
+
+<p>整个过程还是非常的方便，Endpoint 的创建的速度非常快（本示例用了 2 分半钟），省去了安装运行环境的痛苦，爽的一匹啊！</p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。]]></summary></entry><entry><title type="html">在 TLS 1.1 过期后上传 S3 的策略</title><link href="https://youbug.cn/2023/05/post-s3-tls-outdate.html" rel="alternate" type="text/html" title="在 TLS 1.1 过期后上传 S3 的策略" /><published>2023-05-07T01:10:49+00:00</published><updated>2023-05-07T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/post-s3-tls-outdate</id><content type="html" xml:base="https://youbug.cn/2023/05/post-s3-tls-outdate.html"><![CDATA[<p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
 
 <h2 id="使用-http">使用 http</h2>
 
@@ -1552,262 +1657,4 @@ Finished: SUCCESS
 
 <p>References：</p>
 
-<p><a href="https://plugins.Jenkins.io/pipeline-aws/">Jenkins plugin: Pipeline: AWS Steps</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="aws" /><summary type="html"><![CDATA[在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。]]></summary></entry><entry><title type="html">使用 Lambda 配合 GuardDuty 事件封禁攻击源</title><link href="https://youbug.cn/2023/02/guardduty-lambda-block.html" rel="alternate" type="text/html" title="使用 Lambda 配合 GuardDuty 事件封禁攻击源" /><published>2023-02-23T05:10:49+00:00</published><updated>2023-02-23T05:10:49+00:00</updated><id>https://youbug.cn/2023/02/guardduty-lambda-block</id><content type="html" xml:base="https://youbug.cn/2023/02/guardduty-lambda-block.html"><![CDATA[<p>在针对 AWS 的网络攻击过程中，有一类攻击是暴力破解 root 账号，此类攻击会被 GuardDuty 监控并记录到。当发生此类暴力破解事件的时候，可以通过 Lambda 来对攻击源进行及时封禁。</p>
-
-<h2 id="lambda-函数">Lambda 函数</h2>
-
-<p>下面的 Lambda 函数是基于 GuardDuty 对一个 RDP 暴力破解事件进行的 响应，使用 nodejs 编写。</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">AWS</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">aws-sdk</span><span class="dl">'</span><span class="p">);</span>
-<span class="kd">const</span> <span class="nx">innerCidrs</span> <span class="o">=</span> <span class="p">[</span><span class="dl">"</span><span class="s2">172.31.0.0/16</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">172.33.0.0/16</span><span class="dl">"</span><span class="p">];</span> <span class="c1">//内网 IP cidr。</span>
-<span class="kd">const</span> <span class="nx">protectedVpcIds</span> <span class="o">=</span> <span class="p">[</span><span class="dl">'</span><span class="s1">vpc-xxxxxxxx</span><span class="dl">'</span><span class="p">];</span> <span class="c1">//当外部攻击时候，需要保护的 VPC。</span>
-<span class="kd">const</span> <span class="nx">forbiddenSgId</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">sg-xxxxxxxxxxxx</span><span class="dl">"</span><span class="p">;</span> <span class="c1">//预定义的隔离安全组 ID，此安全组规则是全部封禁。</span>
-<span class="kd">const</span> <span class="nx">region</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">cn-northwest-1</span><span class="dl">'</span><span class="p">;</span>
-<span class="nx">AWS</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">update</span><span class="p">({</span><span class="nx">region</span><span class="p">});</span>
-<span class="kd">const</span> <span class="nx">ec2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">AWS</span><span class="p">.</span><span class="nx">EC2</span><span class="p">();</span>
-<span class="nx">exports</span><span class="p">.</span><span class="nx">handler</span> <span class="o">=</span> <span class="k">async</span> <span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
-  <span class="kd">const</span> <span class="nx">sourceIp</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">network</span><span class="p">.</span><span class="nx">sourceIpV4</span><span class="p">;</span>
-  <span class="kd">const</span> <span class="nx">attackType</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">type</span><span class="p">;</span>
-  <span class="kd">const</span> <span class="nx">isInnerIp</span> <span class="o">=</span> <span class="nx">checkInnerIp</span><span class="p">(</span><span class="nx">sourceIp</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="nx">isInnerIp</span> <span class="o">&amp;&amp;</span> <span class="nx">attackType</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="dl">"</span><span class="s2">RDPBruteForce</span><span class="dl">"</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">这是内部 IP，直接修改目标主机安全组进行隔离。</span><span class="dl">"</span><span class="p">);</span>
-    <span class="k">try</span> <span class="p">{</span>
-      <span class="kd">const</span> <span class="nx">ec2</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">findEC2</span><span class="p">(</span><span class="nx">sourceIp</span><span class="p">);</span>
-      <span class="k">if</span> <span class="p">(</span><span class="nx">ec2</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">await</span> <span class="nx">banInnerEc2</span><span class="p">(</span><span class="nx">ec2</span><span class="p">.</span><span class="nx">InstanceId</span><span class="p">);</span>
-      <span class="p">}</span>
-    <span class="p">}</span><span class="k">catch</span><span class="p">(</span><span class="nx">ex</span><span class="p">){</span>
-      <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">ex</span><span class="p">);</span>
-    <span class="p">}</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">这是外部 IP，建议调用 网络防火墙 API（如 fortnet）进行网络阻断。</span><span class="dl">"</span><span class="p">);</span>
-    
-    <span class="c1">// await banExternalIp(sourceIp);</span>
-  <span class="p">}</span>
-  <span class="kd">const</span> <span class="nx">response</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="na">statusCode</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
-      <span class="na">body</span><span class="p">:</span> <span class="dl">"</span><span class="s2">OK</span><span class="dl">"</span>
-  <span class="p">};</span>
-  <span class="k">return</span> <span class="nx">response</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="c1">// 判断是否是内部 IP</span>
-<span class="kd">function</span> <span class="nx">checkInnerIp</span><span class="p">(</span><span class="nx">ipAddress</span><span class="p">){</span>
-  <span class="kd">const</span> <span class="nx">cidrLen</span> <span class="o">=</span> <span class="nx">innerCidrs</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
-  <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="nx">i</span><span class="o">&lt;</span><span class="nx">cidrLen</span><span class="p">;</span><span class="nx">i</span><span class="o">++</span><span class="p">){</span>
-    <span class="k">if</span> <span class="p">(</span><span class="nx">checkIpInCidr</span><span class="p">(</span><span class="nx">innerCidrs</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">ipAddress</span><span class="p">))</span> <span class="p">{</span>
-      <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-  <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="kd">function</span> <span class="nx">checkIpInCidr</span><span class="p">(</span><span class="nx">cidr</span><span class="p">,</span> <span class="nx">ipAddress</span><span class="p">){</span>
-  <span class="kd">const</span> <span class="nx">ipInt</span> <span class="o">=</span> <span class="nx">ipToInt</span><span class="p">(</span><span class="nx">ipAddress</span><span class="p">);</span>
-  <span class="kd">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="nx">parseCIDR</span><span class="p">(</span><span class="nx">cidr</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="nx">ipInt</span> <span class="o">&gt;=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">start</span> <span class="o">&amp;&amp;</span> <span class="nx">ipInt</span><span class="o">&lt;=</span><span class="nx">res</span><span class="p">.</span><span class="nx">end</span><span class="p">){</span>
-    <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="kd">function</span> <span class="nx">ipToInt</span><span class="p">(</span><span class="nx">ip</span><span class="p">){</span>
-  <span class="kd">const</span> <span class="nx">subnet</span> <span class="o">=</span> <span class="nx">ip</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">.</span><span class="dl">'</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="nb">Number</span><span class="p">);</span>
-  <span class="k">return</span> <span class="p">(</span><span class="nx">subnet</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">24</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nx">subnet</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nx">subnet</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="nx">subnet</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
-<span class="p">}</span>
-
-<span class="kd">function</span> <span class="nx">parseCIDR</span><span class="p">(</span><span class="nx">cidr</span><span class="p">)</span> <span class="p">{</span>
-  <span class="kd">const</span> <span class="p">[</span><span class="nx">subnetAddress</span><span class="p">,</span> <span class="nx">mask</span><span class="p">]</span> <span class="o">=</span> <span class="nx">cidr</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">/</span><span class="dl">'</span><span class="p">);</span>
-  <span class="kd">const</span> <span class="nx">maskBits</span> <span class="o">=</span> <span class="nb">Number</span><span class="p">(</span><span class="nx">mask</span><span class="p">);</span>
-  <span class="kd">const</span> <span class="nx">subnetInt</span> <span class="o">=</span> <span class="nx">ipToInt</span><span class="p">(</span><span class="nx">subnetAddress</span><span class="p">);</span>
-  <span class="kd">const</span> <span class="nx">subnetMaskInt</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="nx">maskBits</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="mi">32</span> <span class="o">-</span> <span class="nx">maskBits</span><span class="p">);</span>
-  <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nx">subnetInt</span> <span class="o">&amp;</span> <span class="nx">subnetMaskInt</span><span class="p">;</span>
-  <span class="kd">const</span> <span class="nx">end</span> <span class="o">=</span> <span class="nx">start</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="mi">32</span> <span class="o">-</span> <span class="nx">maskBits</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="k">return</span> <span class="p">{</span> <span class="nx">start</span><span class="p">,</span> <span class="nx">end</span> <span class="p">};</span>
-<span class="p">}</span>
-
-<span class="c1">//通过 ip 寻找 EC2 实例</span>
-<span class="kd">function</span> <span class="nx">findEC2</span><span class="p">(</span><span class="nx">privateIpAddress</span><span class="p">){</span>
-  <span class="kd">const</span> <span class="nx">ec2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">AWS</span><span class="p">.</span><span class="nx">EC2</span><span class="p">({</span> <span class="nx">region</span><span class="p">,</span> <span class="na">apiVersion</span><span class="p">:</span> <span class="dl">'</span><span class="s1">2016-11-15</span><span class="dl">'</span> <span class="p">});</span>
-  <span class="kd">const</span> <span class="nx">params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="na">Filters</span><span class="p">:</span> <span class="p">[</span>
-      <span class="p">{</span>
-        <span class="na">Name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">private-ip-address</span><span class="dl">'</span><span class="p">,</span>
-        <span class="na">Values</span><span class="p">:</span> <span class="p">[</span><span class="nx">privateIpAddress</span><span class="p">],</span>
-      <span class="p">},</span>
-    <span class="p">],</span>
-  <span class="p">};</span>
-  <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
-    <span class="nx">ec2</span><span class="p">.</span><span class="nx">describeInstances</span><span class="p">(</span><span class="nx">params</span><span class="p">,</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
-      <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span> <span class="nx">reject</span><span class="p">(</span><span class="nx">err</span><span class="p">);</span> <span class="p">}</span>
-      <span class="k">else</span> <span class="p">{</span> 
-        <span class="kd">const</span> <span class="nx">instances</span> <span class="o">=</span> <span class="nx">data</span><span class="p">.</span><span class="nx">Reservations</span><span class="p">.</span><span class="nx">flatMap</span><span class="p">(</span><span class="nx">reservation</span> <span class="o">=&gt;</span> <span class="nx">reservation</span><span class="p">.</span><span class="nx">Instances</span><span class="p">);</span>
-         <span class="k">if</span> <span class="p">(</span><span class="nx">instances</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-           <span class="nx">resolve</span><span class="p">(</span><span class="kc">null</span><span class="p">);</span>
-          <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-            <span class="kd">const</span> <span class="nx">instance</span> <span class="o">=</span> <span class="nx">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
-            <span class="nx">resolve</span><span class="p">(</span><span class="nx">instance</span><span class="p">);</span>
-          <span class="p">}</span>
-        <span class="nx">resolve</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span> 
-      <span class="p">}</span>
-    <span class="p">});</span>
-  <span class="p">});</span>
-<span class="p">}</span>
-
-<span class="c1">// 封禁 VPC 内 EC2</span>
-<span class="kd">function</span> <span class="nx">banInnerEc2</span><span class="p">(</span><span class="nx">instanceId</span><span class="p">){</span>
-  <span class="kd">const</span> <span class="nx">params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="na">InstanceId</span><span class="p">:</span> <span class="nx">instanceId</span><span class="p">,</span>
-    <span class="na">Groups</span><span class="p">:</span> <span class="p">[</span><span class="nx">forbiddenSgId</span><span class="p">]</span>
-  <span class="p">};</span>
-  <span class="k">return</span> <span class="nx">ec2</span><span class="p">.</span><span class="nx">modifyInstanceAttribute</span><span class="p">(</span><span class="nx">params</span><span class="p">).</span><span class="nx">promise</span><span class="p">();</span>
-<span class="p">}</span>
-
-
-<span class="k">async</span> <span class="kd">function</span> <span class="nx">banExternalIp</span><span class="p">(</span><span class="nx">ip</span><span class="p">){</span>
-  <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">vpcId</span> <span class="k">of</span> <span class="nx">protectedVpcIds</span><span class="p">){</span>
-    <span class="k">await</span> <span class="nx">banExternalIpInVpc</span><span class="p">(</span><span class="nx">vpcId</span><span class="p">,</span> <span class="nx">ip</span><span class="p">);</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1">// TODO: 绑定子网。</span>
-<span class="c1">// 需要注意：多 NACL 策略需要确认其优先顺序，通常修改 NACL 会有网络风险，实际环境中建议通过外部防火墙进行封禁。</span>
-<span class="k">async</span> <span class="kd">function</span> <span class="nx">banExternalIpInVpc</span><span class="p">(</span><span class="nx">vpcId</span><span class="p">,</span> <span class="nx">ip</span><span class="p">){</span>
-  <span class="kd">const</span> <span class="nx">aclParams</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="na">VpcId</span><span class="p">:</span> <span class="nx">vpcId</span>
-  <span class="p">};</span>
-  
-  <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">ec2</span><span class="p">.</span><span class="nx">createNetworkAcl</span><span class="p">(</span><span class="nx">aclParams</span><span class="p">).</span><span class="nx">promise</span><span class="p">();</span>
-  <span class="kd">const</span> <span class="nx">aclId</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">NetworkAcl</span><span class="p">.</span><span class="nx">NetworkAclId</span><span class="p">;</span>
-  
-  <span class="kd">const</span> <span class="nx">allowAllInRuleParams</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="na">NetworkAclId</span><span class="p">:</span> <span class="nx">aclId</span><span class="p">,</span>
-    <span class="na">RuleNumber</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
-    <span class="na">Protocol</span><span class="p">:</span> <span class="dl">'</span><span class="s1">-1</span><span class="dl">'</span><span class="p">,</span>
-    <span class="na">RuleAction</span><span class="p">:</span> <span class="dl">'</span><span class="s1">allow</span><span class="dl">'</span><span class="p">,</span>
-    <span class="na">Egress</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-    <span class="na">CidrBlock</span><span class="p">:</span> <span class="s2">`0.0.0.0/0`</span>
-  <span class="p">};</span>
-  <span class="kd">const</span> <span class="nx">allowAllOutRuleParams</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="na">NetworkAclId</span><span class="p">:</span> <span class="nx">aclId</span><span class="p">,</span>
-    <span class="na">RuleNumber</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
-    <span class="na">Protocol</span><span class="p">:</span> <span class="dl">'</span><span class="s1">-1</span><span class="dl">'</span><span class="p">,</span>
-    <span class="na">RuleAction</span><span class="p">:</span> <span class="dl">'</span><span class="s1">allow</span><span class="dl">'</span><span class="p">,</span>
-    <span class="na">Egress</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-    <span class="na">CidrBlock</span><span class="p">:</span> <span class="s2">`0.0.0.0/0`</span>
-  <span class="p">};</span>
-  
-  <span class="kd">const</span> <span class="nx">denyRuleParams</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="na">NetworkAclId</span><span class="p">:</span> <span class="nx">aclId</span><span class="p">,</span>
-    <span class="na">RuleNumber</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="na">Protocol</span><span class="p">:</span> <span class="dl">'</span><span class="s1">-1</span><span class="dl">'</span><span class="p">,</span>
-    <span class="na">RuleAction</span><span class="p">:</span> <span class="dl">'</span><span class="s1">deny</span><span class="dl">'</span><span class="p">,</span>
-    <span class="na">Egress</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-    <span class="na">CidrBlock</span><span class="p">:</span> <span class="s2">`</span><span class="p">${</span><span class="nx">ip</span><span class="p">}</span><span class="s2">/32`</span>
-  <span class="p">};</span>
-  
-  <span class="k">await</span> <span class="nx">ec2</span><span class="p">.</span><span class="nx">createNetworkAclEntry</span><span class="p">(</span><span class="nx">allowAllInRuleParams</span><span class="p">).</span><span class="nx">promise</span><span class="p">();</span>
-  <span class="k">await</span> <span class="nx">ec2</span><span class="p">.</span><span class="nx">createNetworkAclEntry</span><span class="p">(</span><span class="nx">allowAllOutRuleParams</span><span class="p">).</span><span class="nx">promise</span><span class="p">();</span>
-  <span class="k">await</span> <span class="nx">ec2</span><span class="p">.</span><span class="nx">createNetworkAclEntry</span><span class="p">(</span><span class="nx">denyRuleParams</span><span class="p">).</span><span class="nx">promise</span><span class="p">();</span>
-  
-<span class="p">}</span>
-
-</code></pre></div></div>
-
-<p>程序思路：</p>
-
-<ul>
-  <li>从攻击事件中得到攻击源的 IP，判断 IP 是否是内网IP。</li>
-  <li>如果是 内网 IP，那么则找到当前 IP 对应的主机，并把此主机加入一个特殊的安全组。</li>
-  <li>如果是外网 IP，则调用网络防火墙进行封禁（或者通过设置 NACL 进行封禁）。</li>
-  <li>此例子仅适用 IPv4。</li>
-</ul>
-
-<p>假设以上函数命名为 <code class="language-plaintext highlighter-rouge">LockTarget</code>。</p>
-
-<p>现在模拟一个 GuardDuty 的攻击事件，我测试的 GuardDuty 的事件格式如下：</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"12345678-1234-1234-1234-123456789012"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"detail-type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GuardDuty Finding"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"aws.guardduty"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"account"</span><span class="p">:</span><span class="w"> </span><span class="s2">"123456789012"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T17:01:23Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"region"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"AwsEc2Instance"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"i-01234567890abcdef"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"detail"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nl">"schemaVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"3.3"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"accountId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"123456789012"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"partition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"aws"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"region"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cn-northwest-1"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"EXAMPLE-GUARDDUTY-FINDING-ID"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"arn"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arn:aws:guardduty:us-west-2:123456789012:detector/EXAMPLE_DETECTOR_ID/finding/EXAMPLE-GUARDDUTY-FINDING-ID"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"UnauthorizedAccess:EC2/RDPBruteForce"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"createdAt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T16:59:33.185Z"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"updatedAt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T16:59:33.185Z"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"severity"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"confidence"</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"EC2 Instance 123.45.67.89 is involved in RDP brute force attack"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"...."</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"resource"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"resourceType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Instance"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"instanceDetails"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"i-01234567890abcdef"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"instanceType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"t2.micro"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"launchTime"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T16:46:47Z"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"windows"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"networkInterfaces"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-          </span><span class="p">{</span><span class="w">
-            </span><span class="nl">"ipv4Addresses"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-              </span><span class="s2">"123.45.67.89"</span><span class="w">
-            </span><span class="p">],</span><span class="w">
-            </span><span class="nl">"networkInterfaceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eni-01234567890abcdef"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"subnetId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subnet-01234567890abcdef"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"vpcId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vpc-01234567890abcdef"</span><span class="w">
-          </span><span class="p">}</span><span class="w">
-        </span><span class="p">]</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nl">"service"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"serviceName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"guardduty"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"detectorId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"EXAMPLE_DETECTOR_ID"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"eventFirstSeen"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T16:46:47Z"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"eventLastSeen"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T16:46:47Z"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"archived"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nl">"additionalInfo"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"ThreatListName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Example Threat List"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"DetectTime"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-25T16:46:47Z"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"DetectContentType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"application/octet-stream"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"AttackType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RDP brute force"</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nl">"network"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"direction"</span><span class="p">:</span><span class="w"> </span><span class="s2">"IN"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RDP"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"sourceIpV4"</span><span class="p">:</span><span class="w"> </span><span class="s2">"192.31.8.115"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<ul>
-  <li>上述代码出自于 ChatGPT，和实际的 GuardDuty 事件可能会稍有出入，请使用真实的 JSON 结构获取攻击源 IP。</li>
-</ul>
-
-<h2 id="配置">配置</h2>
-
-<p>现在在 EventBridge 中创建一个规则:</p>
-
-<ul>
-  <li>选择具有事件模式的规则</li>
-  <li>事件模式选择 GuardDuty, GuardDuty Findings</li>
-  <li>目标选择：Lambda 函数, LockTarget</li>
-</ul>
-
-<p>通过以上的代码和设置，我们即可将攻击源直接隔离。</p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[在针对 AWS 的网络攻击过程中，有一类攻击是暴力破解 root 账号，此类攻击会被 GuardDuty 监控并记录到。当发生此类暴力破解事件的时候，可以通过 Lambda 来对攻击源进行及时封禁。]]></summary></entry></feed>
+<p><a href="https://plugins.Jenkins.io/pipeline-aws/">Jenkins plugin: Pipeline: AWS Steps</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="aws" /><summary type="html"><![CDATA[在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。]]></summary></entry></feed>

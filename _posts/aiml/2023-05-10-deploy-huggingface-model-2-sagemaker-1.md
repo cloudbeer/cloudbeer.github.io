@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "在 SageMaker 上部署 Huggingface 模型"
+title:  "在 SageMaker 上部署 Huggingface 模型 (一)"
 date:   2023-05-10 10:13:33 +0800
 author: 啤酒云
 categories: aiml, aws
@@ -109,3 +109,8 @@ predictor.delete_endpoint()
 ## 总结
 
 整个过程还是非常的方便，Endpoint 的创建的速度非常快（本示例用了 2 分半钟），省去了安装运行环境的痛苦，爽的一匹啊！
+
+---
+相关
+
+[在 SageMaker 上部署 Huggingface 模型 (二)](deploy-huggingface-model-2-sagemaker-2.html)

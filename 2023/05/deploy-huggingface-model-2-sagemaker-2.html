@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>在 SageMaker 上部署 Huggingface 模型 (二) | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="在 SageMaker 上部署 Huggingface 模型 (二)" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。" />
+<meta property="og:description" content="在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。" />
+<link rel="canonical" href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html" />
+<meta property="og:url" content="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-05-11T08:13:33+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="在 SageMaker 上部署 Huggingface 模型 (二)" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-05-11T08:13:33+00:00","datePublished":"2023-05-11T08:13:33+00:00","description":"在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。","headline":"在 SageMaker 上部署 Huggingface 模型 (二)","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html"},"url":"https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">在 SageMaker 上部署 Huggingface 模型 (二)</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-05-11T08:13:33+00:00" itemprop="datePublished">2023-05-11
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。</p>
+
+<h2 id="背景">背景</h2>
+
+<p>在 <a href="deploy-huggingface-model-2-sagemaker-1.html">上一篇文章</a> 里，我们直接使用了 Huggingface 官方提供的部署和推理代码中，并使用了他提供了默认的 HF_TASK，如：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">hub</span> <span class="o">=</span>  <span class="p">{</span>
+ <span class="s">'HF_MODEL_ID'</span><span class="p">:</span><span class="s">'bert-base-chinese'</span><span class="p">,</span>
+ <span class="s">'HF_TASK'</span><span class="p">:</span><span class="s">'fill-mask'</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>现在我们计划做一个推理 embeddings 文本转向量任务，使用自己的推理代码。</p>
+
+<h2 id="代码准备">代码准备</h2>
+
+<p>本文选取了 distiluse-base-multilingual-cased-v2  这个模型，这个模型可以推理多语言的 embeddings，他在 Huggingface 上没有部署到 SageMaker 的选项。</p>
+
+<p>先下载这个代码仓库：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git lfs <span class="nb">install
+</span>git clone https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2
+</code></pre></div></div>
+
+<p>进入这个代码仓库，在编辑器里增加两个文件，一个 推理文件 <code class="language-plaintext highlighter-rouge">code/inference.py</code>，一个依赖库文件 <code class="language-plaintext highlighter-rouge">code/requirements.txt</code>。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>distiluse-base-multilingual-cased-v2
+<span class="nb">mkdir </span>code
+<span class="nb">touch </span>code/inference.py
+<span class="nb">touch </span>code/requirements.txt 
+</code></pre></div></div>
+
+<p>我们需要在 <code class="language-plaintext highlighter-rouge">inference.py</code> 里添加 model_fn 和 predict_fn 这俩函数，这个文件如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sentence_transformers</span> <span class="kn">import</span> <span class="n">SentenceTransformer</span>
+
+<span class="k">def</span> <span class="nf">model_fn</span><span class="p">(</span><span class="n">model_dir</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">SentenceTransformer</span><span class="p">(</span><span class="n">model_dir</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">predict_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">model</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>在 <code class="language-plaintext highlighter-rouge">requirements.txt</code> 里加入 sentence_transformers 的引用：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sentence_transformers==2.2.2
+</code></pre></div></div>
+
+<h2 id="打包上传">打包上传</h2>
+
+<p>现在把这个库打包上传到 S3：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">tar </span>zcvf distiluse-base-multilingual-cased-v2.tar.gz <span class="k">*</span>
+
+aws s3 <span class="nb">cp </span>distiluse-base-multilingual-cased-v2.tar.gz <span class="se">\</span>
+  s3://cloudbeer-llm-models/sentence-transformers/distiluse-base-multilingual-cased-v2.tar.gz
+</code></pre></div></div>
+
+<ul>
+  <li>创建你自己的存储桶，并保证你有足够的权限。</li>
+  <li>模型都很大，上传前记得测试一下你的脚本。</li>
+</ul>
+
+<h2 id="部署模型">部署模型</h2>
+
+<p>与上一篇差不多，先给 <code class="language-plaintext highlighter-rouge">HuggingfaceExecuteRole</code> 这个 IAM Role 加入策略 <code class="language-plaintext highlighter-rouge">AmazonS3ReadOnlyAccess</code>。</p>
+
+<p>完整的部署代码如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
+<span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">cosine</span>
+
+<span class="c1"># 此处定义了一个数组相似度计算的函数
+</span><span class="k">def</span> <span class="nf">similarity</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">array</span><span class="p">(</span><span class="n">v1</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">array</span><span class="p">(</span><span class="n">v2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="o">-</span><span class="n">cosine</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">)</span>
+
+<span class="n">s3_model</span> <span class="o">=</span> <span class="s">"s3://cloudbeer-llm-models/sentence-transformers/distiluse-base-multilingual-cased-v2.tar.gz"</span>
+
+<span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
+<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">]</span>
+
+<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
+  <span class="n">model_data</span><span class="o">=</span><span class="n">s3_model</span><span class="p">,</span>      
+  <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>                    
+  <span class="n">transformers_version</span><span class="o">=</span><span class="s">"4.26"</span><span class="p">,</span>  
+  <span class="n">pytorch_version</span><span class="o">=</span><span class="s">"1.13"</span><span class="p">,</span>
+  <span class="n">py_version</span><span class="o">=</span><span class="s">'py39'</span><span class="p">,</span>           
+<span class="p">)</span>
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
+  <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+  <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.m5.xlarge'</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>现在运行一下推理试试：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">res</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"在 SageMaker 上部署 Huggingface 模型"</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">),</span> <span class="n">res</span><span class="p">[:</span><span class="mi">10</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p>结果如下：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>512 [-0.08045165985822678, 0.028644787147641182, 0.01914004050195217, -0.02148452214896679, 0.017731796950101852, -0.05328822508454323, 0.004828637931495905, 0.015703866258263588, -0.017463965341448784, -0.01227850466966629]
+</code></pre></div></div>
+
+<p>测试相似度：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">res1</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"抱歉"</span><span class="p">)</span>
+<span class="n">res2</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"Sorry"</span><span class="p">)</span>
+<span class="n">sim1</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">res2</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">sim1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>结果为：<code class="language-plaintext highlighter-rouge">0.9197762458059101</code></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sim2</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"对不起"</span><span class="p">))</span>
+<span class="n">sim3</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"Je mi líto"</span><span class="p">))</span>
+<span class="n">sim4</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"ごめんなさい"</span><span class="p">))</span>
+<span class="n">sim5</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"吃了吗"</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="n">sim2</span><span class="p">,</span> <span class="n">sim3</span><span class="p">,</span> <span class="n">sim4</span><span class="p">,</span> <span class="n">sim5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>结果为：<code class="language-plaintext highlighter-rouge">0.9926941692158543 0.9510660558985051 0.9787457828105314 0.27865827356290396</code></p>
+
+<p>比较符合预期！</p>
+
+<h2 id="总结">总结</h2>
+
+<p>上面的过程是在本地的 VSCode Notebook 中完成。</p>
+
+<p>模型部署模型时间为 3 分 15 秒，我部署了 2 个实例，在实际的推理中，可以感觉到推理效率显著提高。</p>
+
+<hr />
+<p>相关</p>
+
+<p><a href="deploy-huggingface-model-2-sagemaker-1.html">在 SageMaker 上部署 Huggingface 模型 (一)</a></p>
+
+<p>参考</p>
+
+<p><a href="https://github.com/aws/sagemaker-huggingface-inference-toolkit">https://github.com/aws/sagemaker-huggingface-inference-toolkit</a></p>
+
+<p><a href="https://huggingface.co/docs/sagemaker/reference#inference-dlc-overview">Huggingface 默认支持的库版本对照</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/05/deploy-huggingface-model-2-sagemaker-2.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

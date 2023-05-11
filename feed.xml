@@ -1,4 +1,150 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-10T06:15:57+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 SageMaker 上部署 Huggingface 模型</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型" /><published>2023-05-10T02:13:33+00:00</published><updated>2023-05-10T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker.html"><![CDATA[<p>在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-11T08:42:49+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 SageMaker 上部署 Huggingface 模型 (二)</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型 (二)" /><published>2023-05-11T08:13:33+00:00</published><updated>2023-05-11T08:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html"><![CDATA[<p>在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。</p>
+
+<h2 id="背景">背景</h2>
+
+<p>在 <a href="deploy-huggingface-model-2-sagemaker-1.html">上一篇文章</a> 里，我们直接使用了 Huggingface 官方提供的部署和推理代码中，并使用了他提供了默认的 HF_TASK，如：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">hub</span> <span class="o">=</span>  <span class="p">{</span>
+ <span class="s">'HF_MODEL_ID'</span><span class="p">:</span><span class="s">'bert-base-chinese'</span><span class="p">,</span>
+ <span class="s">'HF_TASK'</span><span class="p">:</span><span class="s">'fill-mask'</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>现在我们计划做一个推理 embeddings 文本转向量任务，使用自己的推理代码。</p>
+
+<h2 id="代码准备">代码准备</h2>
+
+<p>本文选取了 distiluse-base-multilingual-cased-v2  这个模型，这个模型可以推理多语言的 embeddings，他在 Huggingface 上没有部署到 SageMaker 的选项。</p>
+
+<p>先下载这个代码仓库：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git lfs <span class="nb">install
+</span>git clone https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2
+</code></pre></div></div>
+
+<p>进入这个代码仓库，在编辑器里增加两个文件，一个 推理文件 <code class="language-plaintext highlighter-rouge">code/inference.py</code>，一个依赖库文件 <code class="language-plaintext highlighter-rouge">code/requirements.txt</code>。</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>distiluse-base-multilingual-cased-v2
+<span class="nb">mkdir </span>code
+<span class="nb">touch </span>code/inference.py
+<span class="nb">touch </span>code/requirements.txt 
+</code></pre></div></div>
+
+<p>我们需要在 <code class="language-plaintext highlighter-rouge">inference.py</code> 里添加 model_fn 和 predict_fn 这俩函数，这个文件如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sentence_transformers</span> <span class="kn">import</span> <span class="n">SentenceTransformer</span>
+
+<span class="k">def</span> <span class="nf">model_fn</span><span class="p">(</span><span class="n">model_dir</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">SentenceTransformer</span><span class="p">(</span><span class="n">model_dir</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">predict_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">model</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>在 <code class="language-plaintext highlighter-rouge">requirements.txt</code> 里加入 sentence_transformers 的引用：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sentence_transformers==2.2.2
+</code></pre></div></div>
+
+<h2 id="打包上传">打包上传</h2>
+
+<p>现在把这个库打包上传到 S3：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">tar </span>zcvf distiluse-base-multilingual-cased-v2.tar.gz <span class="k">*</span>
+
+aws s3 <span class="nb">cp </span>distiluse-base-multilingual-cased-v2.tar.gz <span class="se">\</span>
+  s3://cloudbeer-llm-models/sentence-transformers/distiluse-base-multilingual-cased-v2.tar.gz
+</code></pre></div></div>
+
+<ul>
+  <li>创建你自己的存储桶，并保证你有足够的权限。</li>
+  <li>模型都很大，上传前记得测试一下你的脚本。</li>
+</ul>
+
+<h2 id="部署模型">部署模型</h2>
+
+<p>与上一篇差不多，先给 <code class="language-plaintext highlighter-rouge">HuggingfaceExecuteRole</code> 这个 IAM Role 加入策略 <code class="language-plaintext highlighter-rouge">AmazonS3ReadOnlyAccess</code>。</p>
+
+<p>完整的部署代码如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
+<span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">cosine</span>
+
+<span class="c1"># 此处定义了一个数组相似度计算的函数
+</span><span class="k">def</span> <span class="nf">similarity</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">array</span><span class="p">(</span><span class="n">v1</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">array</span><span class="p">(</span><span class="n">v2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="o">-</span><span class="n">cosine</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">)</span>
+
+<span class="n">s3_model</span> <span class="o">=</span> <span class="s">"s3://cloudbeer-llm-models/sentence-transformers/distiluse-base-multilingual-cased-v2.tar.gz"</span>
+
+<span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
+<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">]</span>
+
+<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
+  <span class="n">model_data</span><span class="o">=</span><span class="n">s3_model</span><span class="p">,</span>      
+  <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>                    
+  <span class="n">transformers_version</span><span class="o">=</span><span class="s">"4.26"</span><span class="p">,</span>  
+  <span class="n">pytorch_version</span><span class="o">=</span><span class="s">"1.13"</span><span class="p">,</span>
+  <span class="n">py_version</span><span class="o">=</span><span class="s">'py39'</span><span class="p">,</span>           
+<span class="p">)</span>
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
+  <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+  <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.m5.xlarge'</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>现在运行一下推理试试：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">res</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"在 SageMaker 上部署 Huggingface 模型"</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">),</span> <span class="n">res</span><span class="p">[:</span><span class="mi">10</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p>结果如下：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>512 [-0.08045165985822678, 0.028644787147641182, 0.01914004050195217, -0.02148452214896679, 0.017731796950101852, -0.05328822508454323, 0.004828637931495905, 0.015703866258263588, -0.017463965341448784, -0.01227850466966629]
+</code></pre></div></div>
+
+<p>测试相似度：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">res1</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"抱歉"</span><span class="p">)</span>
+<span class="n">res2</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"Sorry"</span><span class="p">)</span>
+<span class="n">sim1</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">res2</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">sim1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>结果为：<code class="language-plaintext highlighter-rouge">0.9197762458059101</code></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sim2</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"对不起"</span><span class="p">))</span>
+<span class="n">sim3</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"Je mi líto"</span><span class="p">))</span>
+<span class="n">sim4</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"ごめんなさい"</span><span class="p">))</span>
+<span class="n">sim5</span> <span class="o">=</span> <span class="n">similarity</span><span class="p">(</span><span class="n">res1</span><span class="p">,</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="s">"吃了吗"</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="n">sim2</span><span class="p">,</span> <span class="n">sim3</span><span class="p">,</span> <span class="n">sim4</span><span class="p">,</span> <span class="n">sim5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>结果为：<code class="language-plaintext highlighter-rouge">0.9926941692158543 0.9510660558985051 0.9787457828105314 0.27865827356290396</code></p>
+
+<p>比较符合预期！</p>
+
+<h2 id="总结">总结</h2>
+
+<p>上面的过程是在本地的 VSCode Notebook 中完成。</p>
+
+<p>模型部署模型时间为 3 分 15 秒，我部署了 2 个实例，在实际的推理中，可以感觉到推理效率显著提高。</p>
+
+<hr />
+<p>相关</p>
+
+<p><a href="deploy-huggingface-model-2-sagemaker-1.html">在 SageMaker 上部署 Huggingface 模型 (一)</a></p>
+
+<p>参考</p>
+
+<p><a href="https://github.com/aws/sagemaker-huggingface-inference-toolkit">https://github.com/aws/sagemaker-huggingface-inference-toolkit</a></p>
+
+<p><a href="https://huggingface.co/docs/sagemaker/reference#inference-dlc-overview">Huggingface 默认支持的库版本对照</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。]]></summary></entry><entry><title type="html">在 SageMaker 上部署 Huggingface 模型 (一)</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-1.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型 (一)" /><published>2023-05-10T02:13:33+00:00</published><updated>2023-05-10T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-1</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-1.html"><![CDATA[<p>在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。</p>
 
 <h2 id="创建-iam-角色">创建 IAM 角色</h2>
 
@@ -103,7 +249,12 @@
 
 <h2 id="总结">总结</h2>
 
-<p>整个过程还是非常的方便，Endpoint 的创建的速度非常快（本示例用了 2 分半钟），省去了安装运行环境的痛苦，爽的一匹啊！</p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。]]></summary></entry><entry><title type="html">在 TLS 1.1 过期后上传 S3 的策略</title><link href="https://youbug.cn/2023/05/post-s3-tls-outdate.html" rel="alternate" type="text/html" title="在 TLS 1.1 过期后上传 S3 的策略" /><published>2023-05-07T01:10:49+00:00</published><updated>2023-05-07T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/post-s3-tls-outdate</id><content type="html" xml:base="https://youbug.cn/2023/05/post-s3-tls-outdate.html"><![CDATA[<p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
+<p>整个过程还是非常的方便，Endpoint 的创建的速度非常快（本示例用了 2 分半钟），省去了安装运行环境的痛苦，爽的一匹啊！</p>
+
+<hr />
+<p>相关</p>
+
+<p><a href="deploy-huggingface-model-2-sagemaker-2.html">在 SageMaker 上部署 Huggingface 模型 (二)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。]]></summary></entry><entry><title type="html">在 TLS 1.1 过期后上传 S3 的策略</title><link href="https://youbug.cn/2023/05/post-s3-tls-outdate.html" rel="alternate" type="text/html" title="在 TLS 1.1 过期后上传 S3 的策略" /><published>2023-05-07T01:10:49+00:00</published><updated>2023-05-07T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/post-s3-tls-outdate</id><content type="html" xml:base="https://youbug.cn/2023/05/post-s3-tls-outdate.html"><![CDATA[<p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
 
 <h2 id="使用-http">使用 http</h2>
 
@@ -1520,141 +1671,4 @@ Block(BlockType=KEY_VALUE_SET, Confidence=86.59171, Geometry=Geometry(BoundingBo
 
 <p>Textract JAVA Demo <a href="https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/javav2/example_code/textract">https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/javav2/example_code/textract</a></p>
 
-<p>Python Extract KV Pairs <a href="https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html">https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html</a></p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="tucao" /><summary type="html"><![CDATA[Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。]]></summary></entry><entry><title type="html">在 AWS 里，使用 Jenkins 跨账号执行任务</title><link href="https://youbug.cn/2023/03/jenkins-assume-role.html" rel="alternate" type="text/html" title="在 AWS 里，使用 Jenkins 跨账号执行任务" /><published>2023-03-02T07:02:33+00:00</published><updated>2023-03-02T07:02:33+00:00</updated><id>https://youbug.cn/2023/03/jenkins-assume-role</id><content type="html" xml:base="https://youbug.cn/2023/03/jenkins-assume-role.html"><![CDATA[<p>在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。</p>
-
-<h2 id="jenkins-configuration-jenkins-设置">Jenkins Configuration （Jenkins 设置）</h2>
-
-<p>As a Jenkins administator, Menu: Manage Jenkins -&gt; Manage Plugins, Search “Pipeline: AWS Steps”, ensure this Jenkins plugin is installed.</p>
-
-<p>以 Jenkins 的管理员身份登录，进入菜单： Manage Jenkins -&gt; Manage Plugins，搜索 “Pipeline: AWS Steps”，安装这个插件。</p>
-
-<p>From “Manage Jenkins  -&gt; Configure System” to enable ‘Retrieve credentials from node’.</p>
-
-<p>在菜单 “系统管理 -&gt; 系统配置” 中，启用 “Pipeline: AWS Steps” 的 “Retrieve credentials from node”。</p>
-
-<h2 id="node-settings-节点设置jenkins-运行节点">Node settings 节点设置（Jenkins 运行节点）</h2>
-
-<p>My Jenkins is installed in an EC2 instace and the workers in EC2 also.</p>
-
-<p>Firstly, Bind a role to the EC2. Choose the Jenkins EC2, then choose Actions -&gt; Security -&gt; Modify IAM role.</p>
-
-<p>现在设置 Jenkins 所在的 EC2 的角色。</p>
-
-<p>选择目标 EC2，并选择如图的菜单：</p>
-
-<p><img src="/assets/posts/devops/jenkins-assume-01.png" alt="Set EC2 Role" /></p>
-
-<p>Next, you can choose a role, or create a new one.</p>
-
-<p>When you update the IAM role of EC2, your Jenkins will be granted the role.</p>
-
-<p>现在请选择一个 role，或者创建一个新的。</p>
-
-<p>选择好之后，更新 EC2 的 Role。</p>
-
-<h2 id="create-an-iam-role-in-another-account-在另一个账号中创建角色">Create an IAM Role in another account （在另一个账号中创建角色）</h2>
-
-<p>Now, We can login to the production account.</p>
-
-<p>Create a new role:</p>
-
-<p>现在登录到生产账号。并创建一个角色。</p>
-
-<ul>
-  <li>Trusted entity type: Amazon Web Services account</li>
-  <li>An Amazon Web Services account: Another Amazon Web Services account of the account id of Jenkins installed (number, such as 12345679012).</li>
-  <li>Next choose some permissions policy.</li>
-  <li>Give the role a name, such as ‘for-Jenkins’.</li>
-</ul>
-
-<h2 id="modify-the-jenkins-ec2-role">Modify the Jenkins EC2 role</h2>
-
-<p>Now back to the Jenkins account. Modify the ec2 role.</p>
-
-<p>In the “Permisions” tab, choose “Add permissions -&gt; Create inline policy”:</p>
-
-<p>现在返回 Jenkins 所在的账号，给刚刚 EC2 的角色进行角色扮演。</p>
-
-<p>在角色设置面板设置一个内联策略，进入 “Permisions” tab, 选择 “Add permissions -&gt; Create inline policy”:</p>
-
-<p>The policy is like:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"Resource"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arn:aws-cn:iam::&lt;your-prod-account-id&gt;:role/for-Jenkins"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts:AssumeRole"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<h2 id="jenkinsfile">Jenkinsfile</h2>
-
-<p>Now the Jenkinsfile maybe as:</p>
-
-<p>Jenkinsfile 这么写就行:</p>
-
-<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pipeline</span> <span class="o">{</span>
-  <span class="n">agent</span> <span class="n">any</span>
-  <span class="n">stages</span> <span class="o">{</span>
-    <span class="n">stage</span><span class="o">(</span><span class="s1">'build'</span><span class="o">)</span> <span class="o">{</span>
-      <span class="n">steps</span> <span class="o">{</span>
-        <span class="n">script</span> <span class="o">{</span>
-          <span class="n">withAWS</span><span class="o">(</span><span class="nl">role:</span><span class="s1">'for-Jenkins'</span><span class="o">,</span> <span class="nl">roleAccount:</span><span class="s1">'&lt;your-prod-account-id&gt;'</span><span class="o">,</span> <span class="nl">region:</span> <span class="s1">'cn-northwest-1'</span><span class="o">)</span> <span class="o">{</span>
-            <span class="kt">def</span> <span class="n">res</span> <span class="o">=</span> <span class="n">s3Upload</span><span class="o">(</span><span class="nl">file:</span><span class="s1">'readme.md'</span><span class="o">,</span> <span class="nl">bucket:</span><span class="s1">'xxxx'</span><span class="o">,</span> <span class="nl">path:</span><span class="s1">'readme.md'</span><span class="o">)</span>
-            <span class="n">println</span><span class="o">(</span><span class="n">res</span><span class="o">)</span>
-          <span class="o">}</span>
-        <span class="o">}</span>
-      <span class="o">}</span>
-    <span class="o">}</span>
-  <span class="o">}</span>
-<span class="o">}</span>
-
-</code></pre></div></div>
-
-<p>You will see the file uploaded to the target s3 bucket if the permissions are right.</p>
-
-<p>如果权限设置合理，就可以看到 Jenkins 成功上传文件到另一个账号了。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
-Setting AWS region cn-northwest-1 
- Retrieving credentials from node.
-Requesting assume role
-Assuming role ARN is arn:aws-cn:iam::123456789012:role/ role arn:aws-cn:sts::123456789012:assumed-role/for-Jenkins/Jenkins-Jenkins-withAWS-gitee-16 with <span class="nb">id </span>AROATUJBXHIVWAC6AZW3X:Jenkins-Jenkins-withAWS-gitee-16 
- <span class="o">[</span>Pipeline] <span class="o">{</span>
-<span class="o">[</span>Pipeline] s3Upload
-Uploading file:/var/Jenkins_home/workspace/Jenkins-withAWS_gitee/readme.md to s3://xxxxx/readme.md 
-Finished: Uploading to xxxxx/readme.md
-Upload <span class="nb">complete</span>
-<span class="o">[</span>Pipeline] <span class="nb">echo
-</span>s3://xxxxx/readme.md
-<span class="o">[</span>Pipeline] <span class="o">}</span>
-<span class="o">[</span>Pipeline] // withAWS
-<span class="o">[</span>Pipeline] <span class="o">}</span>
-<span class="o">[</span>Pipeline] <span class="o">}</span>
-<span class="o">[</span>Pipeline] // stage
-<span class="o">[</span>Pipeline] <span class="o">}</span>
-<span class="o">[</span>Pipeline] // withEnv
-<span class="o">[</span>Pipeline] <span class="o">}</span>
-<span class="o">[</span>Pipeline] // node
-<span class="o">[</span>Pipeline] End of Pipeline
-Finished: SUCCESS
-...
-</code></pre></div></div>
-
-<h2 id="more">More</h2>
-
-<p>Mybe your Jenkins worker runs in a pod. In this situation, you can use <a href="https://docs.aws.amazon.com/zh_cn/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html">IRSA style</a> to assume role between accounts.</p>
-
-<p>If you use AKSK in Jenkins, you can assume the role to the IAM user of AKSK.</p>
-
-<p>如果 Jenkins 安装在 EKS 的 Pod 里，那么可以利用 <a href="https://docs.aws.amazon.com/zh_cn/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html">IRSA 方式</a> 进行角色扮演。</p>
-
-<p>另外一点，如果在 Jenkins 里使用的是 AKSK，那么就把角色扮演到 AKSK 对应的 IAM User 即可。</p>
-
-<hr />
-
-<p>References：</p>
-
-<p><a href="https://plugins.Jenkins.io/pipeline-aws/">Jenkins plugin: Pipeline: AWS Steps</a></p>]]></content><author><name>啤酒云</name></author><category term="devops," /><category term="aws" /><summary type="html"><![CDATA[在 AWS 中，企业的 Jenkins 通常安装在开发测试环境，如果需要操作生产环境中的资源，如何设置权限呢？本文介绍了方法。]]></summary></entry></feed>
+<p>Python Extract KV Pairs <a href="https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html">https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html</a></p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="tucao" /><summary type="html"><![CDATA[Amazon Textract 就是 OCR, 针对国际单据啥的识别有奇效，看控制台的 Demo 觉得很受惊，居然有 KV 键值对的显示。但用 Java 代码咋获取键值对呢？他的 KEY_VALUE_SET 类型的 Block 使用方法 .text() 啥都没有哇。]]></summary></entry></feed>

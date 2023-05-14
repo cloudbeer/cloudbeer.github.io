@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "在 AWS 上使用 Stable Diffusion Inpainting 给商品更换模特"
-date:   2023-05-13 09:10:49 +0800
+title:  "在 AWS 上使用 Stable Diffusion 给商品更换模特(一)"
+date:   2023-05-14 20:10:49 +0800
 author: 啤酒云
 categories: aiml, aws
 ---
@@ -104,9 +104,13 @@ def predict_fn(data, pipe):
 
 ```
 
-- 定义了部分 prompt  和 完整的 negative_prompt，在使用过程中只需要输入你需要的模特提示词即可
-- 定义了图片的默认大小，此尺寸也可以在外部指定，建议不要太大，并且尺寸最好是 8 的倍数
-
+- 内置定义了部分 prompt  和 完整的 negative_prompt，这些 prompt 可以帮助生产质量比较高的图片，在使用过程中只需要输入你需要的模特提示词即可。
+- width 和 height 定义了图片的像素大小，默认 512*512，此尺寸也可以在推理的时候指定，建议不要太大（根据机型的GPU内存不同，太大会溢出），并且尺寸必须是 8 的倍数。
+- 商品图片的处理建议：
+  - image_url: 定义了原来的商品图片，此图片最好是纯白底，当前 SD 模型可以直接重绘白色部分，**使用自己作为遮罩 mask**。
+  - 如果你的商品图片是白色基调，那么则需要处理一张遮罩图片，将商品部分涂黑，需要重绘的部分变成白色。
+  - 原图建议不要充满图片，需要将模特的头部留出位置，如果全身图片，也需要留白出来。
+  
 code 目录下 requirements.txt：
 
 ```txt
@@ -195,8 +199,17 @@ predictor = huggingface_model.deploy(
 下面的测试在本地 Notebook 中进行的，代码：
 
 ```python
+from sagemaker.huggingface.model import HuggingFacePredictor
+
+predictor = HuggingFacePredictor(
+  endpoint_name='sd-inpainting-try-on'
+)
 
 import matplotlib.pyplot as plt
+from PIL import Image
+import base64
+from io import BytesIO
+
 
 def display_images(images=None, columns=4, width=100, height=100):
     plt.figure(figsize=(width, height))
@@ -204,16 +217,40 @@ def display_images(images=None, columns=4, width=100, height=100):
         plt.subplot(int(len(images) / columns + 1), columns, i + 1)
         plt.axis('off')
         plt.imshow(image)
-        
-res = gen(data = {
-    "prompt": "a female,flowers field",
-    "image_url": "https://th.bing.com/th/id/R.316c68fd4da6e3329115aa92fe07315f?rik=WRx0NfsTBN5Wsw&pid=ImgRaw&r=0",
-    "width": 560,
-    "height": 840
-}, pipe=pipe)
 
+def decode_base64_image(image_string):
+  base64_image = base64.b64decode(image_string)
+  buffer = BytesIO(base64_image)
+  return Image.open(buffer)
 
-display_images(res)
+res = predictor.predict({
+    "prompt": "a strong man,football field, back view",
+    "image_url": "https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01.png",
+    "mask_url": "https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01_mask.png",
+    "width": 512,
+    "height": 512,
+    "num_images_per_prompt": 2
+})
+
+decoded_images = [decode_base64_image(image) for image in res["generated_images"]]
+
+display_images(decoded_images)
+
 ```
 
-## 流水线
+- 从 Endpoint 的名称 `sd-inpainting-try-on` 中获取一个 HuggingFacePredictor 实例
+- 调用 predict 方法完成推理
+
+下面是图片的结果：
+
+| 原图         | 蒙版     |
+|--------------|-----------|
+| ![skirt](https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01.png) | ![skirt mask](https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01_mask.png)     |
+
+结果样例
+
+![output samples](/assets/posts/aiml/sd-inpaiting-skirt-output.jpg)
+
+## 流水线处理
+
+待续

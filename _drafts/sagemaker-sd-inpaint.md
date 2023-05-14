@@ -192,4 +192,28 @@ predictor = huggingface_model.deploy(
 
 ## 测试推理
 
+下面的测试在本地 Notebook 中进行的，代码：
+
+```python
+
+import matplotlib.pyplot as plt
+
+def display_images(images=None, columns=4, width=100, height=100):
+    plt.figure(figsize=(width, height))
+    for i, image in enumerate(images):
+        plt.subplot(int(len(images) / columns + 1), columns, i + 1)
+        plt.axis('off')
+        plt.imshow(image)
+        
+res = gen(data = {
+    "prompt": "a female,flowers field",
+    "image_url": "https://th.bing.com/th/id/R.316c68fd4da6e3329115aa92fe07315f?rik=WRx0NfsTBN5Wsw&pid=ImgRaw&r=0",
+    "width": 560,
+    "height": 840
+}, pipe=pipe)
+
+
+display_images(res)
+```
+
 ## 流水线

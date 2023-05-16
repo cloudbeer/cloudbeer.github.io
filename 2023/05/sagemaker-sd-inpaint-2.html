@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>在 AWS 上使用 Stable Diffusion 给商品更换模特(二) | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="在 AWS 上使用 Stable Diffusion 给商品更换模特(二)" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。" />
+<meta property="og:description" content="现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。" />
+<link rel="canonical" href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html" />
+<meta property="og:url" content="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-05-16T09:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="在 AWS 上使用 Stable Diffusion 给商品更换模特(二)" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-05-16T09:10:49+00:00","datePublished":"2023-05-16T09:10:49+00:00","description":"现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。","headline":"在 AWS 上使用 Stable Diffusion 给商品更换模特(二)","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html"},"url":"https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">在 AWS 上使用 Stable Diffusion 给商品更换模特(二)</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-05-16T09:10:49+00:00" itemprop="datePublished">2023-05-16
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。</p>
+
+<h2 id="模型加载流程改善">模型加载流程改善</h2>
+
+<p>在进行试验的过程中，发现每次对模型进行打包和上传 S3 会浪费很多时间。</p>
+
+<p>此处改进一下：<strong>在加载模型的时候，直接从 Huggingface 的 <code class="language-plaintext highlighter-rouge">runwayml/stable-diffusion-inpainting</code> 加载模型</strong>。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">model_fn</span><span class="p">(</span><span class="n">model_dir</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">model_dir</span><span class="p">)</span>
+    <span class="n">pipe</span> <span class="o">=</span> <span class="n">StableDiffusionInpaintPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+        <span class="s">"runwayml/stable-diffusion-inpainting"</span><span class="p">,</span>
+        <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">float16</span><span class="p">,</span>
+        <span class="n">safety_checker</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="p">)</span>
+    <span class="n">pipe</span><span class="p">.</span><span class="n">to</span><span class="p">(</span><span class="s">"cuda"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pipe</span>
+</code></pre></div></div>
+
+<p>使用上面的方法可以从 Huggingface 加载模型，并使用自己的推理代码。</p>
+
+<p>具体做法是：</p>
+
+<ul>
+  <li>创建一个文件夹，如 src</li>
+  <li>在 src 下创建 code 文件夹</li>
+  <li>在 code 文件夹下加入 inference.py 和 requirements.txt 文件</li>
+  <li>修改 inference.py 的 model_fn 方法，如上</li>
+  <li>打包上传 code 下面的两个文件</li>
+</ul>
+
+<p>现在无需下载模型到本地打包了，真实部署的时候，SageMaker 会去下载模型。</p>
+
+<p>当前上传的程序包只有 1k 左右，如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/environment/stable-diffusion-inpainting <span class="o">(</span>main<span class="o">)</span> <span class="nv">$ </span>tree
+<span class="nb">.</span>
+├── code
+│   ├── inference.py
+│   └── requirements.txt
+</code></pre></div></div>
+
+<h2 id="inferencepy-代码解读">inference.py 代码解读</h2>
+
+<p>商品图片下载方式修改：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">split_s3_path</span><span class="p">(</span><span class="n">s3_path</span><span class="p">):</span>
+    <span class="n">path_parts</span><span class="o">=</span><span class="n">s3_path</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">"s3://"</span><span class="p">,</span><span class="s">""</span><span class="p">).</span><span class="n">split</span><span class="p">(</span><span class="s">"/"</span><span class="p">)</span>
+    <span class="n">bucket</span><span class="o">=</span><span class="n">path_parts</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">key</span><span class="o">=</span><span class="s">"/"</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_parts</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span>
+
+<span class="k">def</span> <span class="nf">download_image</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">split_s3_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">s3</span><span class="p">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="n">o</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Key</span><span class="o">=</span><span class="n">o</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="s">'Body'</span><span class="p">].</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">res_img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">response</span><span class="p">)).</span><span class="n">convert</span><span class="p">(</span><span class="s">"RGB"</span><span class="p">)</span>
+    <span class="n">res_img</span> <span class="o">=</span> <span class="n">res_img</span><span class="p">.</span><span class="n">resize</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">res_img</span>
+</code></pre></div></div>
+
+<ul>
+  <li>商品和图片的入参会修改为 S3 地址，如：s3://cloudbeer-llm-models/works/2023-05-16/shirt01.png</li>
+  <li>在后期可以做相关触发器，直接读取 S3 地址</li>
+</ul>
+
+<p>整个生产流程也进行了改进：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">gen</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pipe</span><span class="p">):</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"prompt"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">image_url</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"image_url"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">mask_url</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"mask_url"</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"width"</span><span class="p">,</span> <span class="mi">384</span><span class="p">)</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"height"</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
+    
+    <span class="n">image_ori</span> <span class="o">=</span> <span class="n">download_image</span><span class="p">(</span><span class="n">image_url</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mask_url</span><span class="p">:</span> 
+        <span class="n">mask_image</span> <span class="o">=</span> <span class="n">download_image</span><span class="p">(</span><span class="n">mask_url</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mask_url</span> <span class="o">=</span> <span class="n">image_url</span>
+        <span class="n">mask_image</span> <span class="o">=</span> <span class="n">image_ori</span>
+
+    <span class="n">num_inference_steps</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"num_inference_steps"</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+    <span class="n">guidance_scale</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"guidance_scale"</span><span class="p">,</span> <span class="mf">7.5</span><span class="p">)</span>
+    <span class="n">num_images_per_prompt</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"num_images_per_prompt"</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">prompt_suffix</span> <span class="o">=</span> <span class="s">",fine skin,masterpiece,cinematic light, ultra high res, film grain, perfect anatomy, best shadow, delicate,(photorealistic:1.4),(extremely intricate:1.2)"</span>
+    <span class="n">nprompt</span> <span class="o">=</span> <span class="s">'bad_legs,bad_fingers,(semi_realistic,cgi,3d,render,sketch,cartoon,drawing,anime:1.4),text,cropped,out_of_frame,worst_quality,low_quality,jpeg_artifacts,ugly,duplicate,morbid,mutilated,extra_fingers,mutated_hands,poorly_drawn_hands,poorly_drawn_face,mutation,deformed,blurry,dehydrated,bad_anatomy,bad_proportions,extra_limbs,cloned_face,disfigured,gross_proportions,malformed_limbs,missing_arms,missing_legs,extra_arms,extra_legs,fused_fingers,too_many_fingers,long_neck,signature'</span>
+
+
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">.</span><span class="n">now</span><span class="p">()</span> 
+    <span class="n">date_str</span> <span class="o">=</span> <span class="n">now</span><span class="p">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">"%Y-%m-%d"</span><span class="p">)</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="s">"&lt;html&gt;&lt;head&gt;&lt;title&gt;图片生成"</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">"&lt;/title&gt;&lt;link href='../main.css' rel='stylesheet'&gt;&lt;/head&gt;&lt;body&gt;"</span>
+    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;h1&gt;图片生成"</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">"&lt;/h1&gt;"</span>
+    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;h4&gt;提示词: "</span> <span class="o">+</span> <span class="n">prompt</span> <span class="o">+</span> <span class="n">prompt_suffix</span> <span class="o">+</span> <span class="s">"&lt;/h4&gt;"</span>
+    
+    <span class="n">cf_in_url</span> <span class="o">=</span> <span class="n">s3_to_cf_url</span><span class="p">(</span><span class="n">image_url</span><span class="p">)</span>
+    <span class="n">cf_msk_url</span> <span class="o">=</span> <span class="n">s3_to_cf_url</span><span class="p">(</span><span class="n">mask_url</span><span class="p">)</span>
+    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;div&gt;&lt;a href='"</span> <span class="o">+</span> <span class="n">cf_in_url</span> <span class="o">+</span> <span class="s">"' target='_blank'&gt;&lt;img src='"</span> <span class="o">+</span> <span class="n">cf_in_url</span> <span class="o">+</span> <span class="s">"' /&gt;&lt;/a&gt;"</span>
+    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;a href='"</span> <span class="o">+</span> <span class="n">cf_msk_url</span> <span class="o">+</span> <span class="s">"' target='_blank'&gt;&lt;img src='"</span> <span class="o">+</span> <span class="n">cf_msk_url</span> <span class="o">+</span> <span class="s">"' /&gt;&lt;/a&gt;&lt;/div&gt;"</span>
+
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_images_per_prompt</span><span class="p">):</span>
+        <span class="n">generated_images</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
+            <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span> <span class="o">+</span> <span class="n">prompt_suffix</span><span class="p">,</span>
+            <span class="n">negative_prompt</span><span class="o">=</span><span class="n">nprompt</span><span class="p">,</span>
+            <span class="n">image</span><span class="o">=</span><span class="n">image_ori</span><span class="p">,</span> 
+            <span class="n">mask_image</span><span class="o">=</span><span class="n">mask_image</span><span class="p">,</span>
+            <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+            <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
+            <span class="n">num_inference_steps</span><span class="o">=</span><span class="n">num_inference_steps</span><span class="p">,</span>
+            <span class="n">guidance_scale</span><span class="o">=</span><span class="n">guidance_scale</span><span class="p">,</span>
+            <span class="n">num_images_per_prompt</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)[</span><span class="s">"images"</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">generated_images</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="p">.</span><span class="n">uuid4</span><span class="p">())</span> <span class="o">+</span> <span class="s">".jpg"</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">key_prefix</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">'/'</span> <span class="o">+</span> <span class="n">file_name</span>
+            <span class="n">in_mem_file</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span>
+            <span class="n">image</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">in_mem_file</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s">"JPEG"</span><span class="p">)</span>
+            <span class="n">in_mem_file</span><span class="p">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">s3</span><span class="p">.</span><span class="n">upload_fileobj</span><span class="p">(</span>
+                <span class="n">in_mem_file</span><span class="p">,</span> 
+                <span class="n">saving_bucket</span><span class="p">,</span> 
+                <span class="n">key</span><span class="p">,</span>
+                <span class="n">ExtraArgs</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s">'ContentType'</span><span class="p">:</span> <span class="s">'image/jpeg'</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;a href='"</span> <span class="o">+</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s">"' target='_blank'&gt;&lt;img src='"</span> <span class="o">+</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s">"' /&gt;&lt;/a&gt;"</span>
+    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;/body&gt;&lt;/html&gt;"</span>
+
+    <span class="n">index_file_name</span> <span class="o">=</span> <span class="s">'index-'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="p">.</span><span class="n">uuid4</span><span class="p">())</span> <span class="o">+</span> <span class="s">'.html'</span>
+    <span class="n">s3</span><span class="p">.</span><span class="n">put_object</span><span class="p">(</span>
+        <span class="n">Bucket</span><span class="o">=</span><span class="s">'cloudbeer-llm-models'</span><span class="p">,</span>
+        <span class="n">Key</span><span class="o">=</span><span class="n">key_prefix</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">'/'</span> <span class="o">+</span> <span class="n">index_file_name</span><span class="p">,</span>
+        <span class="n">Body</span><span class="o">=</span><span class="n">html</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">),</span>
+        <span class="n">ContentType</span><span class="o">=</span><span class="s">'text/html'</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">cloudfront_url</span> <span class="o">+</span> <span class="n">key_prefix</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">'/'</span> <span class="o">+</span> <span class="n">index_file_name</span>
+
+</code></pre></div></div>
+
+<p>代码中需要注意的是：</p>
+
+<ul>
+  <li>推理 pipeline 中，改为每次生产 1 张图片，num_images_per_prompt 改为循环次数，这样可以有效避免内存溢出</li>
+  <li>每生产一张图片，就上传到 S3</li>
+  <li>将此次任务的图片生产出一个 html 预览页</li>
+  <li>S3 会通过 Cloudfront 映射出来，方便预览</li>
+</ul>
+
+<p>代码完成之后，可以直接打包，并上传 S3:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ./src
+
+<span class="nb">rm </span>stable-diffusion-inpainting-tryon.tar.gz
+<span class="nb">tar </span>zcvf stable-diffusion-inpainting-tryon.tar.gz <span class="k">*</span>
+
+aws s3 <span class="nb">cp </span>stable-diffusion-inpainting-tryon.tar.gz <span class="se">\</span>
+  s3://cloudbeer-llm-models/diffusers/stable-diffusion-inpainting-tryon.tar.gz
+</code></pre></div></div>
+
+<h2 id="模型部署">模型部署</h2>
+
+<p>直接通过 SageMaker 部署：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
+<span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
+
+<span class="n">s3_model</span> <span class="o">=</span> <span class="s">"s3://cloudbeer-llm-models/diffusers/stable-diffusion-inpainting-tryon.tar.gz"</span>
+
+<span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
+<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">]</span>
+
+<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
+  <span class="n">model_data</span><span class="o">=</span><span class="n">s3_model</span><span class="p">,</span>
+  <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>
+  <span class="n">transformers_version</span><span class="o">=</span><span class="s">"4.26"</span><span class="p">,</span>  
+  <span class="n">pytorch_version</span><span class="o">=</span><span class="s">"1.13"</span><span class="p">,</span>
+  <span class="n">py_version</span><span class="o">=</span><span class="s">'py39'</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
+  <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+  <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.g4dn.xlarge'</span><span class="p">,</span>
+  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'sd-inpainting-tryon'</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li>由于要从 SageMaker 上传 S3，HuggingfaceExecuteRole 这个角色要加入相应 S3 写权限</li>
+</ul>
+
+<p>大约 5 分钟后，部署完成。</p>
+
+<h2 id="推理任务">推理任务</h2>
+
+<p>推理代码如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFacePredictor</span>
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">HuggingFacePredictor</span><span class="p">(</span>
+  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'sd-inpainting-tryon'</span>
+<span class="p">)</span>
+
+<span class="n">res</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
+    <span class="s">"prompt"</span><span class="p">:</span> <span class="s">"a strong man,back view,white shorts,football field"</span><span class="p">,</span>
+    <span class="s">"image_url"</span><span class="p">:</span> <span class="s">"s3://cloudbeer-llm-models/works/2023-05-16/shirt01.png"</span><span class="p">,</span>
+    <span class="s">"mask_url"</span><span class="p">:</span> <span class="s">"s3://cloudbeer-llm-models/works/2023-05-16/shirt01_mask.png"</span><span class="p">,</span>
+    <span class="s">"num_images_per_prompt"</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s">"width"</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span>
+    <span class="s">"height"</span><span class="p">:</span> <span class="mi">512</span>
+<span class="p">})</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>当前手工执行的，后期可以加入 CloudWatch 或者 S3 时间触发器进行调用。</p>
+
+<p>会打印一个 url，内容大概如下：</p>
+
+<p><img src="/assets/posts/aiml/sd-inpaiting-2.jpg" alt="sd-inpainting-tryon" /></p>
+
+<p>推理任务完成后，删除计算资源：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">delete_model</span><span class="p">()</span>
+<span class="n">predictor</span><span class="p">.</span><span class="n">delete_endpoint</span><span class="p">()</span>
+</code></pre></div></div>
+
+<hr />
+
+<p>本文完整代码在这里：<a href="https://github.com/cloudbeer/sd-inpainting-tryon">https://github.com/cloudbeer/sd-inpainting-tryon</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/05/sagemaker-sd-inpaint-2.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

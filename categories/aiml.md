@@ -1,6 +1,6 @@
 ---
 layout: home
-title: 数据及分析
+title: 人工智能&机器学习
 permalink: /aiml/
 pagination: 
   enabled: true

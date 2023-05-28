@@ -256,3 +256,9 @@ display_images(decoded_images)
 接下来我想设计一个流水线来处理此过程，让图片可以被批量自动处理，处理结束之后，可以自动结束计算资源。
 
 待续...
+
+---
+
+参考：
+
+[在 AWS 上使用 Stable Diffusion 给商品更换模特(二)](sagemaker-sd-inpaint-2.html)

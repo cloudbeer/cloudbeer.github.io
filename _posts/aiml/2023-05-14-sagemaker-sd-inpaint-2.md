@@ -238,4 +238,8 @@ predictor.delete_endpoint()
 
 ---
 
-本文完整代码在这里：<https://github.com/cloudbeer/sd-inpainting-tryon>
+参考：
+
+[本文完整源码](https://github.com/cloudbeer/sd-inpainting-tryon)
+
+[在 AWS 上使用 Stable Diffusion 给商品更换模特(一)](sagemaker-sd-inpaint-1.html)

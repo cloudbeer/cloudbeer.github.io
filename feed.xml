@@ -1,4 +1,130 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-24T15:26:55+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">在 AWS 上使用 Stable Diffusion 给商品更换模特(二)</title><link href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html" rel="alternate" type="text/html" title="在 AWS 上使用 Stable Diffusion 给商品更换模特(二)" /><published>2023-05-16T09:10:49+00:00</published><updated>2023-05-16T09:10:49+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-sd-inpaint-2</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html"><![CDATA[<p>现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-28T03:49:26+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 SageMaker 部署 ChatGLM-6B 自定义 API</title><link href="https://youbug.cn/2023/05/sagemaker-chatglm.html" rel="alternate" type="text/html" title="使用 SageMaker 部署 ChatGLM-6B 自定义 API" /><published>2023-05-28T02:13:33+00:00</published><updated>2023-05-28T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-chatglm</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-chatglm.html"><![CDATA[<p>ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。</p>
+
+<h2 id="关键代码">关键代码</h2>
+
+<p>废话不多说，ChatGLM-6B 抽取 embeddings 的关键代码如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">to_embeddings</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">text</span><span class="p">):</span>
+    <span class="n">input_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s">"pt"</span><span class="p">).</span><span class="n">to</span><span class="p">(</span><span class="s">"cuda"</span><span class="p">)</span>
+    <span class="n">model_output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">output_hidden_states</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">model_output</span><span class="p">.</span><span class="n">hidden_states</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">].</span><span class="n">transpose</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">F</span><span class="p">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">torch</span><span class="p">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span><span class="p">.</span><span class="n">tolist</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>上述代码不做过多解释，因为我也不太懂。</p>
+
+<p>生成的结果是一个长度为 4096 的浮点数组。</p>
+
+<h2 id="sagemaker-predict-接口设计">SageMaker predict 接口设计</h2>
+
+<p>也直接看代码吧：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="k">def</span> <span class="nf">predict_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pipe</span><span class="p">):</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"text"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"type"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">response</span><span class="p">,</span> <span class="n">history</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">.</span><span class="n">chat</span><span class="p">(</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+        <span class="k">return</span> <span class="n">response</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">to_embeddings</span><span class="p">(</span><span class="n">pipe</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>预测接口增加了参数 <code class="language-plaintext highlighter-rouge">type</code>，可以通过使用此参数来执行不同的任务，在本例中</p>
+
+<ul>
+  <li>type 为 0 执行聊天任务</li>
+  <li>else 生成 embeddings</li>
+</ul>
+
+<h2 id="部署">部署</h2>
+
+<p>关键代码已经完成，现在只需要将上述逻辑放到 项目的 code 目录下的 <code class="language-plaintext highlighter-rouge">inference.py</code> 文件中，ChatGLM-6B 模型我们直接让 SageMaker 去 Huggingface 上下载。</p>
+
+<p>code 目录我已经打包上传到 S3。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
+<span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
+
+<span class="n">s3_model</span> <span class="o">=</span> <span class="s">"s3://cloudbeer-llm-models/llm/chatglm-6b-model.tar.gz"</span>
+
+<span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
+<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">]</span>
+
+<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
+  <span class="n">model_data</span><span class="o">=</span><span class="n">s3_model</span><span class="p">,</span>
+  <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>
+  <span class="n">transformers_version</span><span class="o">=</span><span class="s">'4.26'</span><span class="p">,</span>
+  <span class="n">pytorch_version</span><span class="o">=</span><span class="s">'1.13'</span><span class="p">,</span>
+  <span class="n">py_version</span><span class="o">=</span><span class="s">'py39'</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
+  <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+  <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.g4dn.2xlarge'</span><span class="p">,</span>
+  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'chatglm-6b-model'</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="测试">测试</h2>
+
+<h4 id="sagemaker-模型加载">SageMaker 模型加载</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFacePredictor</span>
+
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">HuggingFacePredictor</span><span class="p">(</span>
+  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'chatglm-6b-model'</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="对话">对话</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
+    <span class="s">"text"</span><span class="p">:</span> <span class="s">"你好，你是谁"</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">'我是一个名为 ChatGLM-6B 的人工智能助手，是基于清华大学 KEG 实验室和智谱 AI 公司于 2023 年共同训练的语言模型开发的。我的任务是针对用户的问题和要求提供适当的答复和支持。'
+</code></p>
+
+<h4 id="生产-embedddings">生产 embedddings</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">res</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
+    <span class="s">"text"</span><span class="p">:</span> <span class="s">"你好世界"</span><span class="p">,</span>
+    <span class="s">"type"</span><span class="p">:</span> <span class="mi">1</span>
+<span class="p">})</span>
+
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">),</span> <span class="n">res</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">4096 [-0.0092010498046875, 0.0296630859375]</code></p>
+
+<h2 id="避坑">避坑</h2>
+
+<p>下面的坑截止到本文写作日期存在：</p>
+
+<ul>
+  <li>ChatGLM-6B 的最小机型应该是 2xlarge，如 ml.g4dn.2xlarge，我使用 xlarge 一直出错，日志显示 模型无法加载到 100%。</li>
+  <li>transfomers 的最小版本需求为 4.27.1，当前 SageMaker 的 Huggingface 最高版本是 4.26.1，在 requirements.txt 中加入相应的版本依赖即可。</li>
+  <li>如果使用了 CUDA，按照报错信息，需要增加 cpm-kernels 的依赖。</li>
+</ul>
+
+<p>我的 code/requirements.txt 如下：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cpm-kernels==1.0.11
+transformers==4.27.1
+</code></pre></div></div>
+
+<hr />
+<p>参考：</p>
+
+<p><a href="https://github.com/cloudbeer/chatglm-infer-sagemaker">本文完整源码</a></p>
+
+<p><a href="https://huggingface.co/THUDM/chatglm-6b">https://huggingface.co/THUDM/chatglm-6b</a></p>
+
+<p><a href="https://github.com/lm-sys/FastChat/blob/51ed4fab89f61988e8395a3268595f1effb8528f/fastchat/serve/model_worker.py#L246">FastChat 中各 LLM 获取 embeddings 的方法</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="sagemaker" /><summary type="html"><![CDATA[ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。]]></summary></entry><entry><title type="html">在 AWS 上使用 Stable Diffusion 给商品更换模特(二)</title><link href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html" rel="alternate" type="text/html" title="在 AWS 上使用 Stable Diffusion 给商品更换模特(二)" /><published>2023-05-16T09:10:49+00:00</published><updated>2023-05-16T09:10:49+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-sd-inpaint-2</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html"><![CDATA[<p>现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。</p>
 
 <h2 id="模型加载流程改善">模型加载流程改善</h2>
 
@@ -230,7 +356,11 @@ aws s3 <span class="nb">cp </span>stable-diffusion-inpainting-tryon.tar.gz <span
 
 <hr />
 
-<p>本文完整代码在这里：<a href="https://github.com/cloudbeer/sd-inpainting-tryon">https://github.com/cloudbeer/sd-inpainting-tryon</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。]]></summary></entry><entry><title type="html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</title><link href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-1.html" rel="alternate" type="text/html" title="在 AWS 上使用 Stable Diffusion 给商品更换模特(一)" /><published>2023-05-14T12:10:49+00:00</published><updated>2023-05-14T12:10:49+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-sd-inpaint-1</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-sd-inpaint-1.html"><![CDATA[<p>给商品图片安上模特可以使用 stable-diffusion-inpainting 这个模型来轻松实现。本文探讨使用 AWS 服务来进行流水线方式生产，并最大程度节约使用成本。</p>
+<p>参考：</p>
+
+<p><a href="https://github.com/cloudbeer/sd-inpainting-tryon">本文完整源码</a></p>
+
+<p><a href="sagemaker-sd-inpaint-1.html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。]]></summary></entry><entry><title type="html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</title><link href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-1.html" rel="alternate" type="text/html" title="在 AWS 上使用 Stable Diffusion 给商品更换模特(一)" /><published>2023-05-14T12:10:49+00:00</published><updated>2023-05-14T12:10:49+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-sd-inpaint-1</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-sd-inpaint-1.html"><![CDATA[<p>给商品图片安上模特可以使用 stable-diffusion-inpainting 这个模型来轻松实现。本文探讨使用 AWS 服务来进行流水线方式生产，并最大程度节约使用成本。</p>
 
 <h2 id="模型准备">模型准备</h2>
 
@@ -495,7 +625,13 @@ aws s3 <span class="nb">cp </span>stable-diffusion-inpainting.tar.gz <span class
 
 <p>接下来我想设计一个流水线来处理此过程，让图片可以被批量自动处理，处理结束之后，可以自动结束计算资源。</p>
 
-<p>待续…</p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[给商品图片安上模特可以使用 stable-diffusion-inpainting 这个模型来轻松实现。本文探讨使用 AWS 服务来进行流水线方式生产，并最大程度节约使用成本。]]></summary></entry><entry><title type="html">在 SageMaker 上部署 Huggingface 模型 (二)</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型 (二)" /><published>2023-05-11T08:13:33+00:00</published><updated>2023-05-11T08:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html"><![CDATA[<p>在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。</p>
+<p>待续…</p>
+
+<hr />
+
+<p>参考：</p>
+
+<p><a href="sagemaker-sd-inpaint-2.html">在 AWS 上使用 Stable Diffusion 给商品更换模特(二)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[给商品图片安上模特可以使用 stable-diffusion-inpainting 这个模型来轻松实现。本文探讨使用 AWS 服务来进行流水线方式生产，并最大程度节约使用成本。]]></summary></entry><entry><title type="html">在 SageMaker 上部署 Huggingface 模型 (二)</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型 (二)" /><published>2023-05-11T08:13:33+00:00</published><updated>2023-05-11T08:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-2.html"><![CDATA[<p>在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。</p>
 
 <h2 id="背景">背景</h2>
 
@@ -1687,72 +1823,4 @@ python tokenize_dataset_rows.py <span class="se">\</span>
 
 <p>参考：</p>
 
-<p><a href="https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/">https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。]]></summary></entry><entry><title type="html">使用 QuickSight 自动展示 S3 的 Excel 文件</title><link href="https://youbug.cn/2023/04/quicksight-from-s3-excel.html" rel="alternate" type="text/html" title="使用 QuickSight 自动展示 S3 的 Excel 文件" /><published>2023-04-02T03:10:49+00:00</published><updated>2023-04-02T03:10:49+00:00</updated><id>https://youbug.cn/2023/04/quicksight-from-s3-excel</id><content type="html" xml:base="https://youbug.cn/2023/04/quicksight-from-s3-excel.html"><![CDATA[<p>Amazon QuickSight 是 AWS 数据分析的前端展示平台，支持使用 Amazon S3 存储桶的 Excel 文件作为数据集。本文介绍了如何设置 S3 和 如何配置自动刷新。</p>
-
-<h2 id="s3-文件准备">S3 文件准备</h2>
-
-<p>首先需要创建一个 manifest 的 JSON。</p>
-
-<p>manifest 文件包含了 Amazon S3 对象位置和元数据的 JSON 文件。</p>
-
-<p>以下是一个示例 Amazon S3 manifest 文件：</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"entries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"s3://my-bucket/salesdata/q1/report1.csv"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"mandatory"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"meta"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"sales_period"</span><span class="p">:</span><span class="w"> </span><span class="s2">"report1"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"s3://my-bucket/salesdata/q1/report2.csv"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"mandatory"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"meta"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"sales_period"</span><span class="p">:</span><span class="w"> </span><span class="s2">"report2"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>按照上述格式，此文件可以使用 S3 的 上传 Event 触发 Lambda 自动生成。</p>
-
-<p>将上述 JSON 文件和 csv 文件 都上传到 S3。</p>
-
-<h2 id="权限设置">权限设置</h2>
-
-<p>进入 QuickSight 控制台，点击右上侧个人头像，展开菜单，选择 “管理 Quicksight”。</p>
-
-<p>从左侧选择菜单 “安全性和权限”，并点击“管理” 按钮。</p>
-
-<p>选择目标 S3 Bucket，保存之后，权限即可设置完成。</p>
-
-<h2 id="新建数据集">新建数据集</h2>
-
-<p>新建数据集，选择 S3：</p>
-
-<ul>
-  <li>数据源名称: 随便写</li>
-  <li>清单文件：填写之前上传到 S3 的 manifest 的文件的 S3 地址即可</li>
-</ul>
-
-<p>设置完成，点击 “连接”。</p>
-
-<p>进入之后，设计您的展示界面。</p>
-
-<h2 id="配置-quicksight-自动刷新">配置 QuickSight 自动刷新</h2>
-
-<p>到 QuickSight 控制台主页，从左侧菜单选择菜单 “数据集” ，找到刚刚创建的数据集。</p>
-
-<p>进入之后，点击 “刷新” Tab，并点击右上侧的 “立即刷新” 或者 “添加新计划”.</p>
-
-<ul>
-  <li>
-    <p>立即刷新 可以手工立即导入新的数据。</p>
-  </li>
-  <li>
-    <p>添加新计划 可以按照周期（每小时，天，周，月）配置自动刷新。</p>
-  </li>
-</ul>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[Amazon QuickSight 是 AWS 数据分析的前端展示平台，支持使用 Amazon S3 存储桶的 Excel 文件作为数据集。本文介绍了如何设置 S3 和 如何配置自动刷新。]]></summary></entry></feed>
+<p><a href="https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/">https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。]]></summary></entry></feed>

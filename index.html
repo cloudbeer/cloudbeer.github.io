@@ -77,7 +77,15 @@
   }
 </style>
 
-<div class="home"><h1 class="page-heading">YouBug</h1><ul class="post-list"><li><span class="post-meta">2023-05-16</span>
+<div class="home"><h1 class="page-heading">YouBug</h1><ul class="post-list"><li><span class="post-meta">2023-05-28</span>
+      <h3>
+        <a class="post-link" href="/2023/05/sagemaker-chatglm.html">
+          使用 SageMaker 部署 ChatGLM-6B 自定义 API
+        </a>
+      </h3>
+      <div><p>ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。</p>
+</div>
+    </li><li><span class="post-meta">2023-05-16</span>
       <h3>
         <a class="post-link" href="/2023/05/sagemaker-sd-inpaint-2.html">
           在 AWS 上使用 Stable Diffusion 给商品更换模特(二)
@@ -148,14 +156,6 @@
         </a>
       </h3>
       <div><p>当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。</p>
-</div>
-    </li><li><span class="post-meta">2023-04-02</span>
-      <h3>
-        <a class="post-link" href="/2023/04/quicksight-from-s3-excel.html">
-          使用 QuickSight 自动展示 S3 的 Excel 文件
-        </a>
-      </h3>
-      <div><p>Amazon QuickSight 是 AWS 数据分析的前端展示平台，支持使用 Amazon S3 存储桶的 Excel 文件作为数据集。本文介绍了如何设置 S3 和 如何配置自动刷新。</p>
 </div>
     </li></ul>
 

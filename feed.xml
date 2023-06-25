@@ -1,4 +1,321 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-05-28T03:49:26+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 SageMaker 部署 ChatGLM-6B 自定义 API</title><link href="https://youbug.cn/2023/05/sagemaker-chatglm.html" rel="alternate" type="text/html" title="使用 SageMaker 部署 ChatGLM-6B 自定义 API" /><published>2023-05-28T02:13:33+00:00</published><updated>2023-05-28T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-chatglm</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-chatglm.html"><![CDATA[<p>ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-06-25T10:41:16+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 Cloudfront Lambda@Edge 实现图片格式转换</title><link href="https://youbug.cn/2023/06/cloudfront-image-process-lambda-sam.html" rel="alternate" type="text/html" title="使用 Cloudfront Lambda@Edge 实现图片格式转换" /><published>2023-06-25T10:10:49+00:00</published><updated>2023-06-25T10:10:49+00:00</updated><id>https://youbug.cn/2023/06/cloudfront-image-process-lambda-sam</id><content type="html" xml:base="https://youbug.cn/2023/06/cloudfront-image-process-lambda-sam.html"><![CDATA[<p>Cloudfront Lambda@Edge 可以在边缘端完成一系列逻辑操作。 本文使用 AWS Serverless Application Model(AWS SAM) 实现了将图片处理成 WebP 格式。</p>
+
+<h2 id="应用场景">应用场景</h2>
+
+<p>本示例描述了如下场景：</p>
+
+<ul>
+  <li>Cloudfront 的图片路径为： <code class="language-plaintext highlighter-rouge">/{bucket_bucket}/{s3_key}</code></li>
+  <li>客户端的 headers 里如果包含 Accept 为 image/webp，则处理图片为 webp 格式</li>
+  <li>如果不满足上述条件，则重写 Url 为 <code class="language-plaintext highlighter-rouge">/{s3_key}</code>，直接将 request 导向相应的存储桶</li>
+</ul>
+
+<h2 id="sam-应用开发过程">SAM 应用开发过程</h2>
+
+<h3 id="创建应用">创建应用</h3>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam init
+</code></pre></div></div>
+
+<p>一些选项：</p>
+
+<ul>
+  <li>选择 python3.9, ZIP （这是默认的）</li>
+  <li>hello_world 模版即可</li>
+</ul>
+
+<p>完成之后，SAM 会建立一个项目模板。进入项目目录。</p>
+
+<p>我本地的项目名称为 <code class="language-plaintext highlighter-rouge">webp-processor</code>，SAM 系统会以此名字创建一系列资源。</p>
+
+<h3 id="修改配置">修改配置</h3>
+
+<p>由于我们无需 API Gateway 触发器，可以删除项目根目录下 <code class="language-plaintext highlighter-rouge">template.yaml</code> 的关于触发器内容，并增大 Timeout 的时间，如下：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">Globals</span><span class="pi">:</span>
+  <span class="na">Function</span><span class="pi">:</span>
+    <span class="na">Timeout</span><span class="pi">:</span> <span class="m">30</span>
+<span class="na">Resources</span><span class="pi">:</span>
+  <span class="na">CloudfrontFunction</span><span class="pi">:</span>
+    <span class="na">Properties</span><span class="pi">:</span>
+      <span class="c1"># Events:</span>
+      <span class="c1">#   HelloWorld:</span>
+      <span class="c1">#     Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api</span>
+      <span class="c1">#     Properties:</span>
+      <span class="c1">#       Path: /hello</span>
+      <span class="c1">#       Method: get</span>
+<span class="na">Outputs</span><span class="pi">:</span>
+  <span class="c1"># HelloWorldApi:</span>
+  <span class="c1">#   Description: "API Gateway endpoint URL for Prod stage for Hello World function"</span>
+  <span class="c1">#   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"</span>
+</code></pre></div></div>
+
+<h3 id="代码解读">代码解读</h3>
+
+<blockquote>
+  <p>完整的代码请参见文末。</p>
+</blockquote>
+
+<p>如果检测到无需处理的请求，直接返回 request，并重写 URL:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">request</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s">"Records"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"cf"</span><span class="p">][</span><span class="s">"request"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">uri</span><span class="p">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">".jpg"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">uri</span><span class="p">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">".png"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">uri</span><span class="p">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">".jpeg"</span><span class="p">)):</span> <span class="c1"># 只处理这三种类型的图片
+</span>      <span class="n">request</span><span class="p">[</span><span class="s">"uri"</span><span class="p">]</span> <span class="o">=</span> <span class="s">"/"</span> <span class="o">+</span> <span class="n">key</span>
+      <span class="k">return</span> <span class="n">request</span>
+</code></pre></div></div>
+
+<p>cf 请求过来的 headers 构造比较特殊，如下的示例代码可以方便解析并获取 headers 里的值：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">webpAccept</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">for</span> <span class="n">accept</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'accept'</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="k">if</span> <span class="s">"image/webp"</span> <span class="ow">in</span> <span class="n">accept</span><span class="p">[</span><span class="s">'value'</span><span class="p">]:</span>
+            <span class="n">webpAccept</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">break</span>
+</code></pre></div></div>
+
+<p>本示例中，需要用到 Pillow 库，直接在 <code class="language-plaintext highlighter-rouge">requirements.txt</code> 里增加依赖即可。</p>
+
+<h3 id="本地调试">本地调试</h3>
+
+<p>使用如下命令，先 build 再调用：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam build
+
+sam <span class="nb">local </span>invoke <span class="nt">-e</span>  ./events/cf.json 
+</code></pre></div></div>
+
+<p>后面这个 json 文件是模拟相应的触发器请求，具体数据格式可以参考这个网址：</p>
+
+<p><a href="https://github.com/tschoffelen/lambda-sample-events/tree/master/events/aws">https://github.com/tschoffelen/lambda-sample-events/tree/master/events/aws</a></p>
+
+<p>本文测试的 <code class="language-plaintext highlighter-rouge">./events/cf.json</code>  如下：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"Records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"cf"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nl">"distributionId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"EXAMPLE"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nl">"request"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nl">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/test-bucket/web/xxxx.jpg"</span><span class="p">,</span><span class="w">
+          </span><span class="nl">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GET"</span><span class="p">,</span><span class="w">
+          </span><span class="nl">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2001:cdba::3257:9652"</span><span class="p">,</span><span class="w">
+          </span><span class="nl">"headers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"host"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+              </span><span class="p">{</span><span class="w">
+                </span><span class="nl">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Host"</span><span class="p">,</span><span class="w">
+                </span><span class="nl">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"d123.cf.net"</span><span class="w">
+              </span><span class="p">}</span><span class="w">
+            </span><span class="p">],</span><span class="w">
+            </span><span class="nl">"accept"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+              </span><span class="p">{</span><span class="w">
+                </span><span class="nl">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Accept"</span><span class="p">,</span><span class="w">
+                </span><span class="nl">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"</span><span class="w">
+              </span><span class="p">}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+          </span><span class="p">}</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="云上调试api-gateway">云上调试（API Gateway）</h3>
+
+<p>如果使用了  API Gateway 作为触发器，那么使用云上调试会比较简单：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam <span class="nb">sync</span> <span class="nt">--watch</span>
+</code></pre></div></div>
+
+<p>本地调试使用下面的命令：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam <span class="nb">local </span>start-api
+</code></pre></div></div>
+
+<p>部署更新代码之前，需要调用 <code class="language-plaintext highlighter-rouge">sam build</code>。</p>
+
+<h2 id="部署">部署</h2>
+
+<h3 id="本地代码部署到线上">本地代码部署到线上</h3>
+
+<p>测试完成之后，调用如下命令进行部署：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam deploy <span class="nt">--guided</span>
+</code></pre></div></div>
+
+<p>按照提示即可将 Lambda 部署到线上。部署完成后可以在 Lambda 控制台看到 <code class="language-plaintext highlighter-rouge">webp-processor-CloudfrontFunction-xxxxx</code> 的 Lambda 实例。</p>
+
+<h3 id="设置-cloudfront-的缓存策略">设置 Cloudfront 的缓存策略</h3>
+
+<p>由于此场景会通过浏览器的 headers 的 Accept 的值来决定是否处理图片，所以需要设置依据 headers 的  Accept 进行缓存。</p>
+
+<p><a href="https://console.aws.amazon.com/cloudfront/v3/home#/policies/cache">进入 Cloudfront 控制台的 Policies</a>，在 Custom policies 面板点击 <code class="language-plaintext highlighter-rouge">Create cache policy</code>。</p>
+
+<p>参数如下：</p>
+
+<ul>
+  <li>Name: ForWebP （或者其他任意名字）</li>
+  <li>Headers: Include the following headers
+    <ul>
+      <li>Add Header: Accept</li>
+    </ul>
+  </li>
+</ul>
+
+<p>其余默认即可。</p>
+
+<p>进入 Cloudfront 的 Distributions 实例，选择相应的实例，并设置 Behaviors 的 Cache policy 为 <code class="language-plaintext highlighter-rouge">ForWebP</code>。</p>
+
+<h3 id="部署-lambdaedge">部署 Lambda@Edge</h3>
+
+<p><a href="https://console.aws.amazon.com/lambda/home#/functions">进入 Lambda 控制台</a>，进入刚刚部署的函数 <code class="language-plaintext highlighter-rouge">webp-processor-CloudfrontFunction-xxxxx</code>。</p>
+
+<p>右上角选择 Action -&gt; Deploy to Lambda@Edge，如图：</p>
+
+<p><img src="/assets/posts/aws/deploy-lambda-edge.png" alt="deploy lambda to edge" /></p>
+
+<p>第一次部署选择：</p>
+
+<ul>
+  <li>Distribution: 对应的 Cloudfront 实例</li>
+  <li>Cache behavior: *</li>
+  <li>CloudFront event: Origin requset</li>
+  <li>Confirm deploy to Lambda@Edge</li>
+</ul>
+
+<p>此处 CloudFront event 只能选择 Origin requset， Viewer Request 只支持小于 1M 的包。</p>
+
+<p>后续升级部署选择 <code class="language-plaintext highlighter-rouge">Use existing CloudFront trigger on this function</code> 即可。</p>
+
+<h2 id="坑">坑</h2>
+
+<h3 id="本示例的特殊之处">本示例的特殊之处</h3>
+
+<p>本示例使用了一个 Cloudfront 映射多个 S3 存储桶，设置 Origins 的时候，需要设置多个 S3 存储桶，请注意这里的 <strong>Origin path 需要留空</strong>。</p>
+
+<p>同时需要设置多个 Behaviors，规则为： Path 是桶名称，对应到 S3 的相应的桶。</p>
+
+<h3 id="登录-public-ecr">登录 public ecr</h3>
+
+<p>在执行 <code class="language-plaintext highlighter-rouge">sam local invoke</code> 的时候，需要提示 docker login 登录。使用如下命令：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws ecr-public get-login-password <span class="nt">--region</span> us-east-1 | docker login <span class="nt">--username</span> AWS <span class="nt">--password-stdin</span> public.ecr.aws/lambda/python
+</code></pre></div></div>
+
+<p>之后调试的过程中，如果出现 Error: Unknown API error received from docker 的错误，大概率也是需要执行此命令重新登录。</p>
+
+<h3 id="设置-cloudfront-edge-的权限">设置 Cloudfront@ edge 的权限</h3>
+
+<p>需要编辑 lambda 的执行 role 的 信任关系，加入 <code class="language-plaintext highlighter-rouge">edgelambda.amazonaws.com</code> 这个 Principal。</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+ </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
+ </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+   </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
+   </span><span class="nl">"Principal"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"Service"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"lambda.amazonaws.com"</span><span class="p">,</span><span class="w"> </span><span class="s2">"edgelambda.amazonaws.com"</span><span class="p">]</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts:AssumeRole"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+ </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="设置-lambda-执行权限">设置 Lambda 执行权限</h3>
+
+<p>找到 Lambda 的执行角色，加入对应 S3 Bucket 的读取权限。</p>
+
+<h3 id="限制条件">限制条件</h3>
+
+<p>（到当前为止： 2023-6-26）：</p>
+
+<ul>
+  <li>
+    <p>&lt;= python 3.9</p>
+  </li>
+  <li>
+    <p>edged 端不支持 arm 架构</p>
+  </li>
+</ul>
+
+<p>更多限制条件参见：<a href="https://docs.aws.amazon.com/zh_cn/AmazonCloudFront/latest/DeveloperGuide/edge-functions-restrictions.html">https://docs.aws.amazon.com/zh_cn/AmazonCloudFront/latest/DeveloperGuide/edge-functions-restrictions.html</a></p>
+
+<h2 id="完整代码附上">完整代码附上</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+
+<span class="n">s3_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">"s3"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">lambda_handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    
+    <span class="n">request</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s">"Records"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"cf"</span><span class="p">][</span><span class="s">"request"</span><span class="p">]</span>
+    <span class="n">uri</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">"uri"</span><span class="p">]</span>  <span class="c1"># 格式：/bucket/key
+</span>    <span class="n">headers</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">"headers"</span><span class="p">]</span>
+    
+    <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">parse_url</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">uri</span><span class="p">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">".jpg"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">uri</span><span class="p">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">".png"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">uri</span><span class="p">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">".jpeg"</span><span class="p">)):</span> <span class="c1"># 只处理这三种类型的图片
+</span>        <span class="n">request</span><span class="p">[</span><span class="s">"uri"</span><span class="p">]</span> <span class="o">=</span> <span class="s">"/"</span> <span class="o">+</span> <span class="n">key</span>
+        <span class="k">return</span> <span class="n">request</span>
+        
+    <span class="n">webpAccept</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">for</span> <span class="n">accept</span> <span class="ow">in</span> <span class="n">headers</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'accept'</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="k">if</span> <span class="s">"image/webp"</span> <span class="ow">in</span> <span class="n">accept</span><span class="p">[</span><span class="s">'value'</span><span class="p">]:</span>
+            <span class="n">webpAccept</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">break</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">webpAccept</span><span class="p">:</span>
+        <span class="n">request</span><span class="p">[</span><span class="s">"uri"</span><span class="p">]</span> <span class="o">=</span> <span class="s">"/"</span> <span class="o">+</span> <span class="n">key</span>
+        <span class="k">return</span> <span class="n">request</span>
+    
+    <span class="n">webp_image</span> <span class="o">=</span> <span class="n">resize_s3_image</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">"status"</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
+        <span class="s">"bodyEncoding"</span><span class="p">:</span> <span class="s">"base64"</span><span class="p">,</span>
+        <span class="s">"headers"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">"content-type"</span><span class="p">:</span> <span class="p">[{</span><span class="s">"key"</span><span class="p">:</span> <span class="s">"Content-Type"</span><span class="p">,</span> <span class="s">"value"</span><span class="p">:</span> <span class="s">"image/webp"</span><span class="p">}],</span>
+            <span class="s">"content-encoding"</span><span class="p">:</span> <span class="p">[{</span><span class="s">"key"</span><span class="p">:</span> <span class="s">"Content-Encoding"</span><span class="p">,</span> <span class="s">"value"</span><span class="p">:</span> <span class="s">"base64"</span><span class="p">}],</span>
+        <span class="p">},</span>
+        <span class="s">"body"</span><span class="p">:</span> <span class="n">base64</span><span class="p">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">webp_image</span><span class="p">),</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">parse_url</span><span class="p">(</span><span class="n">uri</span><span class="p">:</span><span class="nb">str</span><span class="p">):</span>
+    <span class="n">uri</span> <span class="o">=</span> <span class="n">uri</span><span class="p">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">uris</span> <span class="o">=</span> <span class="n">uri</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">"/"</span><span class="p">)</span>
+    <span class="n">bucket</span><span class="o">=</span><span class="n">uris</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">uri</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">bucket</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:]</span>
+
+
+
+<span class="k">def</span> <span class="nf">resize_s3_image</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">,</span> <span class="n">objectKey</span><span class="p">):</span>
+    <span class="n">s3</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span><span class="s">"s3"</span><span class="p">)</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">s3</span><span class="p">.</span><span class="n">Object</span><span class="p">(</span>
+        <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket_name</span><span class="p">,</span>
+        <span class="n">key</span><span class="o">=</span><span class="n">objectKey</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">obj_body</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">get</span><span class="p">()[</span><span class="s">"Body"</span><span class="p">].</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">obj_body</span><span class="p">))</span>
+
+    <span class="c1"># (w, h) = img.size
+</span>    <span class="c1"># img = img.resize((int(w / 8), int(h / 8)), Image.LANCZOS)
+</span>
+    <span class="nb">buffer</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span>
+    <span class="n">img</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="nb">buffer</span><span class="p">,</span> <span class="s">"webp"</span><span class="p">)</span>
+    <span class="nb">buffer</span><span class="p">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">img</span><span class="p">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="nb">buffer</span><span class="p">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+</code></pre></div></div>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[Cloudfront Lambda@Edge 可以在边缘端完成一系列逻辑操作。 本文使用 AWS Serverless Application Model(AWS SAM) 实现了将图片处理成 WebP 格式。]]></summary></entry><entry><title type="html">使用 SageMaker 部署 ChatGLM-6B 自定义 API</title><link href="https://youbug.cn/2023/05/sagemaker-chatglm.html" rel="alternate" type="text/html" title="使用 SageMaker 部署 ChatGLM-6B 自定义 API" /><published>2023-05-28T02:13:33+00:00</published><updated>2023-05-28T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-chatglm</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-chatglm.html"><![CDATA[<p>ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。</p>
 
 <h2 id="关键代码">关键代码</h2>
 
@@ -1654,173 +1971,4 @@ python tokenize_dataset_rows.py <span class="se">\</span>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s">"ChatGLM-path"</span><span class="p">,</span> <span class="n">trust_remote_code</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">PeftModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s">"&lt;Your_Path&gt;/ChatGLM-Tuning/output"</span><span class="p">,</span> <span class="n">fan_in_fan_out</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-</code></pre></div></div>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。]]></summary></entry><entry><title type="html">在 AWS 部署 AI 文生图为 Restful API 的最简单方式</title><link href="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html" rel="alternate" type="text/html" title="在 AWS 部署 AI 文生图为 Restful API 的最简单方式" /><published>2023-04-03T08:10:49+00:00</published><updated>2023-04-03T08:10:49+00:00</updated><id>https://youbug.cn/2023/04/easy-way-to-inference-on-aws</id><content type="html" xml:base="https://youbug.cn/2023/04/easy-way-to-inference-on-aws.html"><![CDATA[<p>当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。</p>
-
-<h2 id="流程">流程</h2>
-
-<p><img src="/assets/posts/aiml/sagemaker-s3-restful.png" alt="SageMaker restful" /></p>
-
-<ol>
-  <li>
-    <p>用户请求 API Gateway, prompt 包含在 Url 中。</p>
-  </li>
-  <li>
-    <p>API Gateway 将请求传向 Lambda。</p>
-  </li>
-  <li>
-    <p>Lambda 请求 SageMaker 的 Endpoint。</p>
-  </li>
-  <li>
-    <p>SageMaker 响应请求，返回 图片和 prompt 信息。</p>
-  </li>
-  <li>
-    <p>Lambda 将图片上传到 S3。</p>
-  </li>
-  <li>
-    <p>上传完成后，Lambda 对 S3 Object 进行 Url 签名。</p>
-  </li>
-  <li>
-    <p>返回结果</p>
-  </li>
-  <li>
-    <p>返回结果</p>
-  </li>
-</ol>
-
-<h2 id="在-sagemaker-中部署模型">在 SageMaker 中部署模型</h2>
-
-<p>进入 AWS 控制台的 SageMaker Studio，从左侧菜单选择 SageMaker JumpStart - Models, notebooks, solutions。</p>
-
-<p>这里有非常多的现成的模型，选择一个，如 Stable Diffusion 2.1 base，进入之后，选择 “Deploy”。</p>
-
-<p>稍等 “片刻”，等待 Endpoint 生产完成。</p>
-
-<p>完成后，可以在左侧菜单的 Deployments - Endpoints 里看到 Endpoint 的 Name，这个 Name 就是下面代码中的 endpoint_name。</p>
-
-<h2 id="编写-lambda">编写 Lambda</h2>
-
-<p>直接看代码好了，解析在代码末尾，本段 Lambda 使用 Python 编写：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">import</span> <span class="nn">boto3</span>
-<span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">import</span> <span class="nn">base64</span>
-
-<span class="n">endpoint_name</span> <span class="o">=</span> <span class="s">'jumpstart-name'</span>
-<span class="n">bucket_name</span> <span class="o">=</span> <span class="s">'cloudbeer-aigc-works'</span>
-
-<span class="n">s3_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'s3'</span><span class="p">)</span>
-<span class="n">sagemaker_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'runtime.sagemaker'</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">query_endpoint</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-    <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s">"prompt"</span><span class="p">:</span><span class="n">text</span><span class="p">,</span> <span class="s">"width"</span><span class="p">:</span><span class="mi">512</span><span class="p">,</span> <span class="s">"height"</span><span class="p">:</span><span class="mi">512</span><span class="p">}</span>
-    <span class="n">query_response</span> <span class="o">=</span> <span class="n">sagemaker_client</span><span class="p">.</span><span class="n">invoke_endpoint</span><span class="p">(</span>
-              <span class="n">EndpointName</span><span class="o">=</span><span class="n">endpoint_name</span><span class="p">,</span> 
-              <span class="n">ContentType</span><span class="o">=</span><span class="s">'application/json'</span><span class="p">,</span> 
-              <span class="n">Body</span><span class="o">=</span><span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">).</span><span class="n">encode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">),</span> 
-              <span class="n">Accept</span> <span class="o">=</span> <span class="s">'application/json;jpeg'</span><span class="p">)</span>
-    <span class="n">generated_images</span><span class="p">,</span> <span class="n">prompt</span> <span class="o">=</span> <span class="n">parse_response_multiple_images</span><span class="p">(</span><span class="n">query_response</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">generated_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-
-<span class="k">def</span> <span class="nf">parse_response_multiple_images</span><span class="p">(</span><span class="n">query_response</span><span class="p">):</span>
-    <span class="n">response_dict</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">query_response</span><span class="p">[</span><span class="s">'Body'</span><span class="p">].</span><span class="n">read</span><span class="p">())</span>
-    <span class="k">return</span> <span class="n">response_dict</span><span class="p">[</span><span class="s">'generated_images'</span><span class="p">],</span> <span class="n">response_dict</span><span class="p">[</span><span class="s">'prompt'</span><span class="p">]</span>
-
-<span class="k">def</span> <span class="nf">save_s3</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
-    <span class="n">object_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">())</span> <span class="o">+</span> <span class="s">'.jpg'</span>
-    <span class="n">resPut</span> <span class="o">=</span> <span class="n">s3_client</span><span class="p">.</span><span class="n">put_object</span><span class="p">(</span>
-        <span class="n">ContentType</span><span class="o">=</span><span class="s">"image/jpeg"</span><span class="p">,</span>
-        <span class="n">Body</span><span class="o">=</span><span class="n">base64</span><span class="p">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">image</span><span class="p">),</span>
-        <span class="n">Bucket</span><span class="o">=</span><span class="n">bucket_name</span><span class="p">,</span>
-        <span class="n">Key</span><span class="o">=</span><span class="n">object_name</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">s3_client</span><span class="p">.</span><span class="n">generate_presigned_url</span><span class="p">(</span><span class="s">'get_object'</span><span class="p">,</span>
-                                                    <span class="n">Params</span><span class="o">=</span><span class="p">{</span><span class="s">'Bucket'</span><span class="p">:</span> <span class="n">bucket_name</span><span class="p">,</span>
-                                                            <span class="s">'Key'</span><span class="p">:</span> <span class="n">object_name</span><span class="p">},</span>
-                                                    <span class="n">ExpiresIn</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
-    <span class="k">except</span> <span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logging</span><span class="p">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">None</span>
-    <span class="k">return</span> <span class="n">response</span>
-    
-<span class="k">def</span> <span class="nf">lambda_handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
-    <span class="n">prompt</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s">"queryStringParameters"</span><span class="p">][</span><span class="s">'prompt'</span><span class="p">]</span>
-    <span class="n">image</span> <span class="o">=</span> <span class="n">query_endpoint</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="s">'statusCode'</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
-        <span class="s">'body'</span><span class="p">:</span>  <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
-            <span class="s">"url"</span><span class="p">:</span> <span class="n">save_s3</span><span class="p">(</span><span class="n">image</span><span class="p">),</span>
-            <span class="s">"prompt"</span><span class="p">:</span> <span class="n">prompt</span>
-        <span class="p">})</span>
-    <span class="p">}</span>
-
-</code></pre></div></div>
-
-<p>上面的代码非常的简单，做了如下的事情：</p>
-
-<ul>
-  <li>定义了 2 个变量，分别是 模型的 Endpoint 和 S3 桶的名称。</li>
-  <li>query_endpoint 和 parse_response_multiple_images 这两个函数直接使用了 SageMaker 的 Notebook 中的 Python 函数。这俩函数用来调用推理，并解析推理结果。</li>
-  <li>save_s3 这个函数将图片上传到 S3 的存储桶，并生成一个 Presigned Url 作为输出结果。query_endpoint 的图片结果是图片的 byte 数组 base64 encode 之后的字符串，在上传 S3 的时候需要将字符串 decode 成 byte 数组。</li>
-  <li>最后把结果组装一下就可以了， 参数：prompt 获取自 Querystring: <code class="language-plaintext highlighter-rouge">event["queryStringParameters"]['prompt']</code>。</li>
-  <li>这个代码如果需要生产环境使用，请注意如下问题：
-    <ul>
-      <li>图片大小为 512*512，此尺寸可以直接在代码中修改，图片的尺寸会直接关系到生成速度和资源占用。</li>
-      <li>Lambda 的执行超时时间需要调整。</li>
-      <li>S3 文件的 Key 没有创建子目录，都在根下。</li>
-      <li>S3 的文件名使用了时间戳，并发大的时候，有可能会有重复名称。</li>
-      <li>S3 的签名过期时间是 5 分钟。</li>
-      <li>记得加上权限认证，把这个服务提供给你真正的客户，毕竟 GPU 有点贵。</li>
-    </ul>
-  </li>
-</ul>
-
-<h2 id="iam-权限">IAM 权限</h2>
-
-<p>在 Lambda 的 Configuration 的 Tab 里，可以看到一个 Execution role，点击具体的 role 进入 IAM 中，在这个 role 中需要分别加入 SageMaker 和 S3 的权限。</p>
-
-<p>如，S3 的 Inline Policy 可以如下配置：</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w">
-            </span><span class="nl">"Sid"</span><span class="p">:</span><span class="w"> </span><span class="s2">"AccessAiGC"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"s3:*"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"Resource"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-                </span><span class="s2">"arn:aws:s3:::cloudbeer-aigc-works"</span><span class="p">,</span><span class="w">
-                </span><span class="s2">"arn:aws:s3:::cloudbeer-aigc-works/*"</span><span class="w">
-            </span><span class="p">]</span><span class="w">
-        </span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>你亦可以配置相应的 SageMaker 权限。</p>
-
-<h2 id="api-gateway">API Gateway</h2>
-
-<p>新建一个 API Gateway，把他指向 Lambda 就好了。</p>
-
-<p>现在访问如下的 API Gateway 的 Url 就可以看到结果了：</p>
-
-<p><a href="https://xxxxxxxxxxx.execute-api.region.amazonaws.com/route?prompt=cyborg_tiger">https://xxxxxxxxxxx.execute-api.region.amazonaws.com/route?prompt=cyborg_tiger</a>  假的，不要点。</p>
-
-<p>结果为：</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://xxxxxxx.s3.amazonaws.com/xxxxxxxx.jpg?AWSAccessKeyId=...."</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"prompt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cyborg_tiger"</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>上面的 url 就是 AIGC 的输出结果，你应该看到了一只赛博老虎。😄</p>
-
-<hr />
-
-<p>参考：</p>
-
-<p><a href="https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/">https://aws.amazon.com/cn/blogs/machine-learning/generate-images-from-text-with-the-stable-diffusion-model-on-amazon-sagemaker-jumpstart/</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[当你的大模型练就之后，“很容易” 将模型部署到 SageMaker，但我们一般需要通过 Restful API 集成到应用中。本文以 Stable Diffussion 为例，介绍了一种简便的集成方法，并提供了代码。]]></summary></entry></feed>
+</code></pre></div></div>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[本文是开源项目的使用记录，按照文档操作， finetune 的过程其实很简单。]]></summary></entry></feed>

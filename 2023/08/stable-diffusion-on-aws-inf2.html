@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>在 AWS Inferentia 2 上使用 Stable Diffusion | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="在 AWS Inferentia 2 上使用 Stable Diffusion" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="AWS Inferentia2 实例专为深度学习（DL）推理而构建。它们在 Amazon EC2 中以最低的成本为生成式人工智能（AI）模型（包括大型语言模型（LLM）和视觉转换器）提供高性能计算。您可以使用 Inf2 实例来运行推理应用程序，以实现文本摘要、代码生成、视频和图像生成、语音识别、个性化、欺诈检测等等。" />
+<meta property="og:description" content="AWS Inferentia2 实例专为深度学习（DL）推理而构建。它们在 Amazon EC2 中以最低的成本为生成式人工智能（AI）模型（包括大型语言模型（LLM）和视觉转换器）提供高性能计算。您可以使用 Inf2 实例来运行推理应用程序，以实现文本摘要、代码生成、视频和图像生成、语音识别、个性化、欺诈检测等等。" />
+<link rel="canonical" href="https://youbug.cn/2023/08/stable-diffusion-on-aws-inf2.html" />
+<meta property="og:url" content="https://youbug.cn/2023/08/stable-diffusion-on-aws-inf2.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-08-31T05:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="在 AWS Inferentia 2 上使用 Stable Diffusion" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-08-31T05:10:49+00:00","datePublished":"2023-08-31T05:10:49+00:00","description":"AWS Inferentia2 实例专为深度学习（DL）推理而构建。它们在 Amazon EC2 中以最低的成本为生成式人工智能（AI）模型（包括大型语言模型（LLM）和视觉转换器）提供高性能计算。您可以使用 Inf2 实例来运行推理应用程序，以实现文本摘要、代码生成、视频和图像生成、语音识别、个性化、欺诈检测等等。","headline":"在 AWS Inferentia 2 上使用 Stable Diffusion","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/08/stable-diffusion-on-aws-inf2.html"},"url":"https://youbug.cn/2023/08/stable-diffusion-on-aws-inf2.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">在 AWS Inferentia 2 上使用 Stable Diffusion</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-08-31T05:10:49+00:00" itemprop="datePublished">2023-08-31
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>AWS Inferentia2 实例专为深度学习（DL）推理而构建。它们在 Amazon EC2 中以最低的成本为生成式人工智能（AI）模型（包括大型语言模型（LLM）和视觉转换器）提供高性能计算。您可以使用 Inf2 实例来运行推理应用程序，以实现文本摘要、代码生成、视频和图像生成、语音识别、个性化、欺诈检测等等。</p>
+
+<h2 id="启动实例">启动实例</h2>
+
+<p>启动 Inf2 实例需要选择专门的系统 AMI，在 AMI 市场搜索 Neuron，选择 AMI： <code class="language-plaintext highlighter-rouge">Deep Learning AMI Neuron PyTorch 1.13 (Ubuntu 20.04)</code> - 截止 2023-08-31</p>
+
+<p>由于需要转化模型，官方的 sample 实例建议机型为 <code class="language-plaintext highlighter-rouge">inf2.8xlarge</code>。</p>
+
+<p>进入系统后，查看 <code class="language-plaintext highlighter-rouge">/home/ubuntu/README</code> 文件，首先启动 PyTorch 的 Inf2 环境：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source</span> /opt/aws_neuron_venv_pytorch/bin/activate
+</code></pre></div></div>
+
+<h2 id="stable-diffusion-15">Stable diffusion 1.5</h2>
+
+<h3 id="模型转换">模型转换</h3>
+
+<p>使用如下的代码将模型转化为 Inf2 的支持的模型。</p>
+
+<p>此代码来自于官方示例。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">os</span>
+<span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="s">"NEURON_FUSE_SOFTMAX"</span><span class="p">]</span> <span class="o">=</span> <span class="s">"1"</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="n">nn</span>
+<span class="kn">import</span> <span class="nn">torch_neuronx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">image</span> <span class="k">as</span> <span class="n">mpimg</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">clear_output</span>
+
+<span class="kn">from</span> <span class="nn">diffusers</span> <span class="kn">import</span> <span class="n">StableDiffusionPipeline</span>
+<span class="kn">from</span> <span class="nn">diffusers.models.unet_2d_condition</span> <span class="kn">import</span> <span class="n">UNet2DConditionOutput</span>
+
+<span class="kn">from</span> <span class="nn">diffusers.models.cross_attention</span> <span class="kn">import</span> <span class="n">CrossAttention</span>
+
+<span class="n">clear_output</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<span class="c1">###### 定义参数 #########
+</span><span class="n">DTYPE</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">float32</span>
+<span class="n">COMPILER_WORKDIR_ROOT</span> <span class="o">=</span> <span class="s">'/home/ubuntu/models/deli-inf2'</span>
+<span class="n">model_id</span> <span class="o">=</span> <span class="s">"XpucT/Deliberate"</span>
+<span class="c1">#########################
+</span>
+<span class="c1">######## 类和方法的定义 #################
+</span><span class="k">def</span> <span class="nf">get_attention_scores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">attn_mask</span><span class="p">):</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">query</span><span class="p">.</span><span class="n">dtype</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="p">.</span><span class="n">upcast_attention</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="p">.</span><span class="nb">float</span><span class="p">()</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="p">.</span><span class="nb">float</span><span class="p">()</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">query</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">key</span><span class="p">.</span><span class="n">size</span><span class="p">()):</span>
+        <span class="n">attention_scores</span> <span class="o">=</span> <span class="n">cust_badbmm</span><span class="p">(</span>
+            <span class="n">key</span><span class="p">,</span>
+            <span class="n">query</span><span class="p">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">),</span>
+            <span class="bp">self</span><span class="p">.</span><span class="n">scale</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="p">.</span><span class="n">upcast_softmax</span><span class="p">:</span>
+            <span class="n">attention_scores</span> <span class="o">=</span> <span class="n">attention_scores</span><span class="p">.</span><span class="nb">float</span><span class="p">()</span>
+
+        <span class="n">attention_probs</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">nn</span><span class="p">.</span><span class="n">functional</span><span class="p">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">attention_scores</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">).</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">attention_probs</span> <span class="o">=</span> <span class="n">attention_probs</span><span class="p">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">attention_scores</span> <span class="o">=</span> <span class="n">cust_badbmm</span><span class="p">(</span>
+            <span class="n">query</span><span class="p">,</span>
+            <span class="n">key</span><span class="p">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">),</span>
+            <span class="bp">self</span><span class="p">.</span><span class="n">scale</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="p">.</span><span class="n">upcast_softmax</span><span class="p">:</span>
+            <span class="n">attention_scores</span> <span class="o">=</span> <span class="n">attention_scores</span><span class="p">.</span><span class="nb">float</span><span class="p">()</span>
+
+        <span class="n">attention_probs</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">nn</span><span class="p">.</span><span class="n">functional</span><span class="p">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">attention_scores</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">attention_probs</span> <span class="o">=</span> <span class="n">attention_probs</span><span class="p">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">attention_probs</span>
+
+<span class="k">def</span> <span class="nf">cust_badbmm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+    <span class="n">bmm</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">bmm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="n">scaled</span> <span class="o">=</span> <span class="n">bmm</span> <span class="o">*</span> <span class="n">scale</span>
+    <span class="k">return</span> <span class="n">scaled</span>
+
+<span class="k">class</span> <span class="nc">UNetWrap</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">unet</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">unet</span> <span class="o">=</span> <span class="n">unet</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">encoder_hidden_states</span><span class="p">,</span> <span class="n">cross_attention_kwargs</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">out_tuple</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">unet</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">encoder_hidden_states</span><span class="p">,</span> <span class="n">return_dict</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out_tuple</span>
+
+<span class="k">class</span> <span class="nc">NeuronUNet</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">unetwrap</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">unetwrap</span> <span class="o">=</span> <span class="n">unetwrap</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">config</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">in_channels</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">device</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">encoder_hidden_states</span><span class="p">,</span> <span class="n">cross_attention_kwargs</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">unetwrap</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">timestep</span><span class="p">.</span><span class="nb">float</span><span class="p">().</span><span class="n">expand</span><span class="p">((</span><span class="n">sample</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],)),</span> <span class="n">encoder_hidden_states</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">UNet2DConditionOutput</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">NeuronTextEncoder</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text_encoder</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">neuron_text_encoder</span> <span class="o">=</span> <span class="n">text_encoder</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">text_encoder</span><span class="p">.</span><span class="n">config</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">float32</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">text_encoder</span><span class="p">.</span><span class="n">device</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emb</span><span class="p">,</span> <span class="n">attention_mask</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="p">.</span><span class="n">neuron_text_encoder</span><span class="p">(</span><span class="n">emb</span><span class="p">)[</span><span class="s">'last_hidden_state'</span><span class="p">]]</span>
+
+<span class="k">class</span> <span class="nc">NeuronSafetyModelWrap</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">safety_model</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">safety_model</span> <span class="o">=</span> <span class="n">safety_model</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clip_inputs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">safety_model</span><span class="p">(</span><span class="n">clip_inputs</span><span class="p">).</span><span class="n">values</span><span class="p">())</span>
+
+<span class="c1"># --- Compile CLIP text encoder and save ---
+</span><span class="k">print</span><span class="p">(</span><span class="s">"Load model...."</span><span class="p">)</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span><span class="n">pipe</span> <span class="o">=</span> <span class="n">StableDiffusionPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">torch_dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"Compile CLIP text encoder and save"</span><span class="p">)</span>
+<span class="n">text_encoder</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">text_encoder</span><span class="p">)</span>
+
+<span class="c1"># Apply the wrapper to deal with custom return type
+</span><span class="n">text_encoder</span> <span class="o">=</span> <span class="n">NeuronTextEncoder</span><span class="p">(</span><span class="n">text_encoder</span><span class="p">)</span>
+
+<span class="c1"># Compile text encoder
+# This is used for indexing a lookup table in torch.nn.Embedding,
+# so using random numbers may give errors (out of range).
+</span><span class="n">emb</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mi">49406</span><span class="p">,</span> <span class="mi">18376</span><span class="p">,</span>   <span class="mi">525</span><span class="p">,</span>  <span class="mi">7496</span><span class="p">,</span> <span class="mi">49407</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">,</span>     <span class="mi">0</span><span class="p">]])</span>
+
+<span class="k">with</span> <span class="n">torch</span><span class="p">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">text_encoder_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+            <span class="n">text_encoder</span><span class="p">.</span><span class="n">neuron_text_encoder</span><span class="p">,</span>
+            <span class="n">emb</span><span class="p">,</span>
+            <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'text_encoder'</span><span class="p">),</span>
+            <span class="n">compiler_args</span><span class="o">=</span><span class="p">[</span><span class="s">"--enable-fast-loading-neuron-binaries"</span><span class="p">]</span>
+            <span class="p">)</span>
+
+<span class="c1"># Save the compiled text encoder
+</span><span class="n">text_encoder_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'text_encoder/model.pt'</span><span class="p">)</span>
+<span class="n">torch_neuronx</span><span class="p">.</span><span class="n">async_load</span><span class="p">(</span><span class="n">text_encoder_neuron</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">text_encoder_neuron</span><span class="p">,</span> <span class="n">text_encoder_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">text_encoder</span>
+<span class="k">del</span> <span class="n">text_encoder_neuron</span>
+<span class="k">del</span> <span class="n">emb</span>
+
+<span class="c1"># --- Compile VAE decoder and save ---
+</span><span class="k">print</span><span class="p">(</span><span class="s">"Compile VAE decoder and save"</span><span class="p">)</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">decoder</span><span class="p">)</span>
+
+<span class="c1"># # Compile vae decoder
+</span><span class="n">decoder_in</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">])</span>
+<span class="k">with</span> <span class="n">torch</span><span class="p">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">decoder_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+        <span class="n">decoder</span><span class="p">,</span>
+        <span class="n">decoder_in</span><span class="p">,</span>
+        <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'vae_decoder'</span><span class="p">),</span>
+        <span class="n">compiler_args</span><span class="o">=</span><span class="p">[</span><span class="s">"--enable-fast-loading-neuron-binaries"</span><span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># Save the compiled vae decoder #######################
+</span><span class="n">decoder_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'vae_decoder/model.pt'</span><span class="p">)</span>
+<span class="n">torch_neuronx</span><span class="p">.</span><span class="n">async_load</span><span class="p">(</span><span class="n">decoder_neuron</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">decoder_neuron</span><span class="p">,</span> <span class="n">decoder_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">decoder</span>
+<span class="k">del</span> <span class="n">decoder_in</span>
+<span class="k">del</span> <span class="n">decoder_neuron</span>
+
+<span class="c1"># --- Compile UNet and save ---
+</span><span class="k">print</span><span class="p">(</span><span class="s">"Compile UNet and save"</span><span class="p">)</span>
+<span class="c1"># Replace original cross-attention module with custom cross-attention module for better performance
+</span><span class="n">CrossAttention</span><span class="p">.</span><span class="n">get_attention_scores</span> <span class="o">=</span> <span class="n">get_attention_scores</span>
+<span class="c1"># Apply double wrapper to deal with custom return type
+</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span> <span class="o">=</span> <span class="n">NeuronUNet</span><span class="p">(</span><span class="n">UNetWrap</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">))</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span><span class="n">unet</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">unetwrap</span><span class="p">)</span>
+
+
+<span class="c1"># Compile unet - FP32
+</span><span class="n">sample_1b</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">])</span>
+<span class="n">timestep_1b</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">999</span><span class="p">).</span><span class="nb">float</span><span class="p">().</span><span class="n">expand</span><span class="p">((</span><span class="mi">1</span><span class="p">,))</span>
+<span class="n">encoder_hidden_states_1b</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">77</span><span class="p">,</span> <span class="mi">768</span><span class="p">])</span>
+<span class="n">example_inputs</span> <span class="o">=</span> <span class="n">sample_1b</span><span class="p">,</span> <span class="n">timestep_1b</span><span class="p">,</span> <span class="n">encoder_hidden_states_1b</span>
+
+<span class="k">with</span> <span class="n">torch</span><span class="p">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">unet_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+        <span class="n">unet</span><span class="p">,</span>
+        <span class="n">example_inputs</span><span class="p">,</span>
+        <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'unet'</span><span class="p">),</span>
+        <span class="n">compiler_args</span><span class="o">=</span><span class="p">[</span><span class="s">"--model-type=unet-inference"</span><span class="p">,</span> <span class="s">"--enable-fast-loading-neuron-binaries"</span><span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># save compiled unet
+</span><span class="n">unet_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'unet/model.pt'</span><span class="p">)</span>
+<span class="n">torch_neuronx</span><span class="p">.</span><span class="n">async_load</span><span class="p">(</span><span class="n">unet_neuron</span><span class="p">)</span>
+<span class="n">torch_neuronx</span><span class="p">.</span><span class="n">lazy_load</span><span class="p">(</span><span class="n">unet_neuron</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">unet_neuron</span><span class="p">,</span> <span class="n">unet_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">unet</span>
+<span class="k">del</span> <span class="n">unet_neuron</span>
+<span class="k">del</span> <span class="n">sample_1b</span>
+<span class="k">del</span> <span class="n">timestep_1b</span>
+<span class="k">del</span> <span class="n">encoder_hidden_states_1b</span>
+
+
+<span class="c1"># --- Compile VAE post_quant_conv and save ---
+</span><span class="k">print</span><span class="p">(</span><span class="s">"Compile VAE post_quant_conv and save"</span><span class="p">)</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span><span class="n">post_quant_conv</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">post_quant_conv</span><span class="p">)</span>
+
+<span class="c1"># # # Compile vae post_quant_conv
+</span><span class="n">post_quant_conv_in</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">])</span>
+<span class="k">with</span> <span class="n">torch</span><span class="p">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">post_quant_conv_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+        <span class="n">post_quant_conv</span><span class="p">,</span>
+        <span class="n">post_quant_conv_in</span><span class="p">,</span>
+        <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'vae_post_quant_conv'</span><span class="p">),</span>
+        <span class="n">compiler_args</span><span class="o">=</span><span class="p">[</span><span class="s">"--enable-fast-loading-neuron-binaries"</span><span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># # Save the compiled vae post_quant_conv
+</span><span class="n">post_quant_conv_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'vae_post_quant_conv/model.pt'</span><span class="p">)</span>
+<span class="n">torch_neuronx</span><span class="p">.</span><span class="n">async_load</span><span class="p">(</span><span class="n">post_quant_conv_neuron</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">post_quant_conv_neuron</span><span class="p">,</span> <span class="n">post_quant_conv_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">post_quant_conv</span>
+
+
+
+<span class="c1"># # --- Compile safety checker and save ---
+</span><span class="k">print</span><span class="p">(</span><span class="s">"Compile safety checker and save"</span><span class="p">)</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span><span class="n">safety_model</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">safety_checker</span><span class="p">.</span><span class="n">vision_model</span><span class="p">)</span>
+
+
+<span class="n">clip_input</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">])</span>
+<span class="k">with</span> <span class="n">torch</span><span class="p">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">safety_model_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+        <span class="n">safety_model</span><span class="p">,</span>
+        <span class="n">clip_input</span><span class="p">,</span>
+        <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'safety_model_neuron'</span><span class="p">),</span>
+        <span class="n">compiler_args</span><span class="o">=</span><span class="p">[</span><span class="s">"--enable-fast-loading-neuron-binaries"</span><span class="p">]</span>
+    <span class="p">)</span>
+
+<span class="c1"># # Save the compiled vae post_quant_conv
+</span><span class="n">safety_model_neuron_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">'safety_model_neuron/model.pt'</span><span class="p">)</span>
+<span class="n">torch_neuronx</span><span class="p">.</span><span class="n">async_load</span><span class="p">(</span><span class="n">safety_model_neuron</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">safety_model_neuron</span><span class="p">,</span> <span class="n">safety_model_neuron_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">safety_model_neuron</span>
+
+<span class="k">del</span> <span class="n">pipe</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li>需要 diffusers 的版本为 0.14.0</li>
+  <li>直接使用了 hf 上的 diffusers 模型：<code class="language-plaintext highlighter-rouge">XpucT/Deliberate</code>，使用最新的 diffusers 代码自己转换的 C 站模型会推理失败。具体原因不详。</li>
+  <li>上述代码转换后的模型只支持 512 * 512 的图片，这个代码是相关的shape：<code class="language-plaintext highlighter-rouge">torch.randn([1, 4, 64, 64])</code></li>
+</ul>
+
+<p>保存文件： python trans_1.5.py 之后，直接运行 <code class="language-plaintext highlighter-rouge">python trans_1.5.py</code>。</p>
+
+<p>此过程将会生产 neuron 的模型，如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:23 safety_model_neuron
+drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:14 text_encoder
+drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:22 unet
+drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:18 vae_decoder
+drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:22 vae_post_quant_conv
+</code></pre></div></div>
+
+<h3 id="推理">推理</h3>
+
+<p>直接上代码：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 类库，类和方法的定义，参数定义和上面一致，略。。。
+</span><span class="k">print</span><span class="p">(</span><span class="s">"加载原始模型"</span><span class="p">)</span>
+<span class="n">pipe</span> <span class="o">=</span> <span class="n">StableDiffusionPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+    <span class="n">model_id</span><span class="p">,</span>
+    <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">float32</span><span class="p">,</span>
+    <span class="n">safety_checker</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">scheduler</span> <span class="o">=</span> <span class="n">UniPCMultistepScheduler</span><span class="p">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">scheduler</span><span class="p">.</span><span class="n">config</span><span class="p">)</span>
+
+<span class="n">text_encoder_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"text_encoder/model.pt"</span><span class="p">)</span>
+<span class="n">unet_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"unet/model.pt"</span><span class="p">)</span>
+<span class="n">decoder_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_decoder/model.pt"</span><span class="p">)</span>
+<span class="n">post_quant_conv_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_post_quant_conv/model.pt"</span>
+<span class="p">)</span>
+<span class="n">safety_model_neuron_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"safety_model_neuron/model.pt"</span>
+<span class="p">)</span>
+
+
+<span class="c1"># Load the compiled UNet onto two neuron cores.
+</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"加载 Neuro 转换模型"</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"加载 unet"</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">unet</span> <span class="o">=</span> <span class="n">NeuronUNet</span><span class="p">(</span><span class="n">UNetWrap</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">))</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">unetwrap</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">DataParallel</span><span class="p">(</span>
+    <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">unet_filename</span><span class="p">),</span> <span class="n">device_ids</span><span class="p">,</span> <span class="n">set_dynamic_batching</span><span class="o">=</span><span class="bp">False</span>
+<span class="p">)</span>
+
+
+<span class="k">print</span><span class="p">(</span><span class="s">"加载 text_encoder"</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">text_encoder</span> <span class="o">=</span> <span class="n">NeuronTextEncoder</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">text_encoder</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">text_encoder</span><span class="p">.</span><span class="n">neuron_text_encoder</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">text_encoder_filename</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"加载 vae decoder"</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">decoder_filename</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"加载 vae post_quant_conv"</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">post_quant_conv</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">post_quant_conv_filename</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"加载 safety_checker, skipping..."</span><span class="p">)</span>
+<span class="c1"># pipe.safety_checker.vision_model = NeuronSafetyModelWrap(torch.jit.load(safety_model_neuron_filename))
+</span>
+<span class="c1"># Run pipeline
+</span><span class="n">prompt</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">"A 24 y.o pretty girl, masterpiece, 8k, highres"</span><span class="p">,</span>
+    <span class="s">"a photo of an astronaut riding a horse on mars"</span><span class="p">,</span>
+    <span class="s">"sonic on the moon"</span><span class="p">,</span>
+    <span class="s">"elvis playing guitar while eating a hotdog"</span><span class="p">,</span>
+    <span class="s">"saved by the bell"</span><span class="p">,</span>
+    <span class="s">"engineers eating lunch at the opera"</span><span class="p">,</span>
+    <span class="s">"panda eating bamboo on a plane"</span><span class="p">,</span>
+    <span class="s">"A digital illustration of a steampunk flying machine in the sky with cogs and mechanisms, 4k, detailed, trending in artstation, fantasy vivid colors"</span><span class="p">,</span>
+    <span class="s">"kids playing soccer at the FIFA World Cup"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">total_time</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">prompt</span><span class="p">:</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">negative_prompt</span><span class="o">=</span><span class="s">"nsfw, bad finger, lowres"</span><span class="p">,</span> <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span>
+    <span class="p">).</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">total_time</span> <span class="o">=</span> <span class="n">total_time</span> <span class="o">+</span> <span class="p">(</span><span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span>
+    <span class="n">image</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s">"outputs/</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s">.webp"</span><span class="p">,</span> <span class="s">"WEBP"</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"Average time: "</span><span class="p">,</span> <span class="n">np</span><span class="p">.</span><span class="nb">round</span><span class="p">((</span><span class="n">total_time</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">prompt</span><span class="p">)),</span> <span class="mi">2</span><span class="p">),</span> <span class="s">"seconds"</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<p>推理顺利完成，速度很快。</p>
+
+<h2 id="sdxl">SDXL</h2>
+
+<p>8月28日刚刚更新的新的 neuron 2.13 版本可以支持 SDXL 了。当前 AMI 未放出，所以需要先手工安装依赖包。</p>
+
+<p>具体的依赖包仓库在：<a href="https://pip.repos.neuron.amazonaws.com/">https://pip.repos.neuron.amazonaws.com/</a></p>
+
+<p>比如安装最新版本的 neuronx-distributed 命令：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>neuronx-distributed transformers-neuronx <span class="nt">-i</span> https://pip.repos.neuron.amazonaws.com/
+</code></pre></div></div>
+
+<h3 id="模型转换-1">模型转换</h3>
+
+<p>废话不多说，上代码：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># filename: trans_xl.py 
+</span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="n">nn</span>
+<span class="kn">import</span> <span class="nn">torch_neuronx</span>
+<span class="kn">from</span> <span class="nn">diffusers</span> <span class="kn">import</span> <span class="n">DiffusionPipeline</span><span class="p">,</span> <span class="n">DPMSolverMultistepScheduler</span>
+<span class="kn">from</span> <span class="nn">diffusers.models.unet_2d_condition</span> <span class="kn">import</span> <span class="n">UNet2DConditionOutput</span>
+<span class="kn">from</span> <span class="nn">diffusers.models.attention_processor</span> <span class="kn">import</span> <span class="n">Attention</span>
+
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">image</span> <span class="k">as</span> <span class="n">mpimg</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">clear_output</span>
+
+<span class="n">clear_output</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+
+<span class="n">COMPILER_WORKDIR_ROOT</span> <span class="o">=</span> <span class="s">"/home/ubuntu/models/sdxl"</span>
+
+<span class="c1"># COMPILER_WORKDIR_ROOT = "/home/ubuntu/models/ds8"
+</span>
+<span class="c1"># Model ID for SD XL version pipeline
+</span><span class="n">model_id</span> <span class="o">=</span> <span class="s">"stabilityai/stable-diffusion-xl-base-1.0"</span>
+
+
+<span class="k">def</span> <span class="nf">get_attention_scores_neuron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">attn_mask</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">query</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">key</span><span class="p">.</span><span class="n">size</span><span class="p">():</span>
+        <span class="n">attention_scores</span> <span class="o">=</span> <span class="n">custom_badbmm</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">query</span><span class="p">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">),</span> <span class="bp">self</span><span class="p">.</span><span class="n">scale</span><span class="p">)</span>
+        <span class="n">attention_probs</span> <span class="o">=</span> <span class="n">attention_scores</span><span class="p">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">).</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">attention_scores</span> <span class="o">=</span> <span class="n">custom_badbmm</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="p">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">),</span> <span class="bp">self</span><span class="p">.</span><span class="n">scale</span><span class="p">)</span>
+        <span class="n">attention_probs</span> <span class="o">=</span> <span class="n">attention_scores</span><span class="p">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">attention_probs</span>
+
+
+<span class="k">def</span> <span class="nf">custom_badbmm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+    <span class="n">bmm</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">bmm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="n">scaled</span> <span class="o">=</span> <span class="n">bmm</span> <span class="o">*</span> <span class="n">scale</span>
+    <span class="k">return</span> <span class="n">scaled</span>
+
+
+<span class="k">class</span> <span class="nc">UNetWrap</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">unet</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">unet</span> <span class="o">=</span> <span class="n">unet</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">encoder_hidden_states</span><span class="p">,</span> <span class="n">text_embeds</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">time_ids</span><span class="o">=</span><span class="bp">None</span>
+    <span class="p">):</span>
+        <span class="n">out_tuple</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">unet</span><span class="p">(</span>
+            <span class="n">sample</span><span class="p">,</span>
+            <span class="n">timestep</span><span class="p">,</span>
+            <span class="n">encoder_hidden_states</span><span class="p">,</span>
+            <span class="n">added_cond_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s">"text_embeds"</span><span class="p">:</span> <span class="n">text_embeds</span><span class="p">,</span> <span class="s">"time_ids"</span><span class="p">:</span> <span class="n">time_ids</span><span class="p">},</span>
+            <span class="n">return_dict</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">out_tuple</span>
+
+
+<span class="k">class</span> <span class="nc">NeuronUNet</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">unetwrap</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">unetwrap</span> <span class="o">=</span> <span class="n">unetwrap</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">config</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">in_channels</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">add_embedding</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">add_embedding</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">unetwrap</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">device</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">sample</span><span class="p">,</span>
+        <span class="n">timestep</span><span class="p">,</span>
+        <span class="n">encoder_hidden_states</span><span class="p">,</span>
+        <span class="n">added_cond_kwargs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">return_dict</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">cross_attention_kwargs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">unetwrap</span><span class="p">(</span>
+            <span class="n">sample</span><span class="p">,</span>
+            <span class="n">timestep</span><span class="p">.</span><span class="nb">float</span><span class="p">().</span><span class="n">expand</span><span class="p">((</span><span class="n">sample</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],)),</span>
+            <span class="n">encoder_hidden_states</span><span class="p">,</span>
+            <span class="n">added_cond_kwargs</span><span class="p">[</span><span class="s">"text_embeds"</span><span class="p">],</span>
+            <span class="n">added_cond_kwargs</span><span class="p">[</span><span class="s">"time_ids"</span><span class="p">],</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">UNet2DConditionOutput</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span>
+
+
+<span class="c1"># --- Compile VAE decoder and save ---
+</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"Load model...."</span><span class="p">)</span>
+<span class="n">pipe</span> <span class="o">=</span> <span class="n">DiffusionPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">float32</span><span class="p">)</span>
+
+
+<span class="k">print</span><span class="p">(</span><span class="s">"Compile vae decoder...."</span><span class="p">)</span>
+
+<span class="n">decoder</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">decoder</span><span class="p">)</span>
+
+<span class="c1"># # Compile vae decoder
+</span><span class="n">decoder_in</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">])</span>
+<span class="n">decoder_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+    <span class="n">decoder</span><span class="p">,</span>
+    <span class="n">decoder_in</span><span class="p">,</span>
+    <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_decoder"</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="c1"># Save the compiled vae decoder
+</span><span class="n">decoder_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_decoder/model.pt"</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">decoder_neuron</span><span class="p">,</span> <span class="n">decoder_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">decoder</span>
+
+
+<span class="c1"># --- Compile UNet and save ---
+</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"Compile UNet"</span><span class="p">)</span>
+
+<span class="c1"># pipe = DiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float32)
+</span>
+<span class="c1"># Replace original cross-attention module with custom cross-attention module for better performance
+</span><span class="n">Attention</span><span class="p">.</span><span class="n">get_attention_scores</span> <span class="o">=</span> <span class="n">get_attention_scores_neuron</span>
+
+<span class="c1"># Apply double wrapper to deal with custom return type
+</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span> <span class="o">=</span> <span class="n">NeuronUNet</span><span class="p">(</span><span class="n">UNetWrap</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">))</span>
+
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+</span><span class="n">unet</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">unetwrap</span><span class="p">)</span>
+<span class="c1"># del pipe
+</span>
+<span class="c1"># Compile unet - FP32
+</span><span class="n">sample_1b</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">])</span>
+<span class="n">timestep_1b</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">999</span><span class="p">).</span><span class="nb">float</span><span class="p">().</span><span class="n">expand</span><span class="p">((</span><span class="mi">1</span><span class="p">,))</span>
+<span class="n">encoder_hidden_states_1b</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">77</span><span class="p">,</span> <span class="mi">2048</span><span class="p">])</span>
+<span class="n">added_cond_kwargs_1b</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"text_embeds"</span><span class="p">:</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1280</span><span class="p">]),</span>
+    <span class="s">"time_ids"</span><span class="p">:</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">]),</span>
+<span class="p">}</span>
+<span class="n">example_inputs</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">sample_1b</span><span class="p">,</span>
+    <span class="n">timestep_1b</span><span class="p">,</span>
+    <span class="n">encoder_hidden_states_1b</span><span class="p">,</span>
+    <span class="n">added_cond_kwargs_1b</span><span class="p">[</span><span class="s">"text_embeds"</span><span class="p">],</span>
+    <span class="n">added_cond_kwargs_1b</span><span class="p">[</span><span class="s">"time_ids"</span><span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">unet_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+    <span class="n">unet</span><span class="p">,</span>
+    <span class="n">example_inputs</span><span class="p">,</span>
+    <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"unet"</span><span class="p">),</span>
+    <span class="n">compiler_args</span><span class="o">=</span><span class="p">[</span><span class="s">"--model-type=unet-inference"</span><span class="p">],</span>
+<span class="p">)</span>
+
+<span class="c1"># save compiled unet
+</span><span class="n">unet_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"unet/model.pt"</span><span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">unet_neuron</span><span class="p">,</span> <span class="n">unet_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">unet</span>
+
+
+<span class="k">print</span><span class="p">(</span><span class="s">"Compile VAE post_quant_conv "</span><span class="p">)</span>
+<span class="c1"># --- Compile VAE post_quant_conv and save ---
+</span>
+<span class="c1"># Only keep the model being compiled in RAM to minimze memory pressure
+# pipe = DiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float32)
+</span><span class="n">post_quant_conv</span> <span class="o">=</span> <span class="n">copy</span><span class="p">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">post_quant_conv</span><span class="p">)</span>
+<span class="c1"># del pipe
+</span>
+<span class="c1"># Compile vae post_quant_conv
+</span><span class="n">post_quant_conv_in</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">])</span>
+<span class="n">post_quant_conv_neuron</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">trace</span><span class="p">(</span>
+    <span class="n">post_quant_conv</span><span class="p">,</span>
+    <span class="n">post_quant_conv_in</span><span class="p">,</span>
+    <span class="n">compiler_workdir</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_post_quant_conv"</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="c1"># Save the compiled vae post_quant_conv
+</span><span class="n">post_quant_conv_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_post_quant_conv/model.pt"</span>
+<span class="p">)</span>
+<span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">post_quant_conv_neuron</span><span class="p">,</span> <span class="n">post_quant_conv_filename</span><span class="p">)</span>
+
+<span class="c1"># delete unused objects
+</span><span class="k">del</span> <span class="n">post_quant_conv</span>
+
+<span class="k">del</span> <span class="n">pipe</span>
+
+</code></pre></div></div>
+
+<p>但由于 SDXL 的模型要大很多，转换速度比较慢。</p>
+
+<h3 id="推理代码">推理代码</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 头部定义掠过
+</span>
+<span class="n">decoder_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_decoder/model.pt"</span><span class="p">)</span>
+<span class="n">unet_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"unet/model.pt"</span><span class="p">)</span>
+<span class="n">post_quant_conv_filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">COMPILER_WORKDIR_ROOT</span><span class="p">,</span> <span class="s">"vae_post_quant_conv/model.pt"</span>
+<span class="p">)</span>
+
+<span class="n">pipe</span> <span class="o">=</span> <span class="n">DiffusionPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">scheduler</span> <span class="o">=</span> <span class="n">DPMSolverMultistepScheduler</span><span class="p">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">scheduler</span><span class="p">.</span><span class="n">config</span><span class="p">)</span>
+
+
+<span class="c1"># Load the compiled UNet onto two neuron cores.
+</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span> <span class="o">=</span> <span class="n">NeuronUNet</span><span class="p">(</span><span class="n">UNetWrap</span><span class="p">(</span><span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">))</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">unet</span><span class="p">.</span><span class="n">unetwrap</span> <span class="o">=</span> <span class="n">torch_neuronx</span><span class="p">.</span><span class="n">DataParallel</span><span class="p">(</span>
+    <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">unet_filename</span><span class="p">),</span> <span class="n">device_ids</span><span class="p">,</span> <span class="n">set_dynamic_batching</span><span class="o">=</span><span class="bp">False</span>
+<span class="p">)</span>
+
+<span class="c1"># Load other compiled models onto a single neuron core.
+</span><span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">decoder_filename</span><span class="p">)</span>
+<span class="n">pipe</span><span class="p">.</span><span class="n">vae</span><span class="p">.</span><span class="n">post_quant_conv</span> <span class="o">=</span> <span class="n">torch</span><span class="p">.</span><span class="n">jit</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">post_quant_conv_filename</span><span class="p">)</span>
+
+<span class="c1"># Run pipeline
+</span><span class="n">prompt</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">"A 24 y.o pretty girl, masterpiece, 8k, highres"</span><span class="p">,</span>
+    <span class="s">"a photo of an astronaut riding a horse on mars"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">total_time</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">prompt</span><span class="p">:</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">pmt</span> <span class="o">=</span> <span class="sa">f</span><span class="s">"""anime artwork </span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s"> . anime style, key visual, vibrant, studio anime, highly detailed"""</span>
+    <span class="n">npmt</span> <span class="o">=</span> <span class="s">"""photo, deformed, black and white, realism, disfigured, low contrast"""</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span><span class="n">pmt</span><span class="p">,</span> <span class="n">negative_prompt</span><span class="o">=</span><span class="n">npmt</span><span class="p">,</span> <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">).</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">total_time</span> <span class="o">=</span> <span class="n">total_time</span> <span class="o">+</span> <span class="p">(</span><span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span>
+    <span class="n">image</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s">"outputs/xl-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s">.webp"</span><span class="p">,</span> <span class="s">"WEBP"</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"Average time: "</span><span class="p">,</span> <span class="n">np</span><span class="p">.</span><span class="nb">round</span><span class="p">((</span><span class="n">total_time</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">prompt</span><span class="p">)),</span> <span class="mi">2</span><span class="p">),</span> <span class="s">"seconds"</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<p>过程和 1.5 差不多。</p>
+
+<p>但模型加载的时间较长。</p>
+
+<h2 id="总结">总结</h2>
+
+<ul>
+  <li>模型需哟转换，基本都能能成功完成转换，</li>
+  <li>1.5 的模型能成功完成推理的模型不多。</li>
+  <li>SDXL 模型本身有较高质量。但加载时间较长。</li>
+  <li>当前按照官方示例，不支持动图片态尺寸。模型转化的时候已经固定好尺寸了。</li>
+  <li>推理速度很快：512 尺寸的 SD1.5 可达到 19it/s 左右，1024 的 SDXL 是 3.5it/s。</li>
+</ul>
+
+<hr />
+<p>参考：</p>
+
+<p><a href="https://github.com/aws-neuron/aws-neuron-samples">https://github.com/aws-neuron/aws-neuron-samples</a></p>
+
+<p><a href="https://awsdocs-neuron.readthedocs-hosted.com/en/latest/release-notes/index.html">https://awsdocs-neuron.readthedocs-hosted.com/en/latest/release-notes/index.html</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/08/stable-diffusion-on-aws-inf2.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

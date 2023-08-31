@@ -429,10 +429,6 @@ clear_output(wait=False)
 
 
 COMPILER_WORKDIR_ROOT = "/home/ubuntu/models/sdxl"
-
-# COMPILER_WORKDIR_ROOT = "/home/ubuntu/models/ds8"
-
-# Model ID for SD XL version pipeline
 model_id = "stabilityai/stable-diffusion-xl-base-1.0"
 
 
@@ -659,10 +655,10 @@ print("Average time: ", np.round((total_time / len(prompt)), 2), "seconds")
 
 ## 总结
 
-- 模型需哟转换，基本都能能成功完成转换，
-- 1.5 的模型能成功完成推理的模型不多。
-- SDXL 模型本身有较高质量。但加载时间较长。
-- 当前按照官方示例，不支持动图片态尺寸。模型转化的时候已经固定好尺寸了。
+- 模型需要转换，基本都能能成功完成转换，
+- SD 1.5 的模型能成功完成推理的不多。
+- SDXL 模型本身有较高质量，但加载时间较长。
+- 当前按照官方示例，不支持动图片态尺寸，模型转化的时候已经固定好图片尺寸了。
 - 推理速度很快：512 尺寸的 SD1.5 可达到 19it/s 左右，1024 的 SDXL 是 3.5it/s。
 
 ---

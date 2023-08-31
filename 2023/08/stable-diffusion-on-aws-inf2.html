@@ -517,11 +517,7 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:22 vae_post_quant_conv
 
 
 <span class="n">COMPILER_WORKDIR_ROOT</span> <span class="o">=</span> <span class="s">"/home/ubuntu/models/sdxl"</span>
-
-<span class="c1"># COMPILER_WORKDIR_ROOT = "/home/ubuntu/models/ds8"
-</span>
-<span class="c1"># Model ID for SD XL version pipeline
-</span><span class="n">model_id</span> <span class="o">=</span> <span class="s">"stabilityai/stable-diffusion-xl-base-1.0"</span>
+<span class="n">model_id</span> <span class="o">=</span> <span class="s">"stabilityai/stable-diffusion-xl-base-1.0"</span>
 
 
 <span class="k">def</span> <span class="nf">get_attention_scores_neuron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">attn_mask</span><span class="p">):</span>
@@ -747,10 +743,10 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Aug 30 02:22 vae_post_quant_conv
 <h2 id="总结">总结</h2>
 
 <ul>
-  <li>模型需哟转换，基本都能能成功完成转换，</li>
-  <li>1.5 的模型能成功完成推理的模型不多。</li>
-  <li>SDXL 模型本身有较高质量。但加载时间较长。</li>
-  <li>当前按照官方示例，不支持动图片态尺寸。模型转化的时候已经固定好尺寸了。</li>
+  <li>模型需要转换，基本都能能成功完成转换，</li>
+  <li>SD 1.5 的模型能成功完成推理的不多。</li>
+  <li>SDXL 模型本身有较高质量，但加载时间较长。</li>
+  <li>当前按照官方示例，不支持动图片态尺寸，模型转化的时候已经固定好图片尺寸了。</li>
   <li>推理速度很快：512 尺寸的 SD1.5 可达到 19it/s 左右，1024 的 SDXL 是 3.5it/s。</li>
 </ul>
 

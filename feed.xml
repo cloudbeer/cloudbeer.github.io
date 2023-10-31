@@ -1,4 +1,429 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-09-14T10:26:33+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 KeyBERT 进行关键字提取</title><link href="https://youbug.cn/2023/09/keywords-by-keybert.html" rel="alternate" type="text/html" title="使用 KeyBERT 进行关键字提取" /><published>2023-09-14T09:10:49+00:00</published><updated>2023-09-14T09:10:49+00:00</updated><id>https://youbug.cn/2023/09/keywords-by-keybert</id><content type="html" xml:base="https://youbug.cn/2023/09/keywords-by-keybert.html"><![CDATA[<p>在知识库搜索/问答场景中，用户输入的搜索内容有可能是一个完整的句子，在这个情况下，进行向量化之前，一般建议要进行关键字提取或者意图识别。在专业领域，一般可以训练一个模型来进行此项工作。使用模型提取关键字，可以使用 KeyBERT 这个库来完成。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-10-31T13:12:24+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">入门 Amazon Bedrock 只看这一篇就够了</title><link href="https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need.html" rel="alternate" type="text/html" title="入门 Amazon Bedrock 只看这一篇就够了" /><published>2023-10-31T13:03:33+00:00</published><updated>2023-10-31T13:03:33+00:00</updated><id>https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need</id><content type="html" xml:base="https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need.html"><![CDATA[<p>Amazon Bedrock 简要说就是是 AWS 的一项完全托管的服务，通过 API 调用各种优质大模型。本文将总结其基本用法，并提供完整的示例。</p>
+
+<h2 id="使用前提">使用前提</h2>
+
+<h3 id="开通">开通</h3>
+
+<p>到 Bedrock 后台，进入 Model access，修改一下，将你需要的模型都勾选上。然后保存，使得 Access status 为 Access granted。</p>
+
+<h3 id="客户端类库">客户端类库</h3>
+
+<p><strong>首先，升级相关 AWS 的类库到最新。</strong></p>
+
+<p>本文使用 Python，需要 boto3 &gt;= 1.28.57</p>
+
+<h3 id="设置权限">设置权限</h3>
+
+<p>在 AWS 调用服务，总是要预先设置 IAM。</p>
+
+<p>Bedrock 的 IAM 请参考这个链接，请灵活设置。</p>
+
+<p><a href="https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrock.html">https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrock.html</a></p>
+
+<p>下面是一个示例：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"Sid"</span><span class="p">:</span><span class="w"> </span><span class="s2">"InvokeFM"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">  
+               </span><span class="s2">"bedrock:GetFoundationModel"</span><span class="p">,</span><span class="w">
+               </span><span class="s2">"bedrock:InvokeModel"</span><span class="p">,</span><span class="w"> 
+               </span><span class="s2">"bedrock:InvokeModelWithResponseStream"</span><span class="w">
+            </span><span class="p">],</span><span class="w">
+            </span><span class="nl">"Resource"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">   
+</span><span class="p">}</span><span class="w">         
+</span></code></pre></div></div>
+
+<h3 id="基本调用">基本调用</h3>
+
+<p>调用方式也很简单，一眼就看明白了。</p>
+
+<p>如果你设置好了 IAM 权限（如：本地的 AKSK 已经设置好），下面的代码可以无需修改直接运行。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c1"># 声明客户端
+</span><span class="n">bedrock</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s">"bedrock-runtime"</span><span class="p">)</span>
+
+<span class="c1"># 此处使用的是 Amazon 的 titan-embedding 模型
+</span><span class="n">modelId</span> <span class="o">=</span> <span class="s">'amazon.titan-embed-text-v1'</span>
+<span class="c1"># 使用 json 作为输入和输出的文本格式
+</span><span class="n">contentType</span> <span class="o">=</span> <span class="s">'application/json'</span>
+<span class="n">accept</span> <span class="o">=</span> <span class="s">'application/json'</span>
+
+<span class="c1"># 输入参数（不同的模型要求不一样）
+</span><span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+    <span class="s">"inputText"</span><span class="p">:</span> <span class="s">"Hello world!"</span>
+<span class="p">})</span>
+
+<span class="c1"># 发起调用
+</span><span class="n">response</span> <span class="o">=</span> <span class="n">bedrock</span><span class="p">.</span><span class="n">invoke_model</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">,</span> <span class="n">accept</span><span class="o">=</span><span class="n">accept</span><span class="p">,</span> <span class="n">contentType</span><span class="o">=</span><span class="n">contentType</span><span class="p">,)</span>
+
+<span class="c1"># 把结果弄出来
+</span><span class="n">response_body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'body'</span><span class="p">).</span><span class="n">read</span><span class="p">())</span>
+<span class="n">embedding</span> <span class="o">=</span> <span class="n">response_body</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'embedding'</span><span class="p">)</span>
+
+<span class="c1"># 搞定
+</span><span class="k">print</span><span class="p">(</span><span class="n">embedding</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>如果模型支持 stream 输出，则是如下的代码，修改调用方法为 <code class="language-plaintext highlighter-rouge">invoke_model_with_response_stream</code>，并解析输出 stream：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c1"># 声明客户端
+</span><span class="n">bedrock</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s">"bedrock-runtime"</span><span class="p">)</span>
+
+<span class="c1"># 使用的是 Claude v2 模型
+</span><span class="n">modelId</span> <span class="o">=</span> <span class="s">'anthropic.claude-v2'</span>
+<span class="c1"># 使用 json 作为输入的文本格式
+</span><span class="n">contentType</span> <span class="o">=</span> <span class="s">'application/json'</span>
+<span class="c1"># stream 输出，有可能一次输出的 json 字符串会被截断
+</span><span class="n">accept</span> <span class="o">=</span> <span class="s">'*/*'</span>
+
+<span class="c1"># 输入参数（不同的模型要求不一样）
+</span><span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+  <span class="s">"prompt"</span><span class="p">:</span> <span class="s">"Human:你是谁?请介绍自己，不少于100字</span><span class="se">\n\n</span><span class="s">Assistant:"</span><span class="p">,</span>
+  <span class="s">"max_tokens_to_sample"</span><span class="p">:</span> <span class="mi">2048</span><span class="p">,</span>
+  <span class="s">"temperature"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+  <span class="s">"top_p"</span><span class="p">:</span> <span class="mf">0.9</span><span class="p">,</span>
+<span class="p">})</span>
+
+<span class="c1"># 发起调用
+</span><span class="n">response</span> <span class="o">=</span> <span class="n">bedrock</span><span class="p">.</span><span class="n">invoke_model_with_response_stream</span><span class="p">(</span>
+    <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span>
+    <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">,</span>
+    <span class="n">accept</span><span class="o">=</span><span class="n">accept</span><span class="p">,</span>
+    <span class="n">contentType</span><span class="o">=</span><span class="n">contentType</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">stream</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"body"</span><span class="p">)</span>
+
+<span class="c1"># 输出 stream
+</span><span class="k">if</span> <span class="n">stream</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="n">event</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"chunk"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">chunk</span><span class="p">:</span>
+            <span class="n">chunk_obj</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">chunk</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"bytes"</span><span class="p">).</span><span class="n">decode</span><span class="p">())</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">chunk_obj</span><span class="p">[</span><span class="s">"completion"</span><span class="p">]</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>然后，通过修改 modelId 和 body 的参数就可以完成各种目标了。你需要去查看 Bedrock 调用的各个模型文档，找到对应的参数就好了。</p>
+
+<p>到这里，其实已经讲完 bedrock 的调用了。怎么样？很简单吧！</p>
+
+<p>希望你现在已经去找文档并动手去写代码了！</p>
+
+<p>下面是当前 Bedrock 支持的模型，等你需要参考的时候，可以回头来看下面的内容。</p>
+
+<blockquote>
+  <p>Bedrock 会飞快迭代，说不定等你再回来时，下面的内容就过时了。</p>
+</blockquote>
+
+<h2 id="bedrock-支持的模型及参数">Bedrock 支持的模型及参数</h2>
+
+<p>首先你可以 list 一下，看看支持的模型和 modelId.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws bedrock list-foundation-models <span class="nt">--region</span><span class="o">=</span>&lt;region&gt;
+</code></pre></div></div>
+
+<p>具体的模型参数可以在控制台看到，AWS 的 Web 控制台贴心的给每个模型写了基本的输入参数。</p>
+
+<p>从 Bedrock 后台，进入 Base Models 点开每个 model 的详情，就能看到调用参数了，如：<a href="https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/models">https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/models</a></p>
+
+<p>以下的总结大部分为搬运，有些参数官方文档也没发出来，仅供参考。一切以官方文档为准。</p>
+
+<blockquote>
+  <p>如果官方文档的来不及更新，并且你在 2023 年 11 月初看到这篇文章，应该以我的代码为准，因为我都测试了。</p>
+</blockquote>
+
+<h3 id="claude">Claude</h3>
+
+<ul>
+  <li>Max tokens: 100k</li>
+  <li>多语言</li>
+</ul>
+
+<p>调用代码请参考上文中的 invoke_model_with_response_stream</p>
+
+<h4 id="claude-v2">Claude v2</h4>
+
+<p>modelId 为 <code class="language-plaintext highlighter-rouge">anthropic.claude-v2</code></p>
+
+<h4 id="claude-instance-v12">Claude Instance v1.2</h4>
+
+<h4 id="modelid-为-anthropicclaude-instant-v1">modelId 为 <code class="language-plaintext highlighter-rouge">anthropic.claude-instant-v1</code></h4>
+
+<h4 id="claude-v13">Claude v1.3</h4>
+
+<p>modelId 为 <code class="language-plaintext highlighter-rouge">anthropic.claude-v1</code></p>
+
+<h3 id="cohere">Cohere</h3>
+
+<h4 id="command">Command</h4>
+
+<ul>
+  <li>Model size: 52B</li>
+  <li>Max tokens: 4096</li>
+  <li>英语</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">modelId</span> <span class="o">=</span> <span class="s">'cohere.command-text-v14'</span>
+<span class="n">accept</span> <span class="o">=</span> <span class="s">'*/*'</span>
+<span class="n">contentType</span> <span class="o">=</span> <span class="s">'application/json'</span>
+
+<span class="k">def</span> <span class="nf">ask</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span><span class="n">temperature</span><span class="o">=</span><span class="mf">0.8</span><span class="p">):</span>
+  <span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+    <span class="s">"prompt"</span><span class="p">:</span> <span class="n">q</span><span class="p">,</span>
+    <span class="s">"max_tokens"</span><span class="p">:</span> <span class="n">max_tokens</span><span class="p">,</span>
+    <span class="s">"temperature"</span><span class="p">:</span> <span class="n">temperature</span>
+  <span class="p">})</span>
+  <span class="n">response</span> <span class="o">=</span> <span class="n">bedrock</span><span class="p">.</span><span class="n">invoke_model</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">,</span> <span class="n">accept</span><span class="o">=</span><span class="n">accept</span><span class="p">,</span> <span class="n">contentType</span><span class="o">=</span><span class="n">contentType</span><span class="p">,)</span>
+  <span class="c1"># print(response)
+</span>  
+  <span class="n">response_body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'body'</span><span class="p">).</span><span class="n">read</span><span class="p">())</span>
+  <span class="c1"># print(response_body)
+</span>  
+  <span class="k">return</span> <span class="n">response_body</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'generations'</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="s">'text'</span><span class="p">]</span>
+
+<span class="c1"># 测试调用
+</span><span class="k">print</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="s">"""Translate this sentence to Chinese: Are you going to Scarborough Fair: Parsley, sage, rosemary and thyme."""</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"-"</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span>
+<span class="c1"># 试试中文，貌似能听懂，但不太会说
+</span><span class="k">print</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="s">"请翻译为英文：君不见黄河之水天上来"</span><span class="p">))</span>
+
+</code></pre></div></div>
+
+<h3 id="jurassic">Jurassic</h3>
+
+<ul>
+  <li>Max tokens: 8191</li>
+  <li>English, Spanish, French, German, Portuguese, Italian, Dutch</li>
+</ul>
+
+<p>Jurassic 的入参和出参规范不太一样（入参是驼峰，claude2 是 snake），模型参数也和说明和文档稍有出入，看起来还在迭代。</p>
+
+<p>经过一些修改，下面是完整可运行的代码。</p>
+
+<h4 id="jurassic-2-ultra">Jurassic-2 Ultra</h4>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">modelId</span> <span class="o">=</span> <span class="s">'ai21.j2-ultra-v1'</span>
+<span class="n">accept</span> <span class="o">=</span> <span class="s">'*/*'</span>
+<span class="n">contentType</span> <span class="o">=</span> <span class="s">'application/json'</span>
+
+<span class="k">def</span> <span class="nf">ask</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">,</span> <span class="n">maxTokens</span><span class="o">=</span><span class="mi">300</span><span class="p">):</span>
+  <span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+    <span class="s">"prompt"</span><span class="p">:</span> <span class="n">q</span><span class="p">,</span>
+    <span class="s">"maxTokens"</span><span class="p">:</span> <span class="n">maxTokens</span><span class="p">,</span>
+    <span class="s">"temperature"</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+    <span class="s">"topP"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s">"stopSequences"</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s">"countPenalty"</span><span class="p">:{</span>
+      <span class="s">"scale"</span><span class="p">:</span><span class="mi">0</span>
+    <span class="p">},</span>
+    <span class="s">"presencePenalty"</span><span class="p">:{</span>
+      <span class="s">"scale"</span><span class="p">:</span><span class="mi">0</span>
+    <span class="p">},</span>
+    <span class="s">"frequencyPenalty"</span><span class="p">:{</span>
+      <span class="s">"scale"</span><span class="p">:</span><span class="mi">0</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+
+
+  <span class="n">response</span> <span class="o">=</span> <span class="n">bedrock</span><span class="p">.</span><span class="n">invoke_model</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">,</span> <span class="n">accept</span><span class="o">=</span><span class="n">accept</span><span class="p">,</span> <span class="n">contentType</span><span class="o">=</span><span class="n">contentType</span><span class="p">,)</span>
+  <span class="n">response_body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'body'</span><span class="p">).</span><span class="n">read</span><span class="p">())</span>
+  <span class="k">return</span> <span class="n">response_body</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'completions'</span><span class="p">)[</span><span class="mi">0</span><span class="p">].</span><span class="n">get</span><span class="p">(</span><span class="s">"data"</span><span class="p">).</span><span class="n">get</span><span class="p">(</span><span class="s">'text'</span><span class="p">)</span>
+
+
+<span class="k">print</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="s">"Who are you?"</span><span class="p">))</span>
+
+<span class="c1"># 试试中文
+</span><span class="k">print</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="s">"你是谁?"</span><span class="p">))</span>
+</code></pre></div></div>
+
+<h4 id="jurassic-2-mid">Jurassic-2 Mid</h4>
+
+<p>modelId 为 <code class="language-plaintext highlighter-rouge">ai21.j2-mid-v1</code></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="s">"Who are you?"</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="s">"ai21.j2-mid-v1"</span><span class="p">))</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="s">"请翻译为英文：白日依山尽"</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="s">"ai21.j2-mid-v1"</span><span class="p">))</span>
+</code></pre></div></div>
+
+<h3 id="titan">Titan</h3>
+
+<p>Titan 有三个模型，目前只有 Embeddings 生成可以测试。</p>
+
+<h4 id="titan-embeddings-generation-1-g1">Titan Embeddings Generation 1 (G1)</h4>
+
+<ul>
+  <li>Max tokens: 8k</li>
+  <li>输出向量维度: 1536</li>
+  <li>多语言支持</li>
+</ul>
+
+<p>下面代码的尝试使用 Titan 进行向量化，并进行相似度比较。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">modelId</span> <span class="o">=</span> <span class="s">'amazon.titan-embed-text-v1'</span>
+<span class="n">accept</span> <span class="o">=</span> <span class="s">'application/json'</span>
+<span class="n">contentType</span> <span class="o">=</span> <span class="s">'application/json'</span>
+
+<span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+  <span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+      <span class="s">"inputText"</span><span class="p">:</span> <span class="n">text</span>
+  <span class="p">})</span>
+  <span class="n">response</span> <span class="o">=</span> <span class="n">bedrock</span><span class="p">.</span><span class="n">invoke_model</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">,</span> <span class="n">accept</span><span class="o">=</span><span class="n">accept</span><span class="p">,</span> <span class="n">contentType</span><span class="o">=</span><span class="n">contentType</span><span class="p">,)</span>
+  
+  <span class="n">response_body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'body'</span><span class="p">).</span><span class="n">read</span><span class="p">())</span>
+  <span class="k">return</span> <span class="n">response_body</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'embedding'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>定义相似度的函数</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">array</span>
+<span class="kn">from</span> <span class="nn">numpy.linalg</span> <span class="kn">import</span> <span class="n">norm</span>
+
+<span class="k">def</span> <span class="nf">cosine_sim</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">dot</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">norm</span><span class="p">(</span><span class="n">v1</span><span class="p">)</span><span class="o">*</span><span class="n">norm</span><span class="p">(</span><span class="n">v2</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">l2_sim</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">norm</span><span class="p">(</span><span class="n">array</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v1</span><span class="p">))</span><span class="o">-</span><span class="n">array</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v2</span><span class="p">)))</span>
+
+</code></pre></div></div>
+
+<p>测试</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">word</span> <span class="o">=</span> <span class="s">"对不起"</span>
+<span class="n">compares</span> <span class="o">=</span> <span class="p">[</span><span class="s">"对不起"</span><span class="p">,</span> <span class="s">"抱歉"</span><span class="p">,</span> <span class="s">"對不起"</span><span class="p">,</span> <span class="s">"對唔住"</span><span class="p">,</span><span class="s">"真遗憾"</span><span class="p">,</span> <span class="s">"吃了吗"</span><span class="p">,</span> <span class="s">"I'm sorry"</span><span class="p">,</span> <span class="s">"I apologize"</span><span class="p">,</span> <span class="s">"the weather"</span><span class="p">,</span>  <span class="s">"ごめんなさい"</span><span class="p">,</span> <span class="s">"미안해"</span><span class="p">,</span> <span class="s">"Désolé"</span><span class="p">]</span>
+
+<span class="n">wordvec</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">compare</span> <span class="ow">in</span> <span class="n">compares</span><span class="p">:</span>
+  <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"</span><span class="si">{</span><span class="n">word</span><span class="si">}</span><span class="s"> 与 </span><span class="si">{</span><span class="n">compare</span><span class="si">}</span><span class="s"> 的 Cosine 相似度："</span><span class="p">,</span>  <span class="n">cosine_sim</span><span class="p">(</span><span class="n">predict</span><span class="p">(</span><span class="n">compare</span><span class="p">),</span> <span class="n">wordvec</span><span class="p">))</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"-"</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">compare</span> <span class="ow">in</span> <span class="n">compares</span><span class="p">:</span>
+  <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"</span><span class="si">{</span><span class="n">word</span><span class="si">}</span><span class="s"> 与 </span><span class="si">{</span><span class="n">compare</span><span class="si">}</span><span class="s"> 的 L2 距离："</span><span class="p">,</span>  <span class="n">l2_sim</span><span class="p">(</span><span class="n">predict</span><span class="p">(</span><span class="n">compare</span><span class="p">),</span> <span class="n">wordvec</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>从向量结果比较看来，<ruby>
+大<rt>不</rt>
+概<rt>太</rt>
+<ruby>符合预期。</ruby></ruby></p>
+
+<h2 id="stability-ai">Stability AI</h2>
+
+<h3 id="stable-diffusion-xl">Stable Diffusion XL</h3>
+
+<p>当前支持的版本为 v0.8。</p>
+
+<p>输入参数可以参考 <a href="https://dreamstudio.ai/">DreamStudio</a></p>
+
+<p>代码参考：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+
+<span class="c1"># 修改此处的 region_name 可以更换 region
+</span><span class="n">bedrock</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s">'bedrock-runtime'</span><span class="p">,</span><span class="n">region_name</span><span class="o">=</span><span class="s">'us-west-2'</span><span class="p">)</span>
+
+<span class="c1"># 可选 style，此处为 DreamStudio 的列表参考，并未调用
+</span><span class="n">style_presets</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">"enhance"</span><span class="p">,</span>
+    <span class="s">"anime"</span><span class="p">,</span>
+    <span class="s">"photographic"</span><span class="p">,</span>
+    <span class="s">"digital-art"</span><span class="p">,</span>
+    <span class="s">"comic-book"</span><span class="p">,</span>
+    <span class="s">"fantasy-art"</span><span class="p">,</span>
+    <span class="s">"analog-film"</span><span class="p">,</span>
+    <span class="s">"neon-punk"</span><span class="p">,</span>
+    <span class="s">"isometric"</span><span class="p">,</span>
+    <span class="s">"low-poly"</span><span class="p">,</span>
+    <span class="s">"origami"</span><span class="p">,</span>
+    <span class="s">"line-art"</span><span class="p">,</span>
+    <span class="s">"craft-clay"</span><span class="p">,</span>
+    <span class="s">"cinematic"</span><span class="p">,</span>
+    <span class="s">"3d-model"</span><span class="p">,</span>
+    <span class="s">"pixel-art"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">negative_prompts</span><span class="o">=</span><span class="p">[</span><span class="s">"poorly rendered"</span><span class="p">],</span> <span class="n">style_preset</span><span class="o">=</span><span class="s">"enhance"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span><span class="mi">512</span><span class="p">)):</span>
+  <span class="n">request</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span>
+    <span class="s">"text_prompts"</span><span class="p">:</span> <span class="p">(</span>
+        <span class="p">[{</span><span class="s">"text"</span><span class="p">:</span> <span class="n">prompt</span><span class="p">,</span> <span class="s">"weight"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}]</span>
+        <span class="o">+</span> <span class="p">[{</span><span class="s">"text"</span><span class="p">:</span> <span class="n">negprompt</span><span class="p">,</span> <span class="s">"weight"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">}</span> <span class="k">for</span> <span class="n">negprompt</span> <span class="ow">in</span> <span class="n">negative_prompts</span><span class="p">]</span>
+    <span class="p">),</span>
+    <span class="s">"cfg_scale"</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="c1"># "seed": -1,
+</span>    <span class="s">"steps"</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span>
+    <span class="s">"style_preset"</span><span class="p">:</span> <span class="n">style_preset</span><span class="p">,</span>
+    <span class="s">"width"</span><span class="p">:</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="s">"height"</span><span class="p">:</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+  <span class="p">})</span>
+  <span class="n">modelId</span> <span class="o">=</span> <span class="s">"stability.stable-diffusion-xl"</span>
+  <span class="n">response</span> <span class="o">=</span> <span class="n">bedrock</span><span class="p">.</span><span class="n">invoke_model</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">request</span><span class="p">,</span> <span class="n">modelId</span><span class="o">=</span><span class="n">modelId</span><span class="p">)</span>
+  <span class="n">response_body</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"body"</span><span class="p">).</span><span class="n">read</span><span class="p">())</span>
+
+  <span class="n">base_64_img_str</span> <span class="o">=</span> <span class="n">response_body</span><span class="p">[</span><span class="s">"artifacts"</span><span class="p">][</span><span class="mi">0</span><span class="p">].</span><span class="n">get</span><span class="p">(</span><span class="s">"base64"</span><span class="p">)</span>
+  <span class="n">image_1</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="n">io</span><span class="p">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">base64</span><span class="p">.</span><span class="n">decodebytes</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">base_64_img_str</span><span class="p">,</span> <span class="s">"utf-8"</span><span class="p">))))</span>
+  <span class="k">return</span> <span class="n">image_1</span>
+
+</code></pre></div></div>
+
+<p>调用：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predict</span><span class="p">(</span>
+    <span class="s">"3D product render, futuristic sofa, finely detailed, purism, ue 5, a computer rendering, minimalism, octane render, 4k"</span><span class="p">,</span> 
+    <span class="n">negative_prompts</span><span class="o">=</span><span class="p">[</span>
+        <span class="s">"poorly rendered"</span><span class="p">,</span>
+        <span class="s">"worst quality"</span><span class="p">,</span>
+        <span class="s">"monochrome"</span><span class="p">,</span>
+        <span class="s">"cropped"</span><span class="p">,</span>
+        <span class="s">"duplicate"</span><span class="p">,</span>
+        <span class="s">"out of frame"</span><span class="p">,</span> 
+        <span class="s">"ugly"</span><span class="p">,</span> 
+        <span class="s">"deformed"</span><span class="p">,</span>
+        <span class="s">"complex background"</span>
+    <span class="p">],</span>
+    <span class="n">style_preset</span><span class="o">=</span><span class="s">"3d-model"</span><span class="p">,</span> 
+    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span><span class="mi">512</span><span class="p">)</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>当前的 SDXL 模型有下面的优点和坑：</p>
+
+<ul>
+  <li>支持 style_preset 参数，这个参数在官方文档里没写，官方 sample notebook 有。</li>
+  <li>可以完美输出 512 像素的图片，1024 的反倒无法输出。</li>
+  <li>必须有一个边是 512 或者 768，另一个变长是 8 的倍数(这个 SD 都一样)。</li>
+</ul>
+
+<h2 id="总结和继续">总结和继续</h2>
+
+<p>亚麻的 Bedrock 集合了生成式 AI 各家（老二，老三们）之所长，并坚持不断更新迭代，终将进化为地球的最强者。</p>
+
+<p>你需要做的就是了解各个模型的特点，找到合适的提示词模板（提示词工程 PE），加上预处理（用各种类库），然后组合成自动化流程。</p>
+
+<p>最终，漂亮的应用呼之欲出。</p>
+
+<p>祝你成功！！！</p>
+
+<hr />
+
+<p>模型参数： <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters.html">https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters.html</a></p>
+
+<p><a href="https://github.com/aws-samples/amazon-bedrock-workshop">Amazon Bedrock Workshop</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[Amazon Bedrock 简要说就是是 AWS 的一项完全托管的服务，通过 API 调用各种优质大模型。本文将总结其基本用法，并提供完整的示例。]]></summary></entry><entry><title type="html">使用 KeyBERT 进行关键字提取</title><link href="https://youbug.cn/2023/09/keywords-by-keybert.html" rel="alternate" type="text/html" title="使用 KeyBERT 进行关键字提取" /><published>2023-09-14T09:10:49+00:00</published><updated>2023-09-14T09:10:49+00:00</updated><id>https://youbug.cn/2023/09/keywords-by-keybert</id><content type="html" xml:base="https://youbug.cn/2023/09/keywords-by-keybert.html"><![CDATA[<p>在知识库搜索/问答场景中，用户输入的搜索内容有可能是一个完整的句子，在这个情况下，进行向量化之前，一般建议要进行关键字提取或者意图识别。在专业领域，一般可以训练一个模型来进行此项工作。使用模型提取关键字，可以使用 KeyBERT 这个库来完成。</p>
 
 <h2 id="开始">开始</h2>
 
@@ -2118,308 +2543,4 @@ Content-Type: multipart/form-data;
 
 <p><a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs">为 Cloudfront 设置密钥对</a></p>
 
-<p><a href="https://docs.aws.amazon.com/cli/latest/reference/cloudfront/sign.html">aws cloudfront sign</a></p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。]]></summary></entry><entry><title type="html">EKS Ingress 跨账号创建 ALB</title><link href="https://youbug.cn/2023/05/create-ingress-alb-across-account.html" rel="alternate" type="text/html" title="EKS Ingress 跨账号创建 ALB" /><published>2023-05-06T01:10:49+00:00</published><updated>2023-05-06T01:10:49+00:00</updated><id>https://youbug.cn/2023/05/create-ingress-alb-across-account</id><content type="html" xml:base="https://youbug.cn/2023/05/create-ingress-alb-across-account.html"><![CDATA[<p>在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与<strong>外网隔离</strong>。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。</p>
-
-<p>先预设一下：</p>
-
-<ul>
-  <li>对公的账号为 AAAA， VPC 为 10.1.0.0/16</li>
-  <li>EKS 账号为 BBBB，VPC 为 10.0.0.0/16</li>
-</ul>
-
-<p>需要做的工作有：设置组织，设置网络(TGW)，共享，设置 IAM 权限，编写 EKS CRD。</p>
-
-<blockquote>
-  <p>本文是使用 China Region 实现的。</p>
-</blockquote>
-
-<h2 id="创建组织并启用相应权限">创建组织并启用相应权限</h2>
-
-<p>组织是共享子网的前提，通常多账号环境下会使用 组织来管理。</p>
-
-<p>在 AAAA 账号中(在其他账号下亦可)：</p>
-
-<p>进入 AWS 后台的 <a href="https://console.amazonaws.cn/organizations/v2/home/">组织控制台</a>：</p>
-
-<ul>
-  <li>创建组织，并将账号纳入，在 AAAA 账号内邀请，在 BBBB 里接受邀请。</li>
-  <li>开启组织的 RAM 可信访问，进入 Amazon Organizations &gt; 服务 &gt; RAM， 开启可信访问</li>
-</ul>
-
-<p>进入 <a href="https://console.amazonaws.cn/ram/home#Settings:">RAM 控制台</a> 开启组织内共享：</p>
-
-<ul>
-  <li>进入 Resource Access Manager &gt; 设置，开启 ”在以下服务中启用共享： Amazon Organizations “</li>
-</ul>
-
-<h2 id="tgw-打通网络">TGW 打通网络</h2>
-
-<p>在 AAAA 账号里：</p>
-
-<p>创建一个 Transit Gateway:</p>
-
-<ul>
-  <li>进入 VPC 控制台，左侧选择菜单 中转网关，点击 ”创建 Transit Gateway“</li>
-  <li>进入中转网关挂载，”创建 Transit Gateway 挂载“，选择 AAAA 账号下的目标 VPC</li>
-</ul>
-
-<p>共享 tgw</p>
-
-<ul>
-  <li>进入 RAM 控制台 <a href="https://console.amazonaws.cn/ram/home#CreateResourceShare:">创建资源共享</a>
-    <ul>
-      <li>共享的资源选择 中转网关</li>
-      <li>委托人选择 组织，填写组织 ID (组织 ID 在 <a href="https://console.amazonaws.cn/organizations/v2/home/root">组织的界面的 root</a> 下的 ARN 的第二段 /o-xxxx/ 内找到，形如 o-xxxxx)。</li>
-    </ul>
-  </li>
-</ul>
-
-<blockquote>
-  <p>注意，在 AAAA 账号中的 VPC 中，必须至少创建 2 个 Public Subnet</p>
-</blockquote>
-
-<p>在 BBBB 账号里现在可以看到 tgw 实例了：</p>
-
-<ul>
-  <li>进入 VPC，中转网关挂载，挂上 VPC。</li>
-</ul>
-
-<p>分别在 AAAA 和 BBBB 账号里的子网路由里加入 tgw 对端路由（可以从目标子网的路由连接点击进入）：</p>
-
-<ul>
-  <li>在 AAAA 的 路由表里加入 16.0.0.0/16 - tgw-xxxxxx</li>
-  <li>在 BBBB 的 路由表里加入 16.1.0.0/16 - tgw-xxxxxx</li>
-</ul>
-
-<p>至此，网络打通。</p>
-
-<h2 id="共享子网">共享子网</h2>
-
-<p>为了在 EKS Ingress 里能发现 AAAA 账号的子网 ID，还需要共享子网。</p>
-
-<p>在 AAAA 账号里共享对公子网：</p>
-
-<p>在 RAM 中创建新的共享资源，资源里选择 子网，会发现，刚刚绑定了 tgw 的子网出现在共享名单里，选择对组织共享。</p>
-
-<h2 id="安全组">安全组</h2>
-
-<p>在 AAAA 账号中创建安全组，后续创建 Ingress 的时候需要显式指定此安全组。</p>
-
-<h2 id="iam">IAM</h2>
-
-<p>现在需要处理 IAM 权限了。</p>
-
-<p>BBBB 中的 EKS 需要在 AAAA 账号里创建 ALB 等资源，所以需要把 AAAA 的 Role 赋予给  BBBB 的 EKS 的 loadbalancer-controller，下面是创建 IRSA 的过程：</p>
-
-<h3 id="在-aaaa-中加入身份提供商">在 AAAA 中加入身份提供商</h3>
-
-<p>进入 IAM 菜单的 身份提供商，</p>
-
-<ul>
-  <li>点击添加提供商，填写 oidc 的 Url。（这个 Url 可以通过 BBBB 账号的 eks 信息得到）</li>
-  <li>受众填写 sts.amazonaws.com</li>
-  <li>获取指纹，确定…</li>
-</ul>
-
-<h3 id="在-aaaa-中创建-policy">在 AAAA 中创建 Policy</h3>
-
-<p>policy 的 json 文件如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-O</span> https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.4.7/docs/install/iam_policy_cn.json
-</code></pre></div></div>
-
-<p>使用命令创建，或者在控制台把上面的文件内容贴进去：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws iam create-policy <span class="se">\</span>
-    <span class="nt">--policy-name</span> AWSLoadBalancerControllerIAMPolicy <span class="se">\</span>
-    <span class="nt">--policy-document</span> file://iam_policy_cn.json
-</code></pre></div></div>
-
-<h3 id="在-aaaa-中创建-role">在 AAAA 中创建 Role</h3>
-
-<p>现在创建一个 Role，选择 自定义信任策略。</p>
-
-<p>信任策略的 JSON 内容如下：</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nl">"Version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2012-10-17"</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"Statement"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w">
-            </span><span class="nl">"Effect"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Allow"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"Principal"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nl">"Federated"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arn:aws-cn:iam::AAAA:oidc-provider/oidc.eks.region.amazonaws.com.cn/id/xxxxxx"</span><span class="w">
-            </span><span class="p">},</span><span class="w">
-            </span><span class="nl">"Action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts:AssumeRoleWithWebIdentity"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"Condition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nl">"StringEquals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                    </span><span class="nl">"oidc.eks.region.amazonaws.com.cn/id/xxxxxx:aud"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sts.amazonaws.com"</span><span class="p">,</span><span class="w">
-                    </span><span class="nl">"oidc.eks.region.amazonaws.com.cn/id/xxxxxx:sub"</span><span class="p">:</span><span class="w"> </span><span class="s2">"system:serviceaccount:kube-system:aws-load-balancer-controller"</span><span class="w">
-                </span><span class="p">}</span><span class="w">
-            </span><span class="p">}</span><span class="w">
-        </span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>名为 <strong>AmazonEKSLoadBalancerControllerRole</strong>，</p>
-
-<p>在选型策略里添加权限，选择上一步创建的  AWSLoadBalancerControllerIAMPolicy 即可。</p>
-
-<p>现在，我们完成了 IAM 的 Role 创建。</p>
-
-<h2 id="创建-eks-资源">创建 EKS 资源</h2>
-
-<p>下面的操作在 BBBB 账号的 EKS 集群内完成。</p>
-
-<h3 id="serviceaccount">ServiceAccount</h3>
-
-<p>如果你已经安装了 EKS 的 aws-loadbalancer-controller，那么现在可以修改一下:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl edit sa aws-load-balancer-controller <span class="nt">-n</span> kube-system
-</code></pre></div></div>
-
-<p>将 <code class="language-plaintext highlighter-rouge">eks.amazonaws.com/role-arn: arn:aws-cn:iam::BBBB:role/AmazonEKSLoadBalancerControllerRole</code> 修改为 <code class="language-plaintext highlighter-rouge">eks.amazonaws.com/role-arn: arn:aws-cn:iam::AAAA:role/AmazonEKSLoadBalancerControllerRole</code></p>
-
-<h3 id="重新安装-aws-loadbalancer-controller">重新安装 aws-loadbalancer-controller</h3>
-
-<p>安装脚本如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">eksName</span><span class="o">=</span>abc
-<span class="nv">region</span><span class="o">=</span>cn-north-1
-<span class="nv">pubcVpc</span><span class="o">=</span>vpc-in-aaaa
-
-helm <span class="nb">install </span>aws-load-balancer-controller eks/aws-load-balancer-controller <span class="se">\</span>
-  <span class="nt">-n</span> kube-system <span class="se">\</span>
-  <span class="nt">--set</span> <span class="nv">region</span><span class="o">=</span><span class="k">${</span><span class="nv">region</span><span class="k">}</span> <span class="se">\</span>
-  <span class="nt">--set</span> <span class="nv">clusterName</span><span class="o">=</span><span class="k">${</span><span class="nv">eksName</span><span class="k">}</span> <span class="se">\</span>
-  <span class="nt">--set</span> serviceAccount.create<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
-  <span class="nt">--set</span> serviceAccount.name<span class="o">=</span>aws-load-balancer-controller <span class="se">\</span>
-  <span class="nt">--set</span> <span class="nv">vpcId</span><span class="o">=</span><span class="k">${</span><span class="nv">pubcVpc</span><span class="k">}</span> <span class="se">\</span>
-  <span class="nt">--set</span> <span class="nv">enableShield</span><span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
-  <span class="nt">--set</span> <span class="nv">enableWaf</span><span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
-  <span class="nt">--set</span> <span class="nv">enableWafv2</span><span class="o">=</span><span class="nb">false</span>
-
-</code></pre></div></div>
-
-<p>上面的 vpcId 需要填写 AAAA 账号的 vpcId，此 vpc 已经共享到 BBBB 账号，你可以在控制台看到。</p>
-
-<p>如果之前使用 helm 安装过，先卸载一下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm uninstall aws-load-balancer-controller
-</code></pre></div></div>
-
-<p>如果之前没有安装过 aws-load-balancer-controller，你可以先创建一个 ServiceAccount，其中的 role-arn 填写 AAAA 账号的 Role，如下 YAML。</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">annotations</span><span class="pi">:</span>
-    <span class="na">eks.amazonaws.com/role-arn</span><span class="pi">:</span> <span class="s">arn:aws-cn:iam::AAAA:role/AmazonEKSLoadBalancerControllerRole</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">aws-load-balancer-controller</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">kube-system</span>
-</code></pre></div></div>
-
-<p>至此，所有基础层的工作已经全部完成。🎆 🎉🎉🎉🎉🎉</p>
-
-<h3 id="测试-ingress">测试 Ingress</h3>
-
-<p>先创建 Deployment 和 Service 资源(测试用)</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">replicas</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">matchLabels</span><span class="pi">:</span>
-      <span class="na">app</span><span class="pi">:</span> <span class="s">httpbin</span>
-  <span class="na">template</span><span class="pi">:</span>
-    <span class="na">metadata</span><span class="pi">:</span>
-      <span class="na">labels</span><span class="pi">:</span>
-        <span class="na">app</span><span class="pi">:</span> <span class="s">httpbin</span>
-    <span class="na">spec</span><span class="pi">:</span>
-      <span class="na">containers</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
-          <span class="na">image</span><span class="pi">:</span> <span class="s">public.ecr.aws/r2h3l6e4/pingcloud-clustertools/kennethreitz/httpbin:latest</span>
-          <span class="na">resources</span><span class="pi">:</span>
-            <span class="na">requests</span><span class="pi">:</span>
-              <span class="na">cpu</span><span class="pi">:</span> <span class="s">250m</span>
-              <span class="na">memory</span><span class="pi">:</span> <span class="s">250Mi</span>
-<span class="nn">---</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Service</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">ports</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">http-httpbin</span>
-      <span class="na">port</span><span class="pi">:</span> <span class="m">3000</span>
-      <span class="na">targetPort</span><span class="pi">:</span> <span class="m">80</span>
-  <span class="na">selector</span><span class="pi">:</span>
-    <span class="na">app</span><span class="pi">:</span> <span class="s">httpbin</span>
-</code></pre></div></div>
-
-<p>创建 Ingress</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">networking.k8s.io/v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Ingress</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">x-ingress</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
-  <span class="na">annotations</span><span class="pi">:</span>
-    <span class="na">alb.ingress.kubernetes.io/target-type</span><span class="pi">:</span> <span class="s">ip</span>
-    <span class="na">alb.ingress.kubernetes.io/scheme</span><span class="pi">:</span> <span class="s">internet-facing</span>
-    <span class="na">alb.ingress.kubernetes.io/subnets</span><span class="pi">:</span> <span class="s2">"</span><span class="s">subnet-aaaa-pub1,</span><span class="nv"> </span><span class="s">subnet-aaaa-pub2"</span>
-    <span class="na">alb.ingress.kubernetes.io/security-groups</span><span class="pi">:</span> <span class="s2">"</span><span class="s">sg-aaaa-xxxx"</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">ingressClassName</span><span class="pi">:</span> <span class="s">alb</span>
-  <span class="na">rules</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">http</span><span class="pi">:</span>
-        <span class="na">paths</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="na">path</span><span class="pi">:</span> <span class="s">/</span>
-            <span class="na">pathType</span><span class="pi">:</span> <span class="s">Prefix</span>
-            <span class="na">backend</span><span class="pi">:</span>
-              <span class="na">service</span><span class="pi">:</span>
-                <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
-                <span class="na">port</span><span class="pi">:</span>
-                  <span class="na">number</span><span class="pi">:</span> <span class="m">3000</span>
-</code></pre></div></div>
-
-<p>需要加入如下注解才能把 Ingress 的 ALB 创建到 AAAA 账号：</p>
-
-<ul>
-  <li>alb.ingress.kubernetes.io/target-type 为 ip</li>
-  <li>alb.ingress.kubernetes.io/scheme: internet-facing 表示ALB</li>
-  <li>alb.ingress.kubernetes.io/subnets 选择 AAAA 账号的对公子网</li>
-  <li>alb.ingress.kubernetes.io/security-groups 为 AAAA 账号的安全组</li>
-</ul>
-
-<h3 id="targetgroupbinding">TargetGroupBinding</h3>
-
-<p>如果你想让 EKS 想使用已存在的 ALB，那么只需要将 Service 绑定给目标群组即可。</p>
-
-<p>可以先在 AAAA 账号下创建一个 目标群组/Target groups，并创建如下的 TargetGroupBinding CRD 资源，如下：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">elbv2.k8s.aws/v1beta1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">TargetGroupBinding</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">static-alb</span>
-  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">serviceRef</span><span class="pi">:</span>
-    <span class="na">name</span><span class="pi">:</span> <span class="s">httpbin</span>
-    <span class="na">port</span><span class="pi">:</span> <span class="m">3000</span>
-  <span class="na">targetGroupARN</span><span class="pi">:</span> <span class="s">&lt;AAAA-target-goupd-arn&gt;</span>
-</code></pre></div></div>
-
-<p>创建好之后，就会看到该目标群组下 BBBB 账号的 pod 的 ip 了。</p>
-
-<hr />
-<p>参考：</p>
-
-<p>中转网关使用文档：<a href="https://docs.amazonaws.cn/vpc/latest/tgw/tgw-transit-gateways.html">https://docs.amazonaws.cn/vpc/latest/tgw/tgw-transit-gateways.html</a></p>
-
-<p><a href="https://aws.amazon.com/cn/blogs/containers/expose-amazon-eks-pods-through-cross-account-load-balancer/">Expose Amazon EKS pods through cross-account load balancer</a></p>]]></content><author><name>啤酒云</name></author><category term="aws," /><category term="container" /><summary type="html"><![CDATA[在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与外网隔离。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。]]></summary></entry></feed>
+<p><a href="https://docs.aws.amazon.com/cli/latest/reference/cloudfront/sign.html">aws cloudfront sign</a></p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。]]></summary></entry></feed>

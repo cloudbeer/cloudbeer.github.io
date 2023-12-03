@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Amazon Bedrock 内置知识库使用入门 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="Amazon Bedrock 内置知识库使用入门" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。" />
+<meta property="og:description" content="本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。" />
+<link rel="canonical" href="https://youbug.cn/2023/12/bedrock-kb.html" />
+<meta property="og:url" content="https://youbug.cn/2023/12/bedrock-kb.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-12-03T01:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Amazon Bedrock 内置知识库使用入门" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-12-03T01:10:49+00:00","datePublished":"2023-12-03T01:10:49+00:00","description":"本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。","headline":"Amazon Bedrock 内置知识库使用入门","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/12/bedrock-kb.html"},"url":"https://youbug.cn/2023/12/bedrock-kb.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Amazon Bedrock 内置知识库使用入门</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-12-03T01:10:49+00:00" itemprop="datePublished">2023-12-03
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。</p>
+
+<h2 id="快速入门">快速入门</h2>
+
+<p>在年底的 re:Invent 2023 上，AWS 发布了一堆产品，其中知识库 (Knowledge base) 便提供了非常快捷的 RAG 实现路径。</p>
+
+<p>他内置了如下的能力（截止当前文章）：</p>
+
+<ul>
+  <li>
+    <p>数据源集成，当前支持 S3 存储桶里的文件</p>
+  </li>
+  <li>文档提取，当前支持如下格式
+    <ul>
+      <li>Plain text (.txt)</li>
+      <li>Markdown (.md)</li>
+      <li>HyperText Markup Language (.html)</li>
+      <li>Microsoft Word document (.doc/.docx)</li>
+      <li>Comma-separated values (.csv)</li>
+      <li>Microsoft Excel spreadsheet (.xls/.xlsx)</li>
+      <li>Portable Document Format (.pdf)</li>
+    </ul>
+  </li>
+  <li>
+    <p>文档分片</p>
+  </li>
+  <li>
+    <p>向量转化（当前使用的是 Titan Embeddings G1 - Text ）</p>
+  </li>
+  <li>向量数据库集成，当前支持如下三种：
+    <ul>
+      <li>OpenSearch Serverless，支持在开通知识库的流程中创建。</li>
+      <li>Pinecone</li>
+      <li>Redis</li>
+    </ul>
+  </li>
+  <li>
+    <p>S3 数据源维护，当文档删除或者修改的时候可以同步向量数据库。</p>
+  </li>
+  <li>
+    <p>在控制台提供了一个知识召回的演示</p>
+  </li>
+  <li>管理 API 和 运行时 API</li>
+</ul>
+
+<h2 id="实际使用集成">实际使用集成</h2>
+
+<p>通过控制台(入口：<a href="https://console.aws.amazon.com/bedrock/home?#/knowledge-bases">https://console.aws.amazon.com/bedrock/home?#/knowledge-bases</a>)，很容易建立知识库体系。</p>
+
+<p>当建立完成知识库之后，用户只需要将文档上传到对应的 S3 存储桶。</p>
+
+<p>然后将知识库集成到自己的应用中，此时只需调用 运行时 API 即可。</p>
+
+<p>运行时的 API 包含如下两个：</p>
+
+<h3 id="retrieve">Retrieve</h3>
+
+<p>知识召回，此方法将直接查询向量数据库，将文章片段及其 S3 的文件信息返回。</p>
+
+<h3 id="retrieveandgenerate">RetrieveAndGenerate</h3>
+
+<p>知识召回之后，将结果传入 生成式 AI 进行知识总结（需要结合使用 Bedrock 的生成式大语言模型，如 Claude）.</p>
+
+<p>返回一段总结好的文字，并分段给出引用地址(citations)。</p>
+
+<h3 id="代码示例">代码示例</h3>
+
+<p>实际使用中，我可能需要将本地知识召回，再加上其他 Agent 得到的知识之后，再进行总结。</p>
+
+<p>Retrieve 调用很简单，代码片段如下：</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">BedrockAgentRuntimeClient</span><span class="p">,</span> <span class="nx">RetrieveCommand</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@aws-sdk/client-bedrock-agent-runtime</span><span class="dl">"</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">bedrockAgentRuntimeClient</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">BedrockAgentRuntimeClient</span><span class="p">({</span> <span class="nx">region</span> <span class="p">});</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">retrive</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="k">await</span> <span class="nx">bedrockAgentRuntimeClient</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="k">new</span> <span class="nx">RetrieveCommand</span><span class="p">({</span>
+    <span class="nx">knowledgeBaseId</span><span class="p">,</span>
+    <span class="na">retrievalQuery</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nx">text</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="na">retrievalConfiguration</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">vectorSearchConfiguration</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">numberOfResults</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+      <span class="p">},</span>
+    <span class="p">}</span>
+  <span class="p">}));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>稍加解释：</p>
+
+<ul>
+  <li>knowledgeBaseId 是你 Amazon Bedrock 知识库的 ID，可以从控制台寻得。</li>
+  <li>text 是你提的问题。</li>
+  <li>numberOfResults 是需要返回的结果条数。</li>
+</ul>
+
+<blockquote>
+  <p>当前建议在实际集成中使用 JS 的 SDK。官方提供的 SDK，只有 JS 可以支持 streaming 流式输出。
+使用流式输出，可以大幅减少在生成过程中的假死等待时间。</p>
+</blockquote>
+
+<p>看一下我控制台打印的结果(<code class="language-plaintext highlighter-rouge">console.log(result.retrievalResults);</code>)：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2023-12-03T04:42:40.384Z cf5e41dc-22de-402c-b4bc-86eacff68691 INFO 如何进行S3事件通知？
+2023-12-03T04:42:40.385Z cf5e41dc-22de-402c-b4bc-86eacff68691 INFO <span class="o">[</span>
+  <span class="o">{</span>
+    content: <span class="o">{</span>
+      text: <span class="s1">'For more infor...'</span>
+    <span class="o">}</span>,
+    location: <span class="o">{</span> s3Location: <span class="o">[</span>Object], <span class="nb">type</span>: <span class="s1">'S3'</span> <span class="o">}</span>,
+    score: 0.65092564
+  <span class="o">}</span>,
+  <span class="o">{</span>
+    content: <span class="o">{</span>
+      text: <span class="s1">'Data protection in Amazon S3  PDFRSS ...'</span>
+    <span class="o">}</span>,
+    location: <span class="o">{</span> s3Location: <span class="o">[</span>Object], <span class="nb">type</span>: <span class="s1">'S3'</span> <span class="o">}</span>,
+    score: 0.66120756
+  <span class="o">}</span>,
+  <span class="o">{</span>
+    content: <span class="o">{</span>
+      text: <span class="s1">'.  • S3 Standard, S3 Intelligent-Tiering, S3 Stand...'</span>
+    <span class="o">}</span>,
+    location: <span class="o">{</span> s3Location: <span class="o">[</span>Object], <span class="nb">type</span>: <span class="s1">'S3'</span> <span class="o">}</span>,
+    score: 0.669181
+  <span class="o">}</span>,
+  <span class="o">{</span>
+    content: <span class="o">{</span>
+      text: <span class="s2">"You specify the Amazon Resource Na..."</span>
+    <span class="o">}</span>,
+    location: <span class="o">{</span> s3Location: <span class="o">[</span>Object], <span class="nb">type</span>: <span class="s1">'S3'</span> <span class="o">}</span>,
+    score: 0.7088487
+  <span class="o">}</span>,
+  <span class="o">{</span>
+    content: <span class="o">{</span>
+      text: <span class="s2">"Amazon S3 Event Notifi..."</span>
+    <span class="o">}</span>,
+    location: <span class="o">{</span> s3Location: <span class="o">[</span>Object], <span class="nb">type</span>: <span class="s1">'S3'</span> <span class="o">}</span>,
+    score: 0.7597214
+  <span class="o">}</span>
+<span class="o">]</span>
+</code></pre></div></div>
+
+<p>比较符合预期，接下来只需要重整这个结果，结合其他的方法获取的知识，将问题和参考知识丢给 LLM ，结合提示词工程(PE)即可完成更好的问答式输出了。</p>
+
+  </div>
+
+  <a class="u-url" href="/2023/12/bedrock-kb.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

@@ -151,7 +151,7 @@ def get_ebs_info(instance_id):
     return {"count": len(ebses["Volumes"]), "size": size}
 ```
 
-上面的代码使用了 boto3 输出了所有的 EC2 instances 信息，存到 csv 文件中，然后上传到 S3，并备份了旧文件。
+上面的代码使用了 boto3 输出了所需要的 EC2 instances 信息，存到 csv 文件中，然后上传到 S3，并备份了旧文件。
 
 实现按时调度，需要修改触发器，我们修改 `template.yaml` 文件:
 

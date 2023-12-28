@@ -3,7 +3,7 @@ layout: post
 title:  "Amazon Bedrock 内置知识库使用入门"
 date:   2023-12-03 09:10:49 +0800
 author: 啤酒云
-categories: aiml
+categories: aiml, aws
 ---
 
 本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。

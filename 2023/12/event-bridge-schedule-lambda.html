@@ -240,7 +240,7 @@
     <span class="k">return</span> <span class="p">{</span><span class="s">"count"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ebses</span><span class="p">[</span><span class="s">"Volumes"</span><span class="p">]),</span> <span class="s">"size"</span><span class="p">:</span> <span class="n">size</span><span class="p">}</span>
 </code></pre></div></div>
 
-<p>上面的代码使用了 boto3 输出了所有的 EC2 instances 信息，存到 csv 文件中，然后上传到 S3，并备份了旧文件。</p>
+<p>上面的代码使用了 boto3 输出了所需要的 EC2 instances 信息，存到 csv 文件中，然后上传到 S3，并备份了旧文件。</p>
 
 <p>实现按时调度，需要修改触发器，我们修改 <code class="language-plaintext highlighter-rouge">template.yaml</code> 文件:</p>
 
@@ -401,8 +401,7 @@ sam <span class="nb">local </span>invoke AWSEC2ExporterFunction <span class="nt"
 
     <div class="footer-col-wrapper">
 
-      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
-<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a></div>
     </div>
   </div>
 

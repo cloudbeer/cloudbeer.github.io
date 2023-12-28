@@ -1,4 +1,252 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-12-03T05:03:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">Amazon Bedrock 内置知识库使用入门</title><link href="https://youbug.cn/2023/12/bedrock-kb.html" rel="alternate" type="text/html" title="Amazon Bedrock 内置知识库使用入门" /><published>2023-12-03T01:10:49+00:00</published><updated>2023-12-03T01:10:49+00:00</updated><id>https://youbug.cn/2023/12/bedrock-kb</id><content type="html" xml:base="https://youbug.cn/2023/12/bedrock-kb.html"><![CDATA[<p>本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2023-12-28T06:16:31+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">使用 EventBridge 调度 AWS Lambda</title><link href="https://youbug.cn/2023/12/event-bridge-schedule-lambda.html" rel="alternate" type="text/html" title="使用 EventBridge 调度 AWS Lambda" /><published>2023-12-28T04:10:49+00:00</published><updated>2023-12-28T04:10:49+00:00</updated><id>https://youbug.cn/2023/12/event-bridge-schedule-lambda</id><content type="html" xml:base="https://youbug.cn/2023/12/event-bridge-schedule-lambda.html"><![CDATA[<p>得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。</p>
+
+<h2 id="创建项目">创建项目</h2>
+
+<p>使用 AWS SAM 创建项目，创建目录后：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam init
+</code></pre></div></div>
+
+<p>我选择的 python 和 zip。</p>
+
+<p>创建好了之后，我不准备使用 HelloWorld 目录，所以新建了一个目录 aws.</p>
+
+<p>现在的文件结构大概如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>├── README.md
+├── __init__.py
+├── aws
+│   ├── __init__.py
+│   ├── ec2.py
+│   └── requirements.txt
+├── events
+│   ├── event.json
+│   └── params.json
+├── samconfig.toml
+├── template.yaml
+</code></pre></div></div>
+
+<h2 id="代码编写和解读">代码编写和解读</h2>
+
+<p>requirements.txt 里增加 boto3 即可。</p>
+
+<p>ec2.py 这个文件，我准备用来导出 ec2 实例信息。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="n">s3_bucket</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="s">"S3Bucket"</span><span class="p">]</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">"ec2"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="n">ec2</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span><span class="s">"ec2"</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">get_date_str</span><span class="p">())</span>
+
+    <span class="n">tmpFile</span> <span class="o">=</span> <span class="s">"/tmp/ec2-info.csv"</span>  <span class="c1"># Lambda 里这个目录是可写的
+</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmpFile</span><span class="p">,</span> <span class="s">"w"</span><span class="p">)</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span>
+        <span class="s">"instance_name,availability_zone,private_ip,cpu_qty,memory_gb,disk_gb,owner1,operating_system</span><span class="se">\n</span><span class="s">"</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">ec2</span><span class="p">.</span><span class="n">instances</span><span class="p">.</span><span class="nb">all</span><span class="p">():</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">instaceTypeInfo</span> <span class="o">=</span> <span class="n">get_ec2_info</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">instance</span><span class="p">.</span><span class="n">tags</span>
+        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_value</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s">"Name"</span><span class="p">))</span>  <span class="c1"># instance_name
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">placement</span><span class="p">[</span><span class="s">"AvailabilityZone"</span><span class="p">])</span>  <span class="c1"># az
+</span>
+        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">private_ip_address</span><span class="p">)</span>  <span class="c1"># private_ip
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">cpu_options</span><span class="p">[</span><span class="s">"CoreCount"</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s">"CoreCount"</span> <span class="ow">in</span> <span class="n">instance</span><span class="p">.</span><span class="n">cpu_options</span>
+            <span class="k">else</span> <span class="s">"Unkown"</span>
+        <span class="p">)</span>  <span class="c1"># cpu_qty
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">instaceTypeInfo</span><span class="p">[</span><span class="s">"Memory"</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">))</span>  <span class="c1"># memory_gb
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">get_ebs_info</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="nb">id</span><span class="p">)[</span><span class="s">"size"</span><span class="p">]))</span>  <span class="c1"># disk_gb
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_value</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s">"Owner1"</span><span class="p">))</span>  <span class="c1"># owner1
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">platform_details</span><span class="p">)</span>  <span class="c1"># operating_system
+</span>        <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">","</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+        <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">backup_s3_file</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s">"export-resources/ec2-info.csv"</span><span class="p">)</span>
+    <span class="n">upload_s3</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s">"export-resources/ec2-info.csv"</span><span class="p">,</span> <span class="n">tmpFile</span><span class="p">)</span>
+    <span class="n">os</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tmpFile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+<span class="c1"># upload file
+</span><span class="k">def</span> <span class="nf">upload_s3</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+    <span class="n">s3</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span>
+        <span class="s">"s3"</span>
+    <span class="p">)</span>
+    <span class="n">s3</span><span class="p">.</span><span class="n">Bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">).</span><span class="n">upload_file</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+
+<span class="c1"># get a string by date second
+</span><span class="k">def</span> <span class="nf">get_date_str</span><span class="p">():</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">.</span><span class="n">datetime</span><span class="p">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">now</span><span class="p">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">"%Y%m%d%H%M%S"</span><span class="p">)</span> <span class="o">+</span> <span class="s">"-"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999</span><span class="p">))</span>
+
+<span class="c1"># change s3 filename to backup it
+</span><span class="k">def</span> <span class="nf">backup_s3_file</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="n">s3</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span>
+        <span class="s">"s3"</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>  <span class="c1"># first time change will raise error
+</span>        <span class="n">s3</span><span class="p">.</span><span class="n">Object</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span> <span class="n">get_date_str</span><span class="p">()).</span><span class="n">copy_from</span><span class="p">(</span>
+            <span class="n">CopySource</span><span class="o">=</span><span class="n">bucket</span> <span class="o">+</span> <span class="s">"/"</span> <span class="o">+</span> <span class="n">key</span><span class="p">,</span> <span class="n">MetadataDirective</span><span class="o">=</span><span class="s">"REPLACE"</span>
+        <span class="p">)</span>
+        <span class="n">s3</span><span class="p">.</span><span class="n">Object</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">).</span><span class="n">delete</span><span class="p">()</span>
+    <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+<span class="c1"># get value from dict
+</span><span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tag</span><span class="p">[</span><span class="s">"Key"</span><span class="p">]</span> <span class="o">==</span> <span class="n">key</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tag</span><span class="p">[</span><span class="s">"Value"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s">"None"</span>
+
+
+<span class="c1"># get cpu and memory info from instance_type
+</span><span class="k">def</span> <span class="nf">get_ec2_info</span><span class="p">(</span><span class="n">instance</span><span class="p">):</span>
+    <span class="n">details</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">describe_instance_types</span><span class="p">(</span><span class="n">InstanceTypes</span><span class="o">=</span><span class="p">[</span><span class="n">instance</span><span class="p">.</span><span class="n">instance_type</span><span class="p">])</span>
+    <span class="c1"># print(details)
+</span>    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">"VCpus"</span><span class="p">:</span> <span class="n">details</span><span class="p">[</span><span class="s">"InstanceTypes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"VCpuInfo"</span><span class="p">][</span><span class="s">"DefaultVCpus"</span><span class="p">],</span>
+        <span class="s">"Cores"</span><span class="p">:</span> <span class="n">details</span><span class="p">[</span><span class="s">"InstanceTypes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"VCpuInfo"</span><span class="p">][</span><span class="s">"DefaultCores"</span><span class="p">],</span>
+        <span class="s">"Memory"</span><span class="p">:</span> <span class="n">details</span><span class="p">[</span><span class="s">"InstanceTypes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"MemoryInfo"</span><span class="p">][</span><span class="s">"SizeInMiB"</span><span class="p">],</span>
+    <span class="p">}</span>
+
+
+<span class="c1"># get ebs by instance id
+</span><span class="k">def</span> <span class="nf">get_ebs_info</span><span class="p">(</span><span class="n">instance_id</span><span class="p">):</span>
+    <span class="n">ebses</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">describe_volumes</span><span class="p">(</span>
+        <span class="n">Filters</span><span class="o">=</span><span class="p">[{</span><span class="s">"Name"</span><span class="p">:</span> <span class="s">"attachment.instance-id"</span><span class="p">,</span> <span class="s">"Values"</span><span class="p">:</span> <span class="p">[</span><span class="n">instance_id</span><span class="p">]}]</span>
+    <span class="p">)</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ebs</span> <span class="ow">in</span> <span class="n">ebses</span><span class="p">[</span><span class="s">"Volumes"</span><span class="p">]:</span>
+        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">size</span> <span class="o">+=</span> <span class="n">ebs</span><span class="p">[</span><span class="s">"Size"</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s">"count"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ebses</span><span class="p">[</span><span class="s">"Volumes"</span><span class="p">]),</span> <span class="s">"size"</span><span class="p">:</span> <span class="n">size</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>上面的代码使用了 boto3 输出了所有的 EC2 instances 信息，存到 csv 文件中，然后上传到 S3，并备份了旧文件。</p>
+
+<p>实现按时调度，需要修改触发器，我们修改 <code class="language-plaintext highlighter-rouge">template.yaml</code> 文件:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">AWSTemplateFormatVersion</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2010-09-09"</span>
+<span class="na">Transform</span><span class="pi">:</span> <span class="s">AWS::Serverless-2016-10-31</span>
+<span class="na">Description</span><span class="pi">:</span> <span class="pi">&gt;</span>
+  <span class="s">cloud-resources-exporter</span>
+
+  <span class="s">Sample SAM Template for cloud-resources-exporter</span>
+
+<span class="na">Globals</span><span class="pi">:</span>
+  <span class="na">Function</span><span class="pi">:</span>
+    <span class="na">Timeout</span><span class="pi">:</span> <span class="m">900</span>
+    <span class="na">MemorySize</span><span class="pi">:</span> <span class="m">256</span>
+
+<span class="na">Parameters</span><span class="pi">:</span>
+  <span class="na">S3Bucket</span><span class="pi">:</span>
+    <span class="na">Type</span><span class="pi">:</span> <span class="s">String</span>
+    <span class="na">Description</span><span class="pi">:</span> <span class="s2">"</span><span class="s">SCV</span><span class="nv"> </span><span class="s">file</span><span class="nv"> </span><span class="s">location."</span>
+
+<span class="na">Resources</span><span class="pi">:</span>
+  <span class="na">AWSEC2ExporterFunction</span><span class="pi">:</span>
+    <span class="na">Type</span><span class="pi">:</span> <span class="s">AWS::Serverless::Function</span>
+    <span class="na">Properties</span><span class="pi">:</span>
+      <span class="na">CodeUri</span><span class="pi">:</span> <span class="s">aws/</span>
+      <span class="na">Handler</span><span class="pi">:</span> <span class="s">ec2.handler</span>
+      <span class="na">Runtime</span><span class="pi">:</span> <span class="s">python3.9</span>
+      <span class="na">Architectures</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">arm64</span>
+      <span class="na">Policies</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">AmazonEC2ReadOnlyAccess</span>
+      <span class="na">Environment</span><span class="pi">:</span>
+        <span class="na">Variables</span><span class="pi">:</span>
+          <span class="na">S3Bucket</span><span class="pi">:</span> <span class="kt">!Ref</span> <span class="s">S3Bucket</span>
+      <span class="na">Events</span><span class="pi">:</span>
+        <span class="na">ScheduleEvent</span><span class="pi">:</span>
+          <span class="na">Type</span><span class="pi">:</span> <span class="s">ScheduleV2</span>
+          <span class="na">Properties</span><span class="pi">:</span>
+            <span class="na">ScheduleExpression</span><span class="pi">:</span> <span class="s">cron(0 * * * ? *)</span>
+
+<span class="na">Outputs</span><span class="pi">:</span>
+  <span class="na">AWSEC2ExporterFunction</span><span class="pi">:</span>
+    <span class="na">Description</span><span class="pi">:</span> <span class="s">AWS EC2 Exporter Function ARN</span>
+    <span class="na">Value</span><span class="pi">:</span> <span class="kt">!GetAtt</span> <span class="s">AWSEC2ExporterFunction.Arn</span>
+</code></pre></div></div>
+
+<p>上述代码的一些重点：</p>
+
+<ul>
+  <li>在 Lambda 执行角色里增加了一个 托管策略：AmazonEC2ReadOnlyAccess</li>
+  <li>S3Bucket 作为一个环境变量传入了 Lambda</li>
+  <li>Events 部分定义了函数触发器：
+    <ul>
+      <li>ScheduleEvent 可以创建一个 EventBridge 计划</li>
+      <li>此计划会自动绑定目标为当前的 Lambda 函数（注意：在 Lambda 控制台看不到此触发器）</li>
+      <li>ScheduleExpression 的支持 at(), rate() 和 cron()
+        <ul>
+          <li>at(yyyy-mm-ddThh:mm:ss)</li>
+          <li>rate(value unit)</li>
+          <li>cron(minutes hours day-of-month month day-of-week year)</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="调试和部署">调试和部署</h2>
+
+<p>本地调试：</p>
+
+<p>设置好 AKSK之后：</p>
+
+<p>本地创建文件 events/params.json :</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"Parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"S3Bucket"</span><span class="p">:</span><span class="w"> </span><span class="s2">"xxx"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre></div></div>
+
+<p>执行命令：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam build
+sam <span class="nb">local </span>invoke AWSEC2ExporterFunction <span class="nt">--env-vars</span> events/params.json
+</code></pre></div></div>
+
+<h2 id="部署到线上">部署到线上</h2>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam deploy <span class="se">\</span>
+  <span class="nt">--region</span> us-east-1 <span class="se">\</span>
+  <span class="nt">--parameter-overrides</span> <span class="se">\</span>
+  <span class="nv">S3Bucket</span><span class="o">=</span>xxxx
+</code></pre></div></div>
+
+<p>上述整个代码里，没有一点 EventBridge 的痕迹，就是这么神奇地搞完了！</p>
+
+<hr />
+<p>Schedule 参考(以为 aws 的为准)：</p>
+
+<p><a href="https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html">https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html</a></p>
+
+<p><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cron-expressions.html">https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cron-expressions.html</a></p>
+
+<p><a href="https://crontab.guru/examples.html">https://crontab.guru/examples.html</a></p>]]></content><author><name>啤酒云</name></author><category term="aws" /><summary type="html"><![CDATA[得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。]]></summary></entry><entry><title type="html">Amazon Bedrock 内置知识库使用入门</title><link href="https://youbug.cn/2023/12/bedrock-kb.html" rel="alternate" type="text/html" title="Amazon Bedrock 内置知识库使用入门" /><published>2023-12-03T01:10:49+00:00</published><updated>2023-12-03T01:10:49+00:00</updated><id>https://youbug.cn/2023/12/bedrock-kb</id><content type="html" xml:base="https://youbug.cn/2023/12/bedrock-kb.html"><![CDATA[<p>本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。</p>
 
 <h2 id="快速入门">快速入门</h2>
 
@@ -142,7 +390,7 @@
 <span class="o">]</span>
 </code></pre></div></div>
 
-<p>比较符合预期，接下来只需要重整这个结果，结合其他的方法获取的知识，将问题和参考知识丢给 LLM ，结合提示词工程(PE)即可完成更好的问答式输出了。</p>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。]]></summary></entry><entry><title type="html">入门 Amazon Bedrock 只看这一篇就够了</title><link href="https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need.html" rel="alternate" type="text/html" title="入门 Amazon Bedrock 只看这一篇就够了" /><published>2023-10-31T13:03:33+00:00</published><updated>2023-10-31T13:03:33+00:00</updated><id>https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need</id><content type="html" xml:base="https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need.html"><![CDATA[<p>Amazon Bedrock 简要说就是是 AWS 的一项完全托管的服务，通过 API 调用各种优质大模型。本文将总结其基本用法，并提供完整的示例。</p>
+<p>比较符合预期，接下来只需要重整这个结果，结合其他的方法获取的知识，将问题和参考知识丢给 LLM ，结合提示词工程(PE)即可完成更好的问答式输出了。</p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。]]></summary></entry><entry><title type="html">入门 Amazon Bedrock 只看这一篇就够了</title><link href="https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need.html" rel="alternate" type="text/html" title="入门 Amazon Bedrock 只看这一篇就够了" /><published>2023-10-31T13:03:33+00:00</published><updated>2023-10-31T13:03:33+00:00</updated><id>https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need</id><content type="html" xml:base="https://youbug.cn/2023/10/amazon-bedrock-this-is-all-you-need.html"><![CDATA[<p>Amazon Bedrock 简要说就是是 AWS 的一项完全托管的服务，通过 API 调用各种优质大模型。本文将总结其基本用法，并提供完整的示例。</p>
 
 <h2 id="使用前提">使用前提</h2>
 
@@ -2457,114 +2705,4 @@ aws s3 <span class="nb">cp </span>distiluse-base-multilingual-cased-v2.tar.gz <s
 
 <p><a href="https://github.com/aws/sagemaker-huggingface-inference-toolkit">https://github.com/aws/sagemaker-huggingface-inference-toolkit</a></p>
 
-<p><a href="https://huggingface.co/docs/sagemaker/reference#inference-dlc-overview">Huggingface 默认支持的库版本对照</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。]]></summary></entry><entry><title type="html">在 SageMaker 上部署 Huggingface 模型 (一)</title><link href="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-1.html" rel="alternate" type="text/html" title="在 SageMaker 上部署 Huggingface 模型 (一)" /><published>2023-05-10T02:13:33+00:00</published><updated>2023-05-10T02:13:33+00:00</updated><id>https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-1</id><content type="html" xml:base="https://youbug.cn/2023/05/deploy-huggingface-model-2-sagemaker-1.html"><![CDATA[<p>在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。</p>
-
-<h2 id="创建-iam-角色">创建 IAM 角色</h2>
-
-<p>往 SageMaker 部署模型需要一个角色，先创建一个角色，如果你之前运行过 SageMaker，大抵应该有了这个角色。</p>
-
-<ul>
-  <li>Trusted entity type: AWS service</li>
-  <li>Use cases for other AWS services: SageMaker</li>
-  <li>勾选上 SageMaker - Execution</li>
-</ul>
-
-<p>你会看到他已经选择了 AmazonSageMakerFullAccess 策略，点击下一步。</p>
-
-<p>把这个角色命名为 HuggingfaceExecuteRole  或者其他。</p>
-
-<h2 id="代码分段解读">代码分段解读</h2>
-
-<blockquote>
-  <p>你可以在 VSCode 里创建一个 xxx.ipynb 的文件，分段执行下面的代码。VSCode 提供了 python 和 notebook 相关插件。</p>
-
-  <p>另外，你需要在本机配置正确的 AKSK 和 AWS Region。</p>
-
-  <p>boto3 和 sagemaker 这俩依赖库要在本机安装一下。</p>
-</blockquote>
-
-<h3 id="定义模型">定义模型</h3>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
-<span class="kn">from</span> <span class="nn">sagemaker.huggingface</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
-
-<span class="n">hub</span> <span class="o">=</span>  <span class="p">{</span>
- <span class="s">'HF_MODEL_ID'</span><span class="p">:</span><span class="s">'bert-base-chinese'</span><span class="p">,</span>
- <span class="s">'HF_TASK'</span><span class="p">:</span><span class="s">'fill-mask'</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<ul>
-  <li>这里定义了模型的名字和需要做的任务名称，SageMaker 会动态拉取 Huggingface 的模型。</li>
-</ul>
-
-<h3 id="部署模型">部署模型</h3>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
-<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)</span>
-
-<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
- <span class="n">transformers_version</span><span class="o">=</span><span class="s">'4.17.0'</span><span class="p">,</span>
- <span class="n">pytorch_version</span><span class="o">=</span><span class="s">'1.10.2'</span><span class="p">,</span>
- <span class="n">py_version</span><span class="o">=</span><span class="s">'py38'</span><span class="p">,</span>
- <span class="n">env</span><span class="o">=</span><span class="n">hub</span><span class="p">,</span>
- <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">],</span> 
-<span class="p">)</span>
-
-
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
- <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
- <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.m5.xlarge'</span> 
-<span class="p">)</span>
-</code></pre></div></div>
-
-<ul>
-  <li>这一步我们定义了模型运行的环境，角色和运行的机型，数量。</li>
-  <li>role 这里需要注意一下，他的入参是 Role 的 Arn。</li>
-  <li>这一步完成之后，可以到 SageMaker 后台看到计算资源/Endpoint 已经成功部署，位置在 Inference - Endpoints。</li>
-</ul>
-
-<h3 id="运行推理">运行推理</h3>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
- <span class="s">'inputs'</span><span class="p">:</span> <span class="s">"哈哈，我正在吃[MASK]。"</span>
-<span class="p">})</span>
-</code></pre></div></div>
-
-<p>结果为：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[{</span><span class="s1">'score'</span>: 0.26574137806892395,
-  <span class="s1">'token'</span>: 1450,
-  <span class="s1">'token_str'</span>: <span class="s1">'呢'</span>,
-  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 呢 。'</span><span class="o">}</span>,
- <span class="o">{</span><span class="s1">'score'</span>: 0.23924605548381805,
-  <span class="s1">'token'</span>: 7649,
-  <span class="s1">'token_str'</span>: <span class="s1">'饭'</span>,
-  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 饭 。'</span><span class="o">}</span>,
- <span class="o">{</span><span class="s1">'score'</span>: 0.07031755149364471,
-  <span class="s1">'token'</span>: 1557,
-  <span class="s1">'token_str'</span>: <span class="s1">'啊'</span>,
-  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 啊 。'</span><span class="o">}</span>,
- <span class="o">{</span><span class="s1">'score'</span>: 0.02992616966366768,
-  <span class="s1">'token'</span>: 1521,
-  <span class="s1">'token_str'</span>: <span class="s1">'哦'</span>,
-  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 哦 。'</span><span class="o">}</span>,
- <span class="o">{</span><span class="s1">'score'</span>: 0.029010694473981857,
-  <span class="s1">'token'</span>: 7613,
-  <span class="s1">'token_str'</span>: <span class="s1">'飯'</span>,
-  <span class="s1">'sequence'</span>: <span class="s1">'哈 哈 ， 我 正 在 吃 飯 。'</span><span class="o">}]</span>
-</code></pre></div></div>
-
-<h3 id="清理资源">清理资源</h3>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">delete_endpoint</span><span class="p">()</span>
-</code></pre></div></div>
-
-<h2 id="总结">总结</h2>
-
-<p>整个过程还是非常的方便，Endpoint 的创建的速度非常快（本示例用了 2 分半钟），省去了安装运行环境的痛苦，爽的一匹啊！</p>
-
-<hr />
-<p>相关</p>
-
-<p><a href="deploy-huggingface-model-2-sagemaker-2.html">在 SageMaker 上部署 Huggingface 模型 (二)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。]]></summary></entry></feed>
+<p><a href="https://huggingface.co/docs/sagemaker/reference#inference-dlc-overview">Huggingface 默认支持的库版本对照</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[在 Huggingface 上，有些模型并没有 Deploy - Sagemaker 这个功能，或者我们需要做一些特殊的任务，怎么办？本文介绍了如何让 SageMaker 调用自定义的推理代码。]]></summary></entry></feed>

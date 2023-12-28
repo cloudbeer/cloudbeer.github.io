@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>使用 EventBridge 调度 AWS Lambda | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="使用 EventBridge 调度 AWS Lambda" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。" />
+<meta property="og:description" content="得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。" />
+<link rel="canonical" href="https://youbug.cn/2023/12/event-bridge-schedule-lambda.html" />
+<meta property="og:url" content="https://youbug.cn/2023/12/event-bridge-schedule-lambda.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-12-28T04:10:49+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="使用 EventBridge 调度 AWS Lambda" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2023-12-28T04:10:49+00:00","datePublished":"2023-12-28T04:10:49+00:00","description":"得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。","headline":"使用 EventBridge 调度 AWS Lambda","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2023/12/event-bridge-schedule-lambda.html"},"url":"https://youbug.cn/2023/12/event-bridge-schedule-lambda.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">使用 EventBridge 调度 AWS Lambda</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-12-28T04:10:49+00:00" itemprop="datePublished">2023-12-28
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。</p>
+
+<h2 id="创建项目">创建项目</h2>
+
+<p>使用 AWS SAM 创建项目，创建目录后：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam init
+</code></pre></div></div>
+
+<p>我选择的 python 和 zip。</p>
+
+<p>创建好了之后，我不准备使用 HelloWorld 目录，所以新建了一个目录 aws.</p>
+
+<p>现在的文件结构大概如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>├── README.md
+├── __init__.py
+├── aws
+│   ├── __init__.py
+│   ├── ec2.py
+│   └── requirements.txt
+├── events
+│   ├── event.json
+│   └── params.json
+├── samconfig.toml
+├── template.yaml
+</code></pre></div></div>
+
+<h2 id="代码编写和解读">代码编写和解读</h2>
+
+<p>requirements.txt 里增加 boto3 即可。</p>
+
+<p>ec2.py 这个文件，我准备用来导出 ec2 实例信息。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="n">s3_bucket</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="s">"S3Bucket"</span><span class="p">]</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">"ec2"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="n">ec2</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span><span class="s">"ec2"</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">get_date_str</span><span class="p">())</span>
+
+    <span class="n">tmpFile</span> <span class="o">=</span> <span class="s">"/tmp/ec2-info.csv"</span>  <span class="c1"># Lambda 里这个目录是可写的
+</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmpFile</span><span class="p">,</span> <span class="s">"w"</span><span class="p">)</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span>
+        <span class="s">"instance_name,availability_zone,private_ip,cpu_qty,memory_gb,disk_gb,owner1,operating_system</span><span class="se">\n</span><span class="s">"</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">ec2</span><span class="p">.</span><span class="n">instances</span><span class="p">.</span><span class="nb">all</span><span class="p">():</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">instaceTypeInfo</span> <span class="o">=</span> <span class="n">get_ec2_info</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">instance</span><span class="p">.</span><span class="n">tags</span>
+        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_value</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s">"Name"</span><span class="p">))</span>  <span class="c1"># instance_name
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">placement</span><span class="p">[</span><span class="s">"AvailabilityZone"</span><span class="p">])</span>  <span class="c1"># az
+</span>
+        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">private_ip_address</span><span class="p">)</span>  <span class="c1"># private_ip
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">cpu_options</span><span class="p">[</span><span class="s">"CoreCount"</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s">"CoreCount"</span> <span class="ow">in</span> <span class="n">instance</span><span class="p">.</span><span class="n">cpu_options</span>
+            <span class="k">else</span> <span class="s">"Unkown"</span>
+        <span class="p">)</span>  <span class="c1"># cpu_qty
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">instaceTypeInfo</span><span class="p">[</span><span class="s">"Memory"</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">))</span>  <span class="c1"># memory_gb
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">get_ebs_info</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="nb">id</span><span class="p">)[</span><span class="s">"size"</span><span class="p">]))</span>  <span class="c1"># disk_gb
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_value</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s">"Owner1"</span><span class="p">))</span>  <span class="c1"># owner1
+</span>        <span class="n">line</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">.</span><span class="n">platform_details</span><span class="p">)</span>  <span class="c1"># operating_system
+</span>        <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">","</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+        <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">backup_s3_file</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s">"export-resources/ec2-info.csv"</span><span class="p">)</span>
+    <span class="n">upload_s3</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s">"export-resources/ec2-info.csv"</span><span class="p">,</span> <span class="n">tmpFile</span><span class="p">)</span>
+    <span class="n">os</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tmpFile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+<span class="c1"># upload file
+</span><span class="k">def</span> <span class="nf">upload_s3</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">file</span><span class="p">):</span>
+    <span class="n">s3</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span>
+        <span class="s">"s3"</span>
+    <span class="p">)</span>
+    <span class="n">s3</span><span class="p">.</span><span class="n">Bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">).</span><span class="n">upload_file</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+
+<span class="c1"># get a string by date second
+</span><span class="k">def</span> <span class="nf">get_date_str</span><span class="p">():</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">.</span><span class="n">datetime</span><span class="p">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">now</span><span class="p">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">"%Y%m%d%H%M%S"</span><span class="p">)</span> <span class="o">+</span> <span class="s">"-"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999</span><span class="p">))</span>
+
+<span class="c1"># change s3 filename to backup it
+</span><span class="k">def</span> <span class="nf">backup_s3_file</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="n">s3</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">resource</span><span class="p">(</span>
+        <span class="s">"s3"</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>  <span class="c1"># first time change will raise error
+</span>        <span class="n">s3</span><span class="p">.</span><span class="n">Object</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span> <span class="n">get_date_str</span><span class="p">()).</span><span class="n">copy_from</span><span class="p">(</span>
+            <span class="n">CopySource</span><span class="o">=</span><span class="n">bucket</span> <span class="o">+</span> <span class="s">"/"</span> <span class="o">+</span> <span class="n">key</span><span class="p">,</span> <span class="n">MetadataDirective</span><span class="o">=</span><span class="s">"REPLACE"</span>
+        <span class="p">)</span>
+        <span class="n">s3</span><span class="p">.</span><span class="n">Object</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">).</span><span class="n">delete</span><span class="p">()</span>
+    <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+<span class="c1"># get value from dict
+</span><span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tag</span><span class="p">[</span><span class="s">"Key"</span><span class="p">]</span> <span class="o">==</span> <span class="n">key</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tag</span><span class="p">[</span><span class="s">"Value"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s">"None"</span>
+
+
+<span class="c1"># get cpu and memory info from instance_type
+</span><span class="k">def</span> <span class="nf">get_ec2_info</span><span class="p">(</span><span class="n">instance</span><span class="p">):</span>
+    <span class="n">details</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">describe_instance_types</span><span class="p">(</span><span class="n">InstanceTypes</span><span class="o">=</span><span class="p">[</span><span class="n">instance</span><span class="p">.</span><span class="n">instance_type</span><span class="p">])</span>
+    <span class="c1"># print(details)
+</span>    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">"VCpus"</span><span class="p">:</span> <span class="n">details</span><span class="p">[</span><span class="s">"InstanceTypes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"VCpuInfo"</span><span class="p">][</span><span class="s">"DefaultVCpus"</span><span class="p">],</span>
+        <span class="s">"Cores"</span><span class="p">:</span> <span class="n">details</span><span class="p">[</span><span class="s">"InstanceTypes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"VCpuInfo"</span><span class="p">][</span><span class="s">"DefaultCores"</span><span class="p">],</span>
+        <span class="s">"Memory"</span><span class="p">:</span> <span class="n">details</span><span class="p">[</span><span class="s">"InstanceTypes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"MemoryInfo"</span><span class="p">][</span><span class="s">"SizeInMiB"</span><span class="p">],</span>
+    <span class="p">}</span>
+
+
+<span class="c1"># get ebs by instance id
+</span><span class="k">def</span> <span class="nf">get_ebs_info</span><span class="p">(</span><span class="n">instance_id</span><span class="p">):</span>
+    <span class="n">ebses</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">describe_volumes</span><span class="p">(</span>
+        <span class="n">Filters</span><span class="o">=</span><span class="p">[{</span><span class="s">"Name"</span><span class="p">:</span> <span class="s">"attachment.instance-id"</span><span class="p">,</span> <span class="s">"Values"</span><span class="p">:</span> <span class="p">[</span><span class="n">instance_id</span><span class="p">]}]</span>
+    <span class="p">)</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ebs</span> <span class="ow">in</span> <span class="n">ebses</span><span class="p">[</span><span class="s">"Volumes"</span><span class="p">]:</span>
+        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">size</span> <span class="o">+=</span> <span class="n">ebs</span><span class="p">[</span><span class="s">"Size"</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s">"count"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ebses</span><span class="p">[</span><span class="s">"Volumes"</span><span class="p">]),</span> <span class="s">"size"</span><span class="p">:</span> <span class="n">size</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>上面的代码使用了 boto3 输出了所有的 EC2 instances 信息，存到 csv 文件中，然后上传到 S3，并备份了旧文件。</p>
+
+<p>实现按时调度，需要修改触发器，我们修改 <code class="language-plaintext highlighter-rouge">template.yaml</code> 文件:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">AWSTemplateFormatVersion</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2010-09-09"</span>
+<span class="na">Transform</span><span class="pi">:</span> <span class="s">AWS::Serverless-2016-10-31</span>
+<span class="na">Description</span><span class="pi">:</span> <span class="pi">&gt;</span>
+  <span class="s">cloud-resources-exporter</span>
+
+  <span class="s">Sample SAM Template for cloud-resources-exporter</span>
+
+<span class="na">Globals</span><span class="pi">:</span>
+  <span class="na">Function</span><span class="pi">:</span>
+    <span class="na">Timeout</span><span class="pi">:</span> <span class="m">900</span>
+    <span class="na">MemorySize</span><span class="pi">:</span> <span class="m">256</span>
+
+<span class="na">Parameters</span><span class="pi">:</span>
+  <span class="na">S3Bucket</span><span class="pi">:</span>
+    <span class="na">Type</span><span class="pi">:</span> <span class="s">String</span>
+    <span class="na">Description</span><span class="pi">:</span> <span class="s2">"</span><span class="s">SCV</span><span class="nv"> </span><span class="s">file</span><span class="nv"> </span><span class="s">location."</span>
+
+<span class="na">Resources</span><span class="pi">:</span>
+  <span class="na">AWSEC2ExporterFunction</span><span class="pi">:</span>
+    <span class="na">Type</span><span class="pi">:</span> <span class="s">AWS::Serverless::Function</span>
+    <span class="na">Properties</span><span class="pi">:</span>
+      <span class="na">CodeUri</span><span class="pi">:</span> <span class="s">aws/</span>
+      <span class="na">Handler</span><span class="pi">:</span> <span class="s">ec2.handler</span>
+      <span class="na">Runtime</span><span class="pi">:</span> <span class="s">python3.9</span>
+      <span class="na">Architectures</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">arm64</span>
+      <span class="na">Policies</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">AmazonEC2ReadOnlyAccess</span>
+      <span class="na">Environment</span><span class="pi">:</span>
+        <span class="na">Variables</span><span class="pi">:</span>
+          <span class="na">S3Bucket</span><span class="pi">:</span> <span class="kt">!Ref</span> <span class="s">S3Bucket</span>
+      <span class="na">Events</span><span class="pi">:</span>
+        <span class="na">ScheduleEvent</span><span class="pi">:</span>
+          <span class="na">Type</span><span class="pi">:</span> <span class="s">ScheduleV2</span>
+          <span class="na">Properties</span><span class="pi">:</span>
+            <span class="na">ScheduleExpression</span><span class="pi">:</span> <span class="s">cron(0 * * * ? *)</span>
+
+<span class="na">Outputs</span><span class="pi">:</span>
+  <span class="na">AWSEC2ExporterFunction</span><span class="pi">:</span>
+    <span class="na">Description</span><span class="pi">:</span> <span class="s">AWS EC2 Exporter Function ARN</span>
+    <span class="na">Value</span><span class="pi">:</span> <span class="kt">!GetAtt</span> <span class="s">AWSEC2ExporterFunction.Arn</span>
+</code></pre></div></div>
+
+<p>上述代码的一些重点：</p>
+
+<ul>
+  <li>在 Lambda 执行角色里增加了一个 托管策略：AmazonEC2ReadOnlyAccess</li>
+  <li>S3Bucket 作为一个环境变量传入了 Lambda</li>
+  <li>Events 部分定义了函数触发器：
+    <ul>
+      <li>ScheduleEvent 可以创建一个 EventBridge 计划</li>
+      <li>此计划会自动绑定目标为当前的 Lambda 函数（注意：在 Lambda 控制台看不到此触发器）</li>
+      <li>ScheduleExpression 的支持 at(), rate() 和 cron()
+        <ul>
+          <li>at(yyyy-mm-ddThh:mm:ss)</li>
+          <li>rate(value unit)</li>
+          <li>cron(minutes hours day-of-month month day-of-week year)</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="调试和部署">调试和部署</h2>
+
+<p>本地调试：</p>
+
+<p>设置好 AKSK之后：</p>
+
+<p>本地创建文件 events/params.json :</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"Parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"S3Bucket"</span><span class="p">:</span><span class="w"> </span><span class="s2">"xxx"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre></div></div>
+
+<p>执行命令：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam build
+sam <span class="nb">local </span>invoke AWSEC2ExporterFunction <span class="nt">--env-vars</span> events/params.json
+</code></pre></div></div>
+
+<h2 id="部署到线上">部署到线上</h2>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sam deploy <span class="se">\</span>
+  <span class="nt">--region</span> us-east-1 <span class="se">\</span>
+  <span class="nt">--parameter-overrides</span> <span class="se">\</span>
+  <span class="nv">S3Bucket</span><span class="o">=</span>xxxx
+</code></pre></div></div>
+
+<p>上述整个代码里，没有一点 EventBridge 的痕迹，就是这么神奇地搞完了！</p>
+
+<hr />
+<p>Schedule 参考(以为 aws 的为准)：</p>
+
+<p><a href="https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html">https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html</a></p>
+
+<p><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cron-expressions.html">https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cron-expressions.html</a></p>
+
+<p><a href="https://crontab.guru/examples.html">https://crontab.guru/examples.html</a></p>
+
+  </div>
+
+  <a class="u-url" href="/2023/12/event-bridge-schedule-lambda.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a> |
+<a href="https://silencehuliang.github.io/" target="_blank">Never give up</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

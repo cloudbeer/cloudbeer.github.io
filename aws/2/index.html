@@ -78,7 +78,23 @@
   }
 </style>
 
-<div class="home"><h1 class="page-heading">旧 | 第 2 页，共 3 页</h1><ul class="post-list"><li><span class="post-meta">2023-04-24</span>
+<div class="home"><h1 class="page-heading">旧 | 第 2 页，共 3 页</h1><ul class="post-list"><li><span class="post-meta">2023-05-07</span>
+      <h3>
+        <a class="post-link" href="/2023/05/post-s3-tls-outdate.html">
+          在 TLS 1.1 过期后上传 S3 的策略
+        </a>
+      </h3>
+      <div><p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
+</div>
+    </li><li><span class="post-meta">2023-05-06</span>
+      <h3>
+        <a class="post-link" href="/2023/05/create-ingress-alb-across-account.html">
+          EKS Ingress 跨账号创建 ALB
+        </a>
+      </h3>
+      <div><p>在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与<strong>外网隔离</strong>。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。</p>
+</div>
+    </li><li><span class="post-meta">2023-04-24</span>
       <h3>
         <a class="post-link" href="/2023/04/llm-embeddings-search.html">
           使用 LLM embeddings 进行数据存储和检索的新姿势
@@ -141,22 +157,6 @@
         </a>
       </h3>
       <div><p>在很多项目里，需要共享类库，所以需要一个构建物仓库，在 AWS 就是 CodeArtifact。本文记录了如何使用 Gitlab 自动化构建 Java 类库，并上传到 CodeArtifact。</p>
-</div>
-    </li><li><span class="post-meta">2022-12-10</span>
-      <h3>
-        <a class="post-link" href="/2022/12/gitlab-in-eks.html">
-          在 AWS EKS 中部署 Gitlab
-        </a>
-      </h3>
-      <div><p>本文记录了 Gitlab 在 Kubernetes 中的安装过程，目标是构建出生产可用的 Gitlab 系统。本文以 AWS EKS 为例。</p>
-</div>
-    </li><li><span class="post-meta">2022-12-07</span>
-      <h3>
-        <a class="post-link" href="/2022/12/modify-eks-by-terraform.html">
-          使用 terraform 增加 EKS 组件
-        </a>
-      </h3>
-      <div><p>在已经开通了 EKS 的情况下，使用 terraform 给 EKS 集群安装组件。</p>
 </div>
     </li></ul>
 

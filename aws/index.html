@@ -77,7 +77,23 @@
   }
 </style>
 
-<div class="home"><h1 class="page-heading">AWS</h1><ul class="post-list"><li><span class="post-meta">2023-10-31</span>
+<div class="home"><h1 class="page-heading">AWS</h1><ul class="post-list"><li><span class="post-meta">2023-12-28</span>
+      <h3>
+        <a class="post-link" href="/2023/12/event-bridge-schedule-lambda.html">
+          使用 EventBridge 调度 AWS Lambda
+        </a>
+      </h3>
+      <div><p>得益于 Lambda 的免运维，快速部署等特性，现在越来越多的应用都使用 Serverless 技术。本文演示了一个场景，定时调度 Lambda，将 AWS 的 EC2 资源导出到 AWS 的数据湖 - S3 存储桶。</p>
+</div>
+    </li><li><span class="post-meta">2023-12-03</span>
+      <h3>
+        <a class="post-link" href="/2023/12/bedrock-kb.html">
+          Amazon Bedrock 内置知识库使用入门
+        </a>
+      </h3>
+      <div><p>本文是 Amazon Bedrock 自带的知识库的一个入门体验，用起来真的很方便，节省了前期的一堆劳动。</p>
+</div>
+    </li><li><span class="post-meta">2023-10-31</span>
       <h3>
         <a class="post-link" href="/2023/10/amazon-bedrock-this-is-all-you-need.html">
           入门 Amazon Bedrock 只看这一篇就够了
@@ -140,22 +156,6 @@
         </a>
       </h3>
       <div><p>在 Huggingface 上浏览模型的时候，会看到一个 Deploy 按钮，很多模型点开会看到 Amazon SageMaker 选项，然后会看到一段代码。今天便试了一下这个，下面是测试过程：在本机运行运行代码，把 Huggingface 的 模型部署到 SageMaker 上并运行推理。</p>
-</div>
-    </li><li><span class="post-meta">2023-05-07</span>
-      <h3>
-        <a class="post-link" href="/2023/05/post-s3-tls-outdate.html">
-          在 TLS 1.1 过期后上传 S3 的策略
-        </a>
-      </h3>
-      <div><p>TLS 1.1 近期全面过期，但有些老的设备还在使用，如何最小代价升级客户端应用？这里实验了 2 种方法：改用 http 或者使用 Cloudfront。</p>
-</div>
-    </li><li><span class="post-meta">2023-05-06</span>
-      <h3>
-        <a class="post-link" href="/2023/05/create-ingress-alb-across-account.html">
-          EKS Ingress 跨账号创建 ALB
-        </a>
-      </h3>
-      <div><p>在企业级生产环境下，通常会把网络服务，安全服务等产品放在统一一个公网账号下进行管理，各个业务模块也可能使用独立的账号，并且与<strong>外网隔离</strong>。 EKS 会被部署在隔离环境，那么如何创建对公网的 Ingress 呢？理想的做法是创建 Ingress 的时候直接把 ALB 创建到公网账号下，本文尝试实现这一过程。</p>
 </div>
     </li></ul>
 

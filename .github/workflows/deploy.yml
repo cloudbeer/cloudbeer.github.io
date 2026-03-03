@@ -16,8 +16,20 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
-          bundler-cache: true   # 自动 bundle install + 缓存加速
+          ruby-version: '2.7'
+
+      - name: Cache gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-
+
+      - name: Install dependencies
+        run: |
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 3
 
       - name: Build Jekyll
         run: bundle exec jekyll build
@@ -33,4 +45,3 @@ jobs:
           user_name: cloudbeer
           user_email: cloudbeer@gmail.com
           commit_message: "Page release from source [skip ci]"
-          force_orphan: false

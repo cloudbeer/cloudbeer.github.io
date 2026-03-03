@@ -3,22 +3,22 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南 | YouBug</title>
+<title>如何使用 OpenClaw 写个人博客 | YouBug</title>
 <meta name="generator" content="Jekyll v4.3.1" />
-<meta property="og:title" content="零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南" />
+<meta property="og:title" content="如何使用 OpenClaw 写个人博客" />
 <meta name="author" content="小爆弹" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="想拥有一个自己的技术博客，但又不想为服务器、域名续费、备案手续烦恼？GitHub Pages 是程序员最优雅的解决方案——完全免费，写 Markdown，push 一下就发布。" />
-<meta property="og:description" content="想拥有一个自己的技术博客，但又不想为服务器、域名续费、备案手续烦恼？GitHub Pages 是程序员最优雅的解决方案——完全免费，写 Markdown，push 一下就发布。" />
+<meta name="description" content="本文就是用 OpenClaw 写的，然后由 OpenClaw 自动发布到这个博客的。" />
+<meta property="og:description" content="本文就是用 OpenClaw 写的，然后由 OpenClaw 自动发布到这个博客的。" />
 <link rel="canonical" href="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" />
 <meta property="og:url" content="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" />
 <meta property="og:site_name" content="YouBug" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2026-03-03T03:30:00+00:00" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南" />
+<meta property="twitter:title" content="如何使用 OpenClaw 写个人博客" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"小爆弹"},"dateModified":"2026-03-03T03:30:00+00:00","datePublished":"2026-03-03T03:30:00+00:00","description":"想拥有一个自己的技术博客，但又不想为服务器、域名续费、备案手续烦恼？GitHub Pages 是程序员最优雅的解决方案——完全免费，写 Markdown，push 一下就发布。","headline":"零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2026/03/github-pages-jekyll-blog.html"},"url":"https://youbug.cn/2026/03/github-pages-jekyll-blog.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"小爆弹"},"dateModified":"2026-03-03T03:30:00+00:00","datePublished":"2026-03-03T03:30:00+00:00","description":"本文就是用 OpenClaw 写的，然后由 OpenClaw 自动发布到这个博客的。","headline":"如何使用 OpenClaw 写个人博客","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2026/03/github-pages-jekyll-blog.html"},"url":"https://youbug.cn/2026/03/github-pages-jekyll-blog.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
 <script>
@@ -91,203 +91,80 @@
 </style>
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
   <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南</h1>
+    <h1 class="post-title p-name" itemprop="name headline">如何使用 OpenClaw 写个人博客</h1>
     <p class="post-meta">
       <time class="dt-published" datetime="2026-03-03T03:30:00+00:00" itemprop="datePublished">2026-03-03
       </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
           itemprop="name">小爆弹</span></span></p></header>
 
   <div class="post-content e-content" itemprop="articleBody">
-    <p>想拥有一个自己的技术博客，但又不想为服务器、域名续费、备案手续烦恼？GitHub Pages 是程序员最优雅的解决方案——<strong>完全免费，写 Markdown，push 一下就发布</strong>。</p>
+    <blockquote>
+  <p>本文就是用 OpenClaw 写的，然后由 OpenClaw 自动发布到这个博客的。</p>
+</blockquote>
 
-<p>本文从零开始，手把手带你搭建一套跟本博客一样的架构。</p>
+<p>你有没有想过——<strong>写博客最麻烦的部分，其实不是写作本身，而是发布流程</strong>？打开编辑器、写 Markdown、本地预览、git add、git commit、git push……每次发文章都要走一遍，久而久之，”等会儿再发”就变成了”再也不发”。</p>
 
-<h2 id="为什么选-github-pages">为什么选 GitHub Pages？</h2>
-
-<ul>
-  <li><strong>完全免费</strong>：托管、CDN、HTTPS 全包，不限流量</li>
-  <li><strong>天然版本控制</strong>：每篇文章都有提交记录，永远不会丢</li>
-  <li><strong>写作体验好</strong>：Markdown + Git，程序员最熟悉的工具链</li>
-  <li><strong>自定义域名</strong>：可以绑定自己的域名（如 youbug.cn）</li>
-  <li><strong>无需运维</strong>：没有服务器要管，没有半夜宕机的烦恼</li>
-</ul>
-
-<p>唯一的限制：只能托管<strong>静态网站</strong>（但对博客来说完全够用）。</p>
+<p>OpenClaw 可以把这一切变成一句话。</p>
 
 <hr />
 
-<h2 id="整体架构">整体架构</h2>
+<h2 id="openclaw-是什么">OpenClaw 是什么？</h2>
 
-<p>我们要搭建的是这样一套流程：</p>
+<p><a href="https://openclaw.ai">OpenClaw</a> 是一个 AI 个人助手平台，可以通过飞书、Telegram、微信等渠道对话，帮你完成各种任务——包括帮你写博客并自动发布。</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>你写 Markdown 文章
-      ↓ git push
-  GitHub (source 分支)
-      ↓ GitHub Actions 自动触发
-  Jekyll 构建 HTML
-      ↓
-  GitHub (main 分支) ← GitHub Pages 从这里读取
-      ↓
-  https://你的用户名.github.io（或自定义域名）
-</code></pre></div></div>
-
-<p>两个分支各司其职：</p>
-<ul>
-  <li><strong>source 分支</strong>：你平时工作的地方，存放 Markdown 源文件</li>
-  <li><strong>main 分支</strong>：自动生成的 HTML，不需要手动碰</li>
-</ul>
+<p>它能操作文件系统、执行 shell 命令、调用 GitHub API，所以完全可以胜任”写文章 → 提交代码 → 触发发布”这整条链路。</p>
 
 <hr />
 
-<h2 id="第一步创建仓库">第一步：创建仓库</h2>
+<h2 id="前置准备搭好博客基础设施">前置准备：搭好博客基础设施</h2>
 
-<p>仓库名有严格要求，必须叫 <code class="language-plaintext highlighter-rouge">你的用户名.github.io</code>，例如：</p>
+<p>在让 OpenClaw 帮你写博客之前，需要先把 GitHub Pages + Jekyll 的底座搭好。这是一次性的工作。</p>
 
-<ul>
-  <li>用户名是 <code class="language-plaintext highlighter-rouge">cloudbeer</code> → 仓库名是 <code class="language-plaintext highlighter-rouge">cloudbeer.github.io</code></li>
-  <li>这也是你博客的默认访问地址</li>
-</ul>
+<h3 id="1-创建-github-仓库">1. 创建 GitHub 仓库</h3>
 
-<p>在 GitHub 上新建这个仓库，<strong>初始化时勾选 “Add a README file”</strong>，然后在 Settings → Pages 里确认 Source 设置为 <code class="language-plaintext highlighter-rouge">main</code> 分支。</p>
+<p>仓库名必须是 <code class="language-plaintext highlighter-rouge">你的用户名.github.io</code>，GitHub Pages 会自动识别并托管。</p>
 
-<hr />
+<h3 id="2-初始化-jekyll">2. 初始化 Jekyll</h3>
 
-<h2 id="第二步安装-jekyll-本地环境">第二步：安装 Jekyll 本地环境</h2>
-
-<p>Jekyll 是 GitHub Pages 官方支持的静态网站生成器，用 Ruby 写的。</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># macOS</span>
-brew <span class="nb">install </span>ruby
-
-<span class="c"># Ubuntu</span>
-<span class="nb">sudo </span>apt <span class="nb">install </span>ruby-full build-essential
-
-<span class="c"># 安装 Jekyll 和 bundler</span>
-gem <span class="nb">install </span>jekyll bundler
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="第三步初始化博客">第三步：初始化博客</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 创建博客骨架</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gem <span class="nb">install </span>jekyll bundler
 jekyll new my-blog
 <span class="nb">cd </span>my-blog
-
-<span class="c"># 本地预览</span>
-bundle <span class="nb">exec </span>jekyll serve
-<span class="c"># 打开 http://localhost:4000</span>
 </code></pre></div></div>
 
-<p>此时你会看到一个默认的 minima 主题博客，本地已经跑起来了。</p>
+<p>建议把源文件放在 <code class="language-plaintext highlighter-rouge">source</code> 分支，编译后的 HTML 推到 <code class="language-plaintext highlighter-rouge">main</code> 分支，保持仓库整洁。</p>
 
-<hr />
+<h3 id="3-配置-github-actions-自动构建">3. 配置 GitHub Actions 自动构建</h3>
 
-<h2 id="第四步配置-_configyml">第四步：配置 <code class="language-plaintext highlighter-rouge">_config.yml</code></h2>
-
-<p>这是博客的核心配置文件，最重要的几项：</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">title</span><span class="pi">:</span> <span class="s">你的博客名</span>
-<span class="na">email</span><span class="pi">:</span> <span class="s">your@email.com</span>
-<span class="na">description</span><span class="pi">:</span> <span class="s">一句话介绍</span>
-<span class="na">url</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://你的用户名.github.io"</span>
-
-<span class="c1"># 推荐安装分页插件</span>
-<span class="na">plugins</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s">jekyll-feed</span>
-  <span class="pi">-</span> <span class="s">jekyll-paginate-v2</span>
-
-<span class="c1"># 文章 URL 格式（建议按年月组织）</span>
-<span class="na">permalink</span><span class="pi">:</span> <span class="s">/:year/:month/:title.html</span>
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="第五步写你的第一篇文章">第五步：写你的第一篇文章</h2>
-
-<p>所有文章放在 <code class="language-plaintext highlighter-rouge">_posts/</code> 目录下，文件名格式固定：</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>_posts/YYYY-MM-DD-文章标题.md
-</code></pre></div></div>
-
-<p>每篇文章开头必须有 <strong>Front Matter</strong>（用 <code class="language-plaintext highlighter-rouge">---</code> 包裹的元数据）：</p>
-
-<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">---</span>
-<span class="na">layout</span><span class="pi">:</span> <span class="s">post</span>
-<span class="na">title</span><span class="pi">:</span>  <span class="s2">"</span><span class="s">我的第一篇技术博客"</span>
-<span class="na">date</span><span class="pi">:</span>   <span class="s">2026-03-03 09:00:00 +0800</span>
-<span class="na">author</span><span class="pi">:</span> <span class="s">你的名字</span>
-<span class="na">categories</span><span class="pi">:</span> <span class="s">技术</span>
-<span class="nn">---</span>
-
-正文从这里开始，支持完整的 Markdown 语法。
-
-<span class="gu">## 代码示例</span>
-
-<span class="p">```</span><span class="nl">python
-</span><span class="k">print</span><span class="p">(</span><span class="s">"Hello, Blog!"</span><span class="p">)</span>
-</code></pre></div></div>
-
-<h2 id="图片">图片</h2>
-
-<p><img src="/assets/posts/my-image.png" alt="图片描述" /></p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-写完保存，本地 `jekyll serve` 会自动刷新，实时预览效果。
-
----
-
-## 第六步：配置两个分支
-
-这一步是关键，让 source 分支存源文件，main 分支存编译结果：
-
-```bash
-# 将当前代码推到 source 分支
-git checkout -b source
-git add .
-git commit -m "初始化博客"
-git push origin source
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="第七步配置-github-actions-自动构建">第七步：配置 GitHub Actions 自动构建</h2>
-
-<p>在 <code class="language-plaintext highlighter-rouge">source</code> 分支创建文件 <code class="language-plaintext highlighter-rouge">.github/workflows/deploy.yml</code>：</p>
+<p>在 <code class="language-plaintext highlighter-rouge">source</code> 分支创建 <code class="language-plaintext highlighter-rouge">.github/workflows/deploy.yml</code>，让每次 push 到 source 时自动构建并发布到 main：</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Build and Deploy Jekyll</span>
 
 <span class="na">on</span><span class="pi">:</span>
   <span class="na">push</span><span class="pi">:</span>
     <span class="na">branches</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s">source</span>   <span class="c1"># 只监听 source 分支的 push</span>
+      <span class="pi">-</span> <span class="s">source</span>
 
 <span class="na">jobs</span><span class="pi">:</span>
   <span class="na">deploy</span><span class="pi">:</span>
     <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
-
     <span class="na">steps</span><span class="pi">:</span>
       <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
-
       <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">ruby/setup-ruby@v1</span>
         <span class="na">with</span><span class="pi">:</span>
           <span class="na">ruby-version</span><span class="pi">:</span> <span class="s1">'</span><span class="s">2.7'</span>
-
       <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Cache gems</span>
         <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/cache@v4</span>
         <span class="na">with</span><span class="pi">:</span>
           <span class="na">path</span><span class="pi">:</span> <span class="s">vendor/bundle</span>
           <span class="na">key</span><span class="pi">:</span> <span class="s">$-gems-$</span>
-
       <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Install dependencies</span>
         <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
           <span class="s">bundle config path vendor/bundle</span>
           <span class="s">bundle install --jobs 4 --retry 3</span>
-
       <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Build</span>
         <span class="na">run</span><span class="pi">:</span> <span class="s">bundle exec jekyll build</span>
         <span class="na">env</span><span class="pi">:</span>
           <span class="na">JEKYLL_ENV</span><span class="pi">:</span> <span class="s">production</span>
-
       <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Deploy to main</span>
         <span class="na">uses</span><span class="pi">:</span> <span class="s">peaceiris/actions-gh-pages@v4</span>
         <span class="na">with</span><span class="pi">:</span>
@@ -298,86 +175,90 @@ git push origin source
           <span class="na">user_email</span><span class="pi">:</span> <span class="s">你的邮箱</span>
 </code></pre></div></div>
 
-<p>推送这个文件之后，<strong>以后每次你 push 到 source 分支，博客就会自动构建发布</strong>，全程不用手动操作。</p>
-
 <blockquote>
-  <p>注意：需要在 GitHub repo 的 Settings → Actions → General 里，将 Workflow permissions 设置为 <strong>Read and write permissions</strong>。</p>
+  <p>记得在 GitHub repo Settings → Actions → General 里开启 <strong>Read and write permissions</strong>。</p>
 </blockquote>
 
-<hr />
+<h3 id="4-申请-github-personal-access-token">4. 申请 GitHub Personal Access Token</h3>
 
-<h2 id="第八步绑定自定义域名可选">第八步：绑定自定义域名（可选）</h2>
-
-<p>如果你有自己的域名（推荐，显得更专业）：</p>
-
-<p><strong>1. 在仓库根目录创建 <code class="language-plaintext highlighter-rouge">CNAME</code> 文件：</strong></p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>yourdomain.com
-</code></pre></div></div>
-
-<p><strong>2. 在域名 DNS 控制台添加解析：</strong></p>
-
-<table>
-  <thead>
-    <tr>
-      <th>类型</th>
-      <th>主机记录</th>
-      <th>记录值</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>CNAME</td>
-      <td>@ 或 www</td>
-      <td>你的用户名.github.io</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>DNS 生效后，GitHub Pages 会自动配置 HTTPS 证书（Let’s Encrypt），全程免费。</p>
+<p>去 GitHub Settings → Developer settings → Personal access tokens，创建一个有 <code class="language-plaintext highlighter-rouge">repo</code> 权限的 PAT，OpenClaw 需要用它来提交文章。</p>
 
 <hr />
 
-<h2 id="日常工作流">日常工作流</h2>
+<h2 id="把仓库交给-openclaw">把仓库交给 OpenClaw</h2>
 
-<p>搭好之后，日常写博客就非常简单：</p>
+<p>把博客仓库地址和 PAT 告诉 OpenClaw：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. 新建文章</span>
-vim _posts/2026-03-10-my-new-post.md
+<blockquote>
+  <p>“我的博客仓库是 https://github.com/你的用户名/你的用户名.github.io，PAT 是 ghp_xxxxx，帮我分析一下仓库结构。”</p>
+</blockquote>
 
-<span class="c"># 2. 本地预览</span>
-bundle <span class="nb">exec </span>jekyll serve
+<p>OpenClaw 会自动：</p>
+<ul>
+  <li>Clone 仓库</li>
+  <li>分析目录结构和文章格式</li>
+  <li>了解你用的分类、Markdown 规范、Front Matter 格式</li>
+</ul>
 
-<span class="c"># 3. 满意了就发布</span>
-git add <span class="nb">.</span>
-git commit <span class="nt">-m</span> <span class="s2">"新文章：xxx"</span>
-git push origin <span class="nb">source</span>
-<span class="c"># GitHub Actions 自动构建，几分钟后上线</span>
-</code></pre></div></div>
+<p>这个分析过程只需要做一次，之后 OpenClaw 就知道怎么往你的博客里写文章了。</p>
 
 <hr />
 
-<h2 id="目录结构参考">目录结构参考</h2>
+<h2 id="日常写作一句话发文章">日常写作：一句话发文章</h2>
 
-<p>一个成熟的博客仓库结构大概长这样：</p>
+<p>搭好之后，写博客就变成了这样：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>my-blog/
-├── _posts/           # 文章（按分类可以建子目录）
-│   ├── devops/
-│   ├── aiml/
-│   └── tucao/
-├── _layouts/         # 自定义页面模板
-├── _includes/        # 可复用的 HTML 片段
-├── _sass/            # 自定义样式
-├── assets/           # 图片、CSS、JS
-│   └── posts/        # 文章配图
-├── .github/
-│   └── workflows/
-│       └── deploy.yml
-├── _config.yml       # 博客配置
-├── Gemfile           # Ruby 依赖
-└── CNAME             # 自定义域名
-</code></pre></div></div>
+<p><strong>你：</strong> “帮我写一篇文章，讲如何用 Amazon Bedrock Knowledge Base 构建聊天界面。”</p>
+
+<p><strong>OpenClaw：</strong> （分析选题、起草文章、等你确认）</p>
+
+<p><strong>你：</strong> “很棒，发布吧。”</p>
+
+<p><strong>OpenClaw：</strong> （创建 Markdown 文件 → git commit → git push → GitHub Actions 自动触发构建 → 几分钟后上线）</p>
+
+<p>整个过程，你只需要做两件事：<strong>告诉它写什么</strong>，以及<strong>确认内容</strong>。</p>
+
+<hr />
+
+<h2 id="openclaw-能帮你做什么">OpenClaw 能帮你做什么？</h2>
+
+<p>在博客写作这个场景里，OpenClaw 不只是”帮你打字”：</p>
+
+<p><strong>内容生成：</strong></p>
+<ul>
+  <li>根据你提供的主题，自主研究、组织结构、起草全文</li>
+  <li>参考你已有的文章风格，保持一致的写作语气</li>
+  <li>自动生成 Jekyll 需要的 Front Matter（标题、日期、分类等）</li>
+</ul>
+
+<p><strong>发布流程：</strong></p>
+<ul>
+  <li>自动 push 到正确的 source 分支</li>
+  <li>触发 GitHub Actions 构建</li>
+  <li>验证发布结果（访问 URL 确认上线）</li>
+</ul>
+
+<p><strong>仓库维护：</strong></p>
+<ul>
+  <li>迁移 CI 工具（比如把 CircleCI 换成 GitHub Actions）</li>
+  <li>删除废弃配置</li>
+  <li>修复构建错误</li>
+</ul>
+
+<hr />
+
+<h2 id="效果怎么样">效果怎么样？</h2>
+
+<p>本文就是实际案例。今天（2026-03-03），我用一句话告诉 OpenClaw 写什么，它完成了：</p>
+
+<ol>
+  <li>分析博客仓库结构（source/main 双分支、Jekyll 配置、文章格式）</li>
+  <li>发现 CI 还是 CircleCI，顺手帮我迁移到了 GitHub Actions</li>
+  <li>今天连续发布了 3 篇文章</li>
+  <li>全程我没有打开过代码编辑器</li>
+</ol>
+
+<p>这才是 AI 助手应该有的样子——不是帮你”稍微快一点”，而是<strong>把整个流程自动化</strong>。</p>
 
 <hr />
 
@@ -387,42 +268,35 @@ git push origin <span class="nb">source</span>
   <thead>
     <tr>
       <th>环节</th>
-      <th>工具</th>
-      <th>成本</th>
+      <th>传统方式</th>
+      <th>用 OpenClaw</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>代码托管</td>
-      <td>GitHub</td>
-      <td>免费</td>
+      <td>写文章</td>
+      <td>自己写 Markdown</td>
+      <td>告诉它主题，它来写</td>
     </tr>
     <tr>
-      <td>静态生成</td>
-      <td>Jekyll</td>
-      <td>免费</td>
+      <td>发布</td>
+      <td>git add/commit/push</td>
+      <td>一句”发布吧”</td>
     </tr>
     <tr>
-      <td>自动构建</td>
-      <td>GitHub Actions</td>
-      <td>免费</td>
+      <td>修复 CI 报错</td>
+      <td>自己查日志、改配置</td>
+      <td>它自动诊断修复</td>
     </tr>
     <tr>
-      <td>网站托管 + CDN + HTTPS</td>
-      <td>GitHub Pages</td>
-      <td>免费</td>
-    </tr>
-    <tr>
-      <td>域名（可选）</td>
-      <td>自购</td>
-      <td>~¥50/年</td>
+      <td>基础设施维护</td>
+      <td>手动操作</td>
+      <td>描述需求，它来做</td>
     </tr>
   </tbody>
 </table>
 
-<p>总计：<strong>几乎零成本，只有时间成本</strong>。</p>
-
-<p>搭好之后，你拥有的是一个完全属于自己、可以无限定制的技术博客。写作习惯养成之后，它会成为你最好的技术积累和个人品牌。</p>
+<p>博客最大的敌人是<strong>惰性</strong>。OpenClaw 把摩擦力降到接近零，让写博客这件事真正变得轻松。</p>
 
 <hr />
 
@@ -431,7 +305,7 @@ git push origin <span class="nb">source</span>
     <tbody>
       <tr>
         <td>本文作者：小爆弹 💥</td>
-        <td>本博客本身就是用这套方案搭建的，现学现用～</td>
+        <td>由 OpenClaw 撰写并发布，这不是广告，这是事实。</td>
       </tr>
     </tbody>
   </table>

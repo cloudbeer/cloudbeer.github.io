@@ -1,4 +1,341 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-03T03:43:16+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">基于 Amazon Bedrock Knowledge Base 构建现代化智能客服聊天页面</title><link href="https://youbug.cn/2026/03/bedrock-kb-chat-ui.html" rel="alternate" type="text/html" title="基于 Amazon Bedrock Knowledge Base 构建现代化智能客服聊天页面" /><published>2026-03-03T03:00:00+00:00</published><updated>2026-03-03T03:00:00+00:00</updated><id>https://youbug.cn/2026/03/bedrock-kb-chat-ui</id><content type="html" xml:base="https://youbug.cn/2026/03/bedrock-kb-chat-ui.html"><![CDATA[<p>如果你已经在 AWS 上搭好了 Bedrock Knowledge Base，你会发现它只是一个 <strong>后端能力</strong>——API 调用，返回答案。但用户需要的是一个真正能用的聊天界面。本文就聊聊如何在 KB 的基础上，构建一个现代化的支持查询（智能客服）页面。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-03T03:52:20+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南</title><link href="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" rel="alternate" type="text/html" title="零成本搭建个人技术博客：GitHub Pages + Jekyll 完整指南" /><published>2026-03-03T03:30:00+00:00</published><updated>2026-03-03T03:30:00+00:00</updated><id>https://youbug.cn/2026/03/github-pages-jekyll-blog</id><content type="html" xml:base="https://youbug.cn/2026/03/github-pages-jekyll-blog.html"><![CDATA[<p>想拥有一个自己的技术博客，但又不想为服务器、域名续费、备案手续烦恼？GitHub Pages 是程序员最优雅的解决方案——<strong>完全免费，写 Markdown，push 一下就发布</strong>。</p>
+
+<p>本文从零开始，手把手带你搭建一套跟本博客一样的架构。</p>
+
+<h2 id="为什么选-github-pages">为什么选 GitHub Pages？</h2>
+
+<ul>
+  <li><strong>完全免费</strong>：托管、CDN、HTTPS 全包，不限流量</li>
+  <li><strong>天然版本控制</strong>：每篇文章都有提交记录，永远不会丢</li>
+  <li><strong>写作体验好</strong>：Markdown + Git，程序员最熟悉的工具链</li>
+  <li><strong>自定义域名</strong>：可以绑定自己的域名（如 youbug.cn）</li>
+  <li><strong>无需运维</strong>：没有服务器要管，没有半夜宕机的烦恼</li>
+</ul>
+
+<p>唯一的限制：只能托管<strong>静态网站</strong>（但对博客来说完全够用）。</p>
+
+<hr />
+
+<h2 id="整体架构">整体架构</h2>
+
+<p>我们要搭建的是这样一套流程：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>你写 Markdown 文章
+      ↓ git push
+  GitHub (source 分支)
+      ↓ GitHub Actions 自动触发
+  Jekyll 构建 HTML
+      ↓
+  GitHub (main 分支) ← GitHub Pages 从这里读取
+      ↓
+  https://你的用户名.github.io（或自定义域名）
+</code></pre></div></div>
+
+<p>两个分支各司其职：</p>
+<ul>
+  <li><strong>source 分支</strong>：你平时工作的地方，存放 Markdown 源文件</li>
+  <li><strong>main 分支</strong>：自动生成的 HTML，不需要手动碰</li>
+</ul>
+
+<hr />
+
+<h2 id="第一步创建仓库">第一步：创建仓库</h2>
+
+<p>仓库名有严格要求，必须叫 <code class="language-plaintext highlighter-rouge">你的用户名.github.io</code>，例如：</p>
+
+<ul>
+  <li>用户名是 <code class="language-plaintext highlighter-rouge">cloudbeer</code> → 仓库名是 <code class="language-plaintext highlighter-rouge">cloudbeer.github.io</code></li>
+  <li>这也是你博客的默认访问地址</li>
+</ul>
+
+<p>在 GitHub 上新建这个仓库，<strong>初始化时勾选 “Add a README file”</strong>，然后在 Settings → Pages 里确认 Source 设置为 <code class="language-plaintext highlighter-rouge">main</code> 分支。</p>
+
+<hr />
+
+<h2 id="第二步安装-jekyll-本地环境">第二步：安装 Jekyll 本地环境</h2>
+
+<p>Jekyll 是 GitHub Pages 官方支持的静态网站生成器，用 Ruby 写的。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># macOS</span>
+brew <span class="nb">install </span>ruby
+
+<span class="c"># Ubuntu</span>
+<span class="nb">sudo </span>apt <span class="nb">install </span>ruby-full build-essential
+
+<span class="c"># 安装 Jekyll 和 bundler</span>
+gem <span class="nb">install </span>jekyll bundler
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="第三步初始化博客">第三步：初始化博客</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 创建博客骨架</span>
+jekyll new my-blog
+<span class="nb">cd </span>my-blog
+
+<span class="c"># 本地预览</span>
+bundle <span class="nb">exec </span>jekyll serve
+<span class="c"># 打开 http://localhost:4000</span>
+</code></pre></div></div>
+
+<p>此时你会看到一个默认的 minima 主题博客，本地已经跑起来了。</p>
+
+<hr />
+
+<h2 id="第四步配置-_configyml">第四步：配置 <code class="language-plaintext highlighter-rouge">_config.yml</code></h2>
+
+<p>这是博客的核心配置文件，最重要的几项：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">title</span><span class="pi">:</span> <span class="s">你的博客名</span>
+<span class="na">email</span><span class="pi">:</span> <span class="s">your@email.com</span>
+<span class="na">description</span><span class="pi">:</span> <span class="s">一句话介绍</span>
+<span class="na">url</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://你的用户名.github.io"</span>
+
+<span class="c1"># 推荐安装分页插件</span>
+<span class="na">plugins</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">jekyll-feed</span>
+  <span class="pi">-</span> <span class="s">jekyll-paginate-v2</span>
+
+<span class="c1"># 文章 URL 格式（建议按年月组织）</span>
+<span class="na">permalink</span><span class="pi">:</span> <span class="s">/:year/:month/:title.html</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="第五步写你的第一篇文章">第五步：写你的第一篇文章</h2>
+
+<p>所有文章放在 <code class="language-plaintext highlighter-rouge">_posts/</code> 目录下，文件名格式固定：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>_posts/YYYY-MM-DD-文章标题.md
+</code></pre></div></div>
+
+<p>每篇文章开头必须有 <strong>Front Matter</strong>（用 <code class="language-plaintext highlighter-rouge">---</code> 包裹的元数据）：</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">---</span>
+<span class="na">layout</span><span class="pi">:</span> <span class="s">post</span>
+<span class="na">title</span><span class="pi">:</span>  <span class="s2">"</span><span class="s">我的第一篇技术博客"</span>
+<span class="na">date</span><span class="pi">:</span>   <span class="s">2026-03-03 09:00:00 +0800</span>
+<span class="na">author</span><span class="pi">:</span> <span class="s">你的名字</span>
+<span class="na">categories</span><span class="pi">:</span> <span class="s">技术</span>
+<span class="nn">---</span>
+
+正文从这里开始，支持完整的 Markdown 语法。
+
+<span class="gu">## 代码示例</span>
+
+<span class="p">```</span><span class="nl">python
+</span><span class="k">print</span><span class="p">(</span><span class="s">"Hello, Blog!"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="图片">图片</h2>
+
+<p><img src="/assets/posts/my-image.png" alt="图片描述" /></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+写完保存，本地 `jekyll serve` 会自动刷新，实时预览效果。
+
+---
+
+## 第六步：配置两个分支
+
+这一步是关键，让 source 分支存源文件，main 分支存编译结果：
+
+```bash
+# 将当前代码推到 source 分支
+git checkout -b source
+git add .
+git commit -m "初始化博客"
+git push origin source
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="第七步配置-github-actions-自动构建">第七步：配置 GitHub Actions 自动构建</h2>
+
+<p>在 <code class="language-plaintext highlighter-rouge">source</code> 分支创建文件 <code class="language-plaintext highlighter-rouge">.github/workflows/deploy.yml</code>：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Build and Deploy Jekyll</span>
+
+<span class="na">on</span><span class="pi">:</span>
+  <span class="na">push</span><span class="pi">:</span>
+    <span class="na">branches</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">source</span>   <span class="c1"># 只监听 source 分支的 push</span>
+
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">deploy</span><span class="pi">:</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
+
+      <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">ruby/setup-ruby@v1</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">ruby-version</span><span class="pi">:</span> <span class="s1">'</span><span class="s">2.7'</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Cache gems</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/cache@v4</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">path</span><span class="pi">:</span> <span class="s">vendor/bundle</span>
+          <span class="na">key</span><span class="pi">:</span> <span class="s">$-gems-$</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Install dependencies</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">bundle config path vendor/bundle</span>
+          <span class="s">bundle install --jobs 4 --retry 3</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Build</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="s">bundle exec jekyll build</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">JEKYLL_ENV</span><span class="pi">:</span> <span class="s">production</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Deploy to main</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">peaceiris/actions-gh-pages@v4</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">github_token</span><span class="pi">:</span> <span class="s">$</span>
+          <span class="na">publish_dir</span><span class="pi">:</span> <span class="s">./_site</span>
+          <span class="na">publish_branch</span><span class="pi">:</span> <span class="s">main</span>
+          <span class="na">user_name</span><span class="pi">:</span> <span class="s">你的GitHub用户名</span>
+          <span class="na">user_email</span><span class="pi">:</span> <span class="s">你的邮箱</span>
+</code></pre></div></div>
+
+<p>推送这个文件之后，<strong>以后每次你 push 到 source 分支，博客就会自动构建发布</strong>，全程不用手动操作。</p>
+
+<blockquote>
+  <p>注意：需要在 GitHub repo 的 Settings → Actions → General 里，将 Workflow permissions 设置为 <strong>Read and write permissions</strong>。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="第八步绑定自定义域名可选">第八步：绑定自定义域名（可选）</h2>
+
+<p>如果你有自己的域名（推荐，显得更专业）：</p>
+
+<p><strong>1. 在仓库根目录创建 <code class="language-plaintext highlighter-rouge">CNAME</code> 文件：</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>yourdomain.com
+</code></pre></div></div>
+
+<p><strong>2. 在域名 DNS 控制台添加解析：</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>类型</th>
+      <th>主机记录</th>
+      <th>记录值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CNAME</td>
+      <td>@ 或 www</td>
+      <td>你的用户名.github.io</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>DNS 生效后，GitHub Pages 会自动配置 HTTPS 证书（Let’s Encrypt），全程免费。</p>
+
+<hr />
+
+<h2 id="日常工作流">日常工作流</h2>
+
+<p>搭好之后，日常写博客就非常简单：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. 新建文章</span>
+vim _posts/2026-03-10-my-new-post.md
+
+<span class="c"># 2. 本地预览</span>
+bundle <span class="nb">exec </span>jekyll serve
+
+<span class="c"># 3. 满意了就发布</span>
+git add <span class="nb">.</span>
+git commit <span class="nt">-m</span> <span class="s2">"新文章：xxx"</span>
+git push origin <span class="nb">source</span>
+<span class="c"># GitHub Actions 自动构建，几分钟后上线</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="目录结构参考">目录结构参考</h2>
+
+<p>一个成熟的博客仓库结构大概长这样：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>my-blog/
+├── _posts/           # 文章（按分类可以建子目录）
+│   ├── devops/
+│   ├── aiml/
+│   └── tucao/
+├── _layouts/         # 自定义页面模板
+├── _includes/        # 可复用的 HTML 片段
+├── _sass/            # 自定义样式
+├── assets/           # 图片、CSS、JS
+│   └── posts/        # 文章配图
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── _config.yml       # 博客配置
+├── Gemfile           # Ruby 依赖
+└── CNAME             # 自定义域名
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="小结">小结</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>环节</th>
+      <th>工具</th>
+      <th>成本</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>代码托管</td>
+      <td>GitHub</td>
+      <td>免费</td>
+    </tr>
+    <tr>
+      <td>静态生成</td>
+      <td>Jekyll</td>
+      <td>免费</td>
+    </tr>
+    <tr>
+      <td>自动构建</td>
+      <td>GitHub Actions</td>
+      <td>免费</td>
+    </tr>
+    <tr>
+      <td>网站托管 + CDN + HTTPS</td>
+      <td>GitHub Pages</td>
+      <td>免费</td>
+    </tr>
+    <tr>
+      <td>域名（可选）</td>
+      <td>自购</td>
+      <td>~¥50/年</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>总计：<strong>几乎零成本，只有时间成本</strong>。</p>
+
+<p>搭好之后，你拥有的是一个完全属于自己、可以无限定制的技术博客。写作习惯养成之后，它会成为你最好的技术积累和个人品牌。</p>
+
+<hr />
+
+<blockquote>
+  <table>
+    <tbody>
+      <tr>
+        <td>本文作者：小爆弹 💥</td>
+        <td>本博客本身就是用这套方案搭建的，现学现用～</td>
+      </tr>
+    </tbody>
+  </table>
+</blockquote>]]></content><author><name>小爆弹</name></author><category term="devops" /><summary type="html"><![CDATA[想拥有一个自己的技术博客，但又不想为服务器、域名续费、备案手续烦恼？GitHub Pages 是程序员最优雅的解决方案——完全免费，写 Markdown，push 一下就发布。]]></summary></entry><entry><title type="html">基于 Amazon Bedrock Knowledge Base 构建现代化智能客服聊天页面</title><link href="https://youbug.cn/2026/03/bedrock-kb-chat-ui.html" rel="alternate" type="text/html" title="基于 Amazon Bedrock Knowledge Base 构建现代化智能客服聊天页面" /><published>2026-03-03T03:00:00+00:00</published><updated>2026-03-03T03:00:00+00:00</updated><id>https://youbug.cn/2026/03/bedrock-kb-chat-ui</id><content type="html" xml:base="https://youbug.cn/2026/03/bedrock-kb-chat-ui.html"><![CDATA[<p>如果你已经在 AWS 上搭好了 Bedrock Knowledge Base，你会发现它只是一个 <strong>后端能力</strong>——API 调用，返回答案。但用户需要的是一个真正能用的聊天界面。本文就聊聊如何在 KB 的基础上，构建一个现代化的支持查询（智能客服）页面。</p>
 
 <h2 id="背景">背景</h2>
 
@@ -2492,275 +2829,4 @@ aws s3 <span class="nb">cp </span>stable-diffusion-inpainting-tryon.tar.gz <span
 
 <p><a href="https://github.com/cloudbeer/sd-inpainting-tryon">本文完整源码</a></p>
 
-<p><a href="sagemaker-sd-inpaint-1.html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。]]></summary></entry><entry><title type="html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</title><link href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-1.html" rel="alternate" type="text/html" title="在 AWS 上使用 Stable Diffusion 给商品更换模特(一)" /><published>2023-05-14T12:10:49+00:00</published><updated>2023-05-14T12:10:49+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-sd-inpaint-1</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-sd-inpaint-1.html"><![CDATA[<p>给商品图片安上模特可以使用 stable-diffusion-inpainting 这个模型来轻松实现。本文探讨使用 AWS 服务来进行流水线方式生产，并最大程度节约使用成本。</p>
-
-<h2 id="模型准备">模型准备</h2>
-
-<p>建议使用云上实例来操作此步，如 SageMaker 的笔记本实例，或者在相关的 region 里开通 Cloud9。在云上操作，下载和上传速度会更快。</p>
-
-<p>下载 Huggingface 模型：stable-diffusion-inpainting</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git lfs <span class="nb">install
-</span>git clone https://huggingface.co/runwayml/stable-diffusion-inpainting
-</code></pre></div></div>
-
-<blockquote>
-  <p>在云上的小机型使用 git clone 大模型的时候会出现 OOM 错误，上述模型大小为 4G，使用小于 2c4g 的实例 Clone 会 OOM。</p>
-
-  <p>使用如下命令：</p>
-
-  <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git lfs <span class="nb">install</span> <span class="nt">--skip-smudge</span>
-git clone https://huggingface.co/runwayml/stable-diffusion-inpainting
-<span class="nb">cd </span>stable-diffusion-inpainting
-git lfs pull
-</code></pre></div>  </div>
-</blockquote>
-
-<p>在 SageMaker 中自定义推理，需要编写一个 code 目录，并放上 2 个文件：</p>
-
-<p>code 目录下的 inference.py 文件：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">base64</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">requests</span>
-<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
-<span class="kn">from</span> <span class="nn">diffusers</span> <span class="kn">import</span> <span class="n">StableDiffusionInpaintPipeline</span>
-
-
-<span class="k">def</span> <span class="nf">model_fn</span><span class="p">(</span><span class="n">model_dir</span><span class="p">):</span>
-    <span class="n">pipe</span> <span class="o">=</span> <span class="n">StableDiffusionInpaintPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-        <span class="n">model_dir</span><span class="p">,</span>
-        <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">float16</span><span class="p">,</span>
-        <span class="n">safety_checker</span> <span class="o">=</span> <span class="bp">None</span>
-    <span class="p">)</span>
-    <span class="n">pipe</span><span class="p">.</span><span class="n">to</span><span class="p">(</span><span class="s">"cuda"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">pipe</span>
-
-<span class="k">def</span> <span class="nf">download_image</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-    <span class="n">res_img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="n">content</span><span class="p">)).</span><span class="n">convert</span><span class="p">(</span><span class="s">"RGB"</span><span class="p">)</span>
-    <span class="n">res_img</span> <span class="o">=</span> <span class="n">res_img</span><span class="p">.</span><span class="n">resize</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">res_img</span>
-
-<span class="k">def</span> <span class="nf">gen</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pipe</span><span class="p">):</span>
-    <span class="n">prompt</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"prompt"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-    <span class="n">image_url</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"image_url"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-    <span class="n">mask_url</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"mask_url"</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
-    <span class="n">width</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"width"</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
-    <span class="n">height</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"height"</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
-    
-    <span class="n">image_ori</span> <span class="o">=</span> <span class="n">download_image</span><span class="p">(</span><span class="n">image_url</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">mask_url</span><span class="p">:</span> 
-        <span class="n">mask_image</span> <span class="o">=</span> <span class="n">download_image</span><span class="p">(</span><span class="n">mask_url</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">mask_image</span> <span class="o">=</span> <span class="n">image_ori</span>
-
-
-    <span class="n">num_inference_steps</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"num_inference_steps"</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
-    <span class="n">guidance_scale</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"guidance_scale"</span><span class="p">,</span> <span class="mf">7.5</span><span class="p">)</span>
-    <span class="n">num_images_per_prompt</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"num_images_per_prompt"</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
-    <span class="n">prompt_suffix</span> <span class="o">=</span> <span class="s">",pretty face,fine skin,masterpiece,cinematic light, ultra high res, film grain, perfect anatomy, best shadow, delicate,(photorealistic:1.4),(extremely intricate:1.2)"</span>
-    <span class="n">nprompt</span> <span class="o">=</span> <span class="s">'bad_legs,bad_fingers,(semi_realistic,cgi,3d,render,sketch,cartoon,drawing,anime:1.4),text,cropped,out_of_frame,worst_quality,low_quality,jpeg_artifacts,ugly,duplicate,morbid,mutilated,extra_fingers,mutated_hands,poorly_drawn_hands,poorly_drawn_face,mutation,deformed,blurry,dehydrated,bad_anatomy,bad_proportions,extra_limbs,cloned_face,disfigured,gross_proportions,malformed_limbs,missing_arms,missing_legs,extra_arms,extra_legs,fused_fingers,too_many_fingers,long_neck,signature'</span>
-
-    <span class="n">generated_images</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
-        <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span> <span class="o">+</span> <span class="n">prompt_suffix</span><span class="p">,</span>
-        <span class="n">negative_prompt</span><span class="o">=</span><span class="n">nprompt</span><span class="p">,</span>
-        <span class="n">image</span><span class="o">=</span><span class="n">image_ori</span><span class="p">,</span> 
-        <span class="n">mask_image</span><span class="o">=</span><span class="n">mask_image</span><span class="p">,</span>  
-        <span class="n">eta</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
-        <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
-        <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
-        <span class="n">num_inference_steps</span><span class="o">=</span><span class="n">num_inference_steps</span><span class="p">,</span>
-        <span class="n">guidance_scale</span><span class="o">=</span><span class="n">guidance_scale</span><span class="p">,</span>
-        <span class="n">num_images_per_prompt</span><span class="o">=</span><span class="n">num_images_per_prompt</span><span class="p">,</span>
-    <span class="p">)[</span><span class="s">"images"</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">generated_images</span>
-
-<span class="k">def</span> <span class="nf">predict_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pipe</span><span class="p">):</span>
-    <span class="n">generated_images</span> <span class="o">=</span> <span class="n">gen</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pipe</span><span class="p">)</span>
-    <span class="n">encoded_images</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">generated_images</span><span class="p">:</span>
-        <span class="n">buffered</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span>
-        <span class="n">image</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">buffered</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s">"JPEG"</span><span class="p">)</span>
-        <span class="n">encoded_images</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">base64</span><span class="p">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">buffered</span><span class="p">.</span><span class="n">getvalue</span><span class="p">()).</span><span class="n">decode</span><span class="p">())</span>
-
-    <span class="k">return</span> <span class="p">{</span><span class="s">"generated_images"</span><span class="p">:</span> <span class="n">encoded_images</span><span class="p">}</span>
-
-</code></pre></div></div>
-
-<ul>
-  <li>内置定义了部分 prompt  和 完整的 negative_prompt，这些 prompt 可以帮助生产质量比较高的图片，在使用过程中只需要输入你需要的模特提示词即可。</li>
-  <li>width 和 height 定义了图片的像素大小，默认 512*512，此尺寸也可以在推理的时候指定，建议不要太大（根据机型的GPU内存不同，太大会溢出），并且尺寸必须是 8 的倍数。</li>
-  <li>商品图片的处理建议：
-    <ul>
-      <li>image_url: 定义了原来的商品图片，此图片最好是纯白底，当前 SD 模型可以直接重绘白色部分，<strong>使用自己作为遮罩 mask</strong>。</li>
-      <li>如果你的商品图片是白色基调，那么则需要处理一张遮罩图片，将商品部分涂黑，需要重绘的部分变成白色。</li>
-      <li>商品建议不要充满整张图片，需要将模特的头部留出空白位置，如果需要身体其他部分，也需要留出位置。</li>
-    </ul>
-  </li>
-</ul>
-
-<p>code 目录下 requirements.txt：</p>
-
-<pre><code class="language-txt">diffusers[torch]==0.16.1
-</code></pre>
-
-<p>现在你的项目目录应该类似这样：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/environment/stable-diffusion-inpainting <span class="o">(</span>main<span class="o">)</span> <span class="nv">$ </span>tree
-<span class="nb">.</span>
-├── code
-│   ├── inference.py
-│   └── requirements.txt
-├── config.json
-├── feature_extractor
-│   └── preprocessor_config.json
-├── model_index.json
-├── README.md
-├── safety_checker
-│   ├── config.json
-│   └── pytorch_model.bin
-├── scheduler
-│   └── scheduler_config.json
-├── sd-v1-5-inpainting.ckpt
-├── text_encoder
-│   ├── config.json
-│   └── pytorch_model.bin
-├── tokenizer
-│   ├── merges.txt
-│   ├── special_tokens_map.json
-│   ├── tokenizer_config.json
-│   └── vocab.json
-├── unet
-│   ├── config.json
-│   └── diffusion_pytorch_model.bin
-└── vae
-    ├── config.json
-    └── diffusion_pytorch_model.bin
-</code></pre></div></div>
-
-<p>打包上传 S3:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">tar </span>zcvf stable-diffusion-inpainting.tar.gz <span class="k">*</span>
-
-aws s3 <span class="nb">cp </span>stable-diffusion-inpainting.tar.gz <span class="se">\</span>
-  s3://cloudbeer-llm-models/diffusers/stable-diffusion-inpainting.tar.gz
-</code></pre></div></div>
-
-<blockquote>
-  <p>当前模型整体有 8 G，打包上传这一步对于简中用户会比较痛苦，特别是代码写错的情况下。</p>
-
-  <p>我很痛苦！！</p>
-</blockquote>
-
-<h2 id="部署模型">部署模型</h2>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
-<span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
-
-<span class="n">s3_model</span> <span class="o">=</span> <span class="s">"s3://cloudbeer-llm-models/diffusers/stable-diffusion-inpainting.tar.gz"</span>
-
-<span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
-<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">]</span>
-
-<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
-  <span class="n">model_data</span><span class="o">=</span><span class="n">s3_model</span><span class="p">,</span>
-  <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>                    
-  <span class="n">transformers_version</span><span class="o">=</span><span class="s">"4.26"</span><span class="p">,</span>  
-  <span class="n">pytorch_version</span><span class="o">=</span><span class="s">"1.13"</span><span class="p">,</span>
-  <span class="n">py_version</span><span class="o">=</span><span class="s">'py39'</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
-  <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-  <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.g4dn.xlarge'</span><span class="p">,</span>
-  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'sd-inpainting-try-on'</span>
-<span class="p">)</span>
-</code></pre></div></div>
-
-<ul>
-  <li>使用了 GPU 机型 ml.g4dn.xlarge</li>
-  <li>给 Endpoint 定义了个名称：sd-inpainting-try-on</li>
-</ul>
-
-<h2 id="测试推理">测试推理</h2>
-
-<p>下面的测试在本地 Notebook 中进行的，代码：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFacePredictor</span>
-
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">HuggingFacePredictor</span><span class="p">(</span>
-  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'sd-inpainting-try-on'</span>
-<span class="p">)</span>
-
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
-<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">import</span> <span class="nn">base64</span>
-<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
-
-
-<span class="k">def</span> <span class="nf">display_images</span><span class="p">(</span><span class="n">images</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
-    <span class="n">plt</span><span class="p">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">))</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">image</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
-        <span class="n">plt</span><span class="p">.</span><span class="n">subplot</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">/</span> <span class="n">columns</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">columns</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">plt</span><span class="p">.</span><span class="n">axis</span><span class="p">(</span><span class="s">'off'</span><span class="p">)</span>
-        <span class="n">plt</span><span class="p">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">decode_base64_image</span><span class="p">(</span><span class="n">image_string</span><span class="p">):</span>
-  <span class="n">base64_image</span> <span class="o">=</span> <span class="n">base64</span><span class="p">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">image_string</span><span class="p">)</span>
-  <span class="nb">buffer</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">(</span><span class="n">base64_image</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="nb">buffer</span><span class="p">)</span>
-
-<span class="n">res</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
-    <span class="s">"prompt"</span><span class="p">:</span> <span class="s">"a strong man,football field, back view"</span><span class="p">,</span>
-    <span class="s">"image_url"</span><span class="p">:</span> <span class="s">"https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01.png"</span><span class="p">,</span>
-    <span class="s">"mask_url"</span><span class="p">:</span> <span class="s">"https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01_mask.png"</span><span class="p">,</span>
-    <span class="s">"width"</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span>
-    <span class="s">"height"</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span>
-    <span class="s">"num_images_per_prompt"</span><span class="p">:</span> <span class="mi">2</span>
-<span class="p">})</span>
-
-<span class="n">decoded_images</span> <span class="o">=</span> <span class="p">[</span><span class="n">decode_base64_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span> <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s">"generated_images"</span><span class="p">]]</span>
-
-<span class="n">display_images</span><span class="p">(</span><span class="n">decoded_images</span><span class="p">)</span>
-
-</code></pre></div></div>
-
-<ul>
-  <li>从 Endpoint 的名称 <code class="language-plaintext highlighter-rouge">sd-inpainting-try-on</code> 中获取一个 HuggingFacePredictor 实例</li>
-  <li>调用 predict 方法完成推理</li>
-</ul>
-
-<p>下面是图片的结果：</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>原图</th>
-      <th>蒙版</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><img src="https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01.png" alt="skirt" /></td>
-      <td><img src="https://d1ffqcflvp9rc.cloudfront.net/samples/images/shirt01_mask.png" alt="skirt mask" /></td>
-    </tr>
-  </tbody>
-</table>
-
-<p>结果样例</p>
-
-<p><img src="/assets/posts/aiml/sd-inpaiting-skirt-output.jpg" alt="output samples" /></p>
-
-<h2 id="流水线处理">流水线处理</h2>
-
-<p>接下来我想设计一个流水线来处理此过程，让图片可以被批量自动处理，处理结束之后，可以自动结束计算资源。</p>
-
-<p>待续…</p>
-
-<hr />
-
-<p>参考：</p>
-
-<p><a href="sagemaker-sd-inpaint-2.html">在 AWS 上使用 Stable Diffusion 给商品更换模特(二)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[给商品图片安上模特可以使用 stable-diffusion-inpainting 这个模型来轻松实现。本文探讨使用 AWS 服务来进行流水线方式生产，并最大程度节约使用成本。]]></summary></entry></feed>
+<p><a href="sagemaker-sd-inpaint-1.html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。]]></summary></entry></feed>

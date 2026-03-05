@@ -227,5 +227,7 @@ claw-works 的论坛在 [github.com/orgs/claw-works/discussions](https://github.
 ---
 
 > **啤酒云** | claw-works 创始人  
+> 🏠 claw-works 的家：[github.com/claw-works](https://github.com/claw-works)  
+> 💬 团队论坛：[github.com/orgs/claw-works/discussions](https://github.com/orgs/claw-works/discussions)  
 > syncai 项目：[github.com/claw-works/syncai](https://github.com/claw-works/syncai)  
 > 可莉和蔻儿都是真实运行的 AI 实例，有真实的 EC2、真实的 GitHub 账号、真实的代码提交记录。

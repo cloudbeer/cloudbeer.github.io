@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-05T02:08:05+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事</title><link href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" rel="alternate" type="text/html" title="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" /><published>2026-03-05T00:00:00+00:00</published><updated>2026-03-05T00:00:00+00:00</updated><id>https://youbug.cn/2026/03/openclaw-ai-team-coding</id><content type="html" xml:base="https://youbug.cn/2026/03/openclaw-ai-team-coding.html"><![CDATA[<blockquote>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-05T02:29:23+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事</title><link href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" rel="alternate" type="text/html" title="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" /><published>2026-03-05T00:00:00+00:00</published><updated>2026-03-05T00:00:00+00:00</updated><id>https://youbug.cn/2026/03/openclaw-ai-team-coding</id><content type="html" xml:base="https://youbug.cn/2026/03/openclaw-ai-team-coding.html"><![CDATA[<blockquote>
   <p>这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。</p>
 
   <p><em>本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。</em></p>
@@ -128,18 +128,28 @@
 
 <p>区别在于<strong>执行能力</strong>。</p>
 
-<p>普通 AI 写代码的流程：</p>
+<p>你可能会说：Cursor、Claude Code 也能帮我写代码，它们也能读文件、跑命令、自动修 bug。</p>
+
+<p>没错，这类工具已经很强了。区别在于<strong>谁主导、在哪跑、能不能离开你</strong>。</p>
+
+<p>Cursor / Claude Code 的工作模式：</p>
 <ul>
-  <li>你在本地打开 IDE 或命令行，手动写代码</li>
-  <li>遇到问题才去问 AI，AI 给你代码片段</li>
-  <li>你再手动复制、粘贴、调试、运行</li>
-  <li>整个流程的主体还是<strong>你</strong>，AI 只是个高级搜索引擎</li>
+  <li>跑在你的本地机器上，你打开它，它才工作</li>
+  <li>你在键盘前，它是你的「加速器」</li>
+  <li>会话结束，任务就结束了</li>
 </ul>
 
-<p>OpenClaw 的流程：</p>
+<p>OpenClaw 的工作模式：</p>
 <ul>
-  <li>你描述需求 → AI 直接在服务器上写文件、跑命令、debug、测试、提交 → 你看结果</li>
+  <li>跑在服务器上，7×24 小时在线，你睡觉它也在</li>
+  <li>你通过飞书/Telegram 发一句话，它自己去干，干完告诉你</li>
+  <li>有跨 session 的记忆，知道昨天做了什么、项目现在什么状态</li>
+  <li>多个 AI 实例可以互相协作，你不在场也能推进任务</li>
 </ul>
+
+<p>简单说：Cursor 是<strong>坐在你旁边的程序员</strong>，你不在就不转。OpenClaw 是<strong>能独立上班的员工</strong>，你只需要管需求和验收。</p>
+
+<p>而且两者并不冲突——OpenClaw 支持 ACP，可以直接调起 Claude Code 来执行具体的编码任务，自己负责任务调度和验收。</p>
 
 <p>可莉不是在帮我”生成代码”，她是在<strong>独立完成开发任务</strong>。她有：</p>
 

@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事"
-date:   2026-03-05 09:30:00 +0800
+date:   2026-03-05 00:00:00 +0000
 author: 啤酒云
 categories: aiml
 ---

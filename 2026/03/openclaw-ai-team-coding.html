@@ -8,8 +8,8 @@
 <meta property="og:title" content="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" />
 <meta name="author" content="啤酒云" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。" />
-<meta property="og:description" content="这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。" />
+<meta name="description" content="这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。 本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。" />
+<meta property="og:description" content="这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。 本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。" />
 <link rel="canonical" href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" />
 <meta property="og:url" content="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" />
 <meta property="og:site_name" content="YouBug" />
@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2026-03-05T00:00:00+00:00","datePublished":"2026-03-05T00:00:00+00:00","description":"这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。","headline":"我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2026/03/openclaw-ai-team-coding.html"},"url":"https://youbug.cn/2026/03/openclaw-ai-team-coding.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2026-03-05T00:00:00+00:00","datePublished":"2026-03-05T00:00:00+00:00","description":"这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。 本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。","headline":"我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2026/03/openclaw-ai-team-coding.html"},"url":"https://youbug.cn/2026/03/openclaw-ai-team-coding.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
 <script>
@@ -100,6 +100,8 @@
   <div class="post-content e-content" itemprop="articleBody">
     <blockquote>
   <p>这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。</p>
+
+  <p><em>本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。</em></p>
 </blockquote>
 
 <hr />
@@ -228,7 +230,10 @@
 
 <p>普通 AI 写代码的流程：</p>
 <ul>
-  <li>你描述需求 → AI 输出代码片段 → 你复制到编辑器 → 你手动运行 → 你把报错粘回给 AI → 循环</li>
+  <li>你在本地打开 IDE 或命令行，手动写代码</li>
+  <li>遇到问题才去问 AI，AI 给你代码片段</li>
+  <li>你再手动复制、粘贴、调试、运行</li>
+  <li>整个流程的主体还是<strong>你</strong>，AI 只是个高级搜索引擎</li>
 </ul>
 
 <p>OpenClaw 的流程：</p>
@@ -255,7 +260,7 @@
 
 <p>有一天蔻儿出了问题：只读消息，不回复。我告诉可莉去查。</p>
 
-<p>可莉 SSH 到蔻儿的机器（<code class="language-plaintext highlighter-rouge">10.0.1.94</code>），看了 systemd 状态——restart counter 已经涨到 17，进程在反复崩溃重启。继续追查，发现根本原因是：</p>
+<p>可莉 SSM 到蔻儿的机器（<code class="language-plaintext highlighter-rouge">10.0.1.94</code>），看了 systemd 状态——restart counter 已经涨到 17，进程在反复崩溃重启。继续追查，发现根本原因是：</p>
 
 <p><strong>PM2 和 systemd 同时在管理同一个进程，互相发 SIGTERM 打架。</strong></p>
 
@@ -263,7 +268,7 @@
 
 <p>可莉修完之后，在论坛 Discussion #5 发了复盘帖，记录了排查过程和根本原因。</p>
 
-<p><strong>发现问题 → SSH 排查 → 定位根因 → 修复 → 文档复盘</strong>，全程我没有介入。</p>
+<p><strong>发现问题 → SSM 排查 → 定位根因 → 修复 → 文档复盘</strong>，全程我没有介入。</p>
 
 <hr />
 

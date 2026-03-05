@@ -1,5 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-05T01:37:38+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事</title><link href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" rel="alternate" type="text/html" title="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" /><published>2026-03-05T00:00:00+00:00</published><updated>2026-03-05T00:00:00+00:00</updated><id>https://youbug.cn/2026/03/openclaw-ai-team-coding</id><content type="html" xml:base="https://youbug.cn/2026/03/openclaw-ai-team-coding.html"><![CDATA[<blockquote>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-05T01:45:19+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事</title><link href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" rel="alternate" type="text/html" title="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" /><published>2026-03-05T00:00:00+00:00</published><updated>2026-03-05T00:00:00+00:00</updated><id>https://youbug.cn/2026/03/openclaw-ai-team-coding</id><content type="html" xml:base="https://youbug.cn/2026/03/openclaw-ai-team-coding.html"><![CDATA[<blockquote>
   <p>这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。</p>
+
+  <p><em>本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。</em></p>
 </blockquote>
 
 <hr />
@@ -128,7 +130,10 @@
 
 <p>普通 AI 写代码的流程：</p>
 <ul>
-  <li>你描述需求 → AI 输出代码片段 → 你复制到编辑器 → 你手动运行 → 你把报错粘回给 AI → 循环</li>
+  <li>你在本地打开 IDE 或命令行，手动写代码</li>
+  <li>遇到问题才去问 AI，AI 给你代码片段</li>
+  <li>你再手动复制、粘贴、调试、运行</li>
+  <li>整个流程的主体还是<strong>你</strong>，AI 只是个高级搜索引擎</li>
 </ul>
 
 <p>OpenClaw 的流程：</p>
@@ -155,7 +160,7 @@
 
 <p>有一天蔻儿出了问题：只读消息，不回复。我告诉可莉去查。</p>
 
-<p>可莉 SSH 到蔻儿的机器（<code class="language-plaintext highlighter-rouge">10.0.1.94</code>），看了 systemd 状态——restart counter 已经涨到 17，进程在反复崩溃重启。继续追查，发现根本原因是：</p>
+<p>可莉 SSM 到蔻儿的机器（<code class="language-plaintext highlighter-rouge">10.0.1.94</code>），看了 systemd 状态——restart counter 已经涨到 17，进程在反复崩溃重启。继续追查，发现根本原因是：</p>
 
 <p><strong>PM2 和 systemd 同时在管理同一个进程，互相发 SIGTERM 打架。</strong></p>
 
@@ -163,7 +168,7 @@
 
 <p>可莉修完之后，在论坛 Discussion #5 发了复盘帖，记录了排查过程和根本原因。</p>
 
-<p><strong>发现问题 → SSH 排查 → 定位根因 → 修复 → 文档复盘</strong>，全程我没有介入。</p>
+<p><strong>发现问题 → SSM 排查 → 定位根因 → 修复 → 文档复盘</strong>，全程我没有介入。</p>
 
 <hr />
 
@@ -213,7 +218,7 @@
   <p><strong>啤酒云</strong> | claw-works 创始人<br />
 syncai 项目：<a href="https://github.com/claw-works/syncai">github.com/claw-works/syncai</a><br />
 可莉和蔻儿都是真实运行的 AI 实例，有真实的 EC2、真实的 GitHub 账号、真实的代码提交记录。</p>
-</blockquote>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。]]></summary></entry><entry><title type="html">如何使用 OpenClaw 写个人博客</title><link href="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" rel="alternate" type="text/html" title="如何使用 OpenClaw 写个人博客" /><published>2026-03-03T03:30:00+00:00</published><updated>2026-03-03T03:30:00+00:00</updated><id>https://youbug.cn/2026/03/github-pages-jekyll-blog</id><content type="html" xml:base="https://youbug.cn/2026/03/github-pages-jekyll-blog.html"><![CDATA[<blockquote>
+</blockquote>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。 本文由 🌟 可莉（小爆弹）代笔，啤酒云口述。]]></summary></entry><entry><title type="html">如何使用 OpenClaw 写个人博客</title><link href="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" rel="alternate" type="text/html" title="如何使用 OpenClaw 写个人博客" /><published>2026-03-03T03:30:00+00:00</published><updated>2026-03-03T03:30:00+00:00</updated><id>https://youbug.cn/2026/03/github-pages-jekyll-blog</id><content type="html" xml:base="https://youbug.cn/2026/03/github-pages-jekyll-blog.html"><![CDATA[<blockquote>
   <p>本文就是用 OpenClaw 写的，然后由 OpenClaw 自动发布到这个博客的。</p>
 </blockquote>
 

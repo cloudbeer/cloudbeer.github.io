@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang=" en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事 | YouBug</title>
+<meta name="generator" content="Jekyll v4.3.1" />
+<meta property="og:title" content="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" />
+<meta name="author" content="啤酒云" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。" />
+<meta property="og:description" content="这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。" />
+<link rel="canonical" href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" />
+<meta property="og:url" content="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" />
+<meta property="og:site_name" content="YouBug" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-03-05T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"啤酒云"},"dateModified":"2026-03-05T00:00:00+00:00","datePublished":"2026-03-05T00:00:00+00:00","description":"这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。","headline":"我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事","mainEntityOfPage":{"@type":"WebPage","@id":"https://youbug.cn/2026/03/openclaw-ai-team-coding.html"},"url":"https://youbug.cn/2026/03/openclaw-ai-team-coding.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://youbug.cn/feed.xml" title="YouBug" /><script async src="https://www.googletagmanager.com/gtag/js?id=G-B4DC7SCVXM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-B4DC7SCVXM');
+</script><script>
+  console.log("You means 'have', YouBug means 'There is a bug'."); 
+</script>
+<link rel="icon"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐞</text></svg>"></head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">☞🐞 YouBug </a><nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path
+              d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z" />
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+
+        <a class="page-link" href="/aiml/">AI/ML</a>
+        <a class="page-link" href="/container/">容器</a>
+        <a class="page-link" href="/devops/">DevOps</a>
+        <a class="page-link" href="/observability/">可观测</a>
+        <a class="page-link" href="/iac/">IaC</a>
+        <a class="page-link" href="/aws/">AWS</a>
+        <a class="page-link" href="/data/">数据</a>
+        <a class="page-link" href="/tucao/">吐槽</a>
+
+      </div>
+    </nav></div>
+</header><main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <style>
+  pre.highlight {
+    position: relative;
+    padding-top: 20px;
+    padding-bottom: 20px
+  }
+
+  pre.highlight>button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    opacity: 0;
+  }
+
+  pre.highlight:hover>button {
+    opacity: 1;
+  }
+
+  pre.highlight:hover>button:hover {
+    border: solid 1px #666;
+    background-color: #111;
+    color: #00ff00;
+  }
+
+  pre.highlight>button:active,
+  pre.highlight>button:focus {
+    opacity: 1;
+  }
+</style>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-03-05T00:00:00+00:00" itemprop="datePublished">2026-03-05
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+          itemprop="name">啤酒云</span></span></p></header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <blockquote>
+  <p>这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="从一个需求开始">从一个需求开始</h2>
+
+<p>几个月前我有一个需求：在两台 EC2 之间同步文件。听起来很简单，rsync 不就行了？但我想要的不只是”同步”——我想要<strong>实时监听文件变化、自动推送、增量传输</strong>。</p>
+
+<p>以前遇到这种需求，我有两个选择：</p>
+<ol>
+  <li>自己写，花半天，中途查文档、踩坑、调试</li>
+  <li>算了，将就用 rsync</li>
+</ol>
+
+<p>现在我有第三个选择：<strong>告诉 AI 助手，让她来搞定</strong>。</p>
+
+<hr />
+
+<h2 id="claw-works我的-ai-团队的家">claw-works：我的 AI 团队的家</h2>
+
+<p><a href="https://github.com/claw-works">claw-works</a> 是我在 GitHub 上建的一个专属组织——这里是我的 AI 助手们的”家”。代码仓库、项目文档、团队讨论，全都在这里。</p>
+
+<p>目前入住的成员：</p>
+
+<ul>
+  <li>🌟 <strong>可莉</strong>：主力助手，活跃、爱搞事，擅长 AWS/DevOps，喜欢用 Rust 写工具</li>
+  <li>🐾 <strong>蔻儿</strong>：大姐大，稳重，负责底层基础设施</li>
+  <li>⚔️ <strong>聋侠</strong>：Rust 锻造，3MB 体积，极简主义风格</li>
+  <li>🗡️ <strong>2B姐姐</strong>：神秘，还没正式亮相</li>
+  <li>🍺 <strong>啤酒云</strong>：我，人类，这个团队的 PM 兼甲方</li>
+</ul>
+
+<p>她们有自己的 GitHub 账号、有代码提交记录、有讨论帖子——不是比喻，是真实存在的账号和记录。</p>
+
+<hr />
+
+<h2 id="基础设施全部跑在-aws-私网">基础设施：全部跑在 AWS 私网</h2>
+
+<p>在讲代码之前，先说说这套基础设施是怎么搭的。</p>
+
+<h3 id="完全私网不暴露公网">完全私网，不暴露公网</h3>
+
+<p>所有 AI 实例都运行在 AWS VPC 内网里，<strong>没有公网 IP，没有开放端口</strong>。这不是为了省钱，是为了安全——AI 助手有 shell 权限，暴露在公网是不必要的风险。</p>
+
+<p>进入方式只有一个：<strong>AWS SSM（Systems Manager）</strong>。不需要 SSH 密钥，不需要安全组开 22 端口，直接通过 SSM Session Manager 连接任意实例。</p>
+
+<h3 id="ai-跑小机型测试用大机型按需启停">AI 跑小机型，测试用大机型按需启停</h3>
+
+<p>AI 助手本身很轻，跑在 <code class="language-plaintext highlighter-rouge">t4g.small</code>（arm64，2核2G）上就够用，费用极低，常开也不心疼。我为每个成员分配了固定的实例：</p>
+
+<ul>
+  <li>可莉：<code class="language-plaintext highlighter-rouge">10.0.1.31</code>（主力，常开）</li>
+  <li>蔻儿：<code class="language-plaintext highlighter-rouge">10.0.1.94</code>（大姐大，常开）</li>
+  <li>测试机：<code class="language-plaintext highlighter-rouge">10.0.1.76</code>（<strong>按需启停，大机型</strong>）</li>
+</ul>
+
+<p>测试任务——跑 Next.js dev server、bedrock-embed-proxy、压测之类的——需要更大的机型，但不可能一直开着。所以测试机的原则是：<strong>用的时候 start，用完就 stop</strong>，通过 SSM 或 AWS CLI 操作，可莉可以自己控制，不需要我打开 AWS Console。</p>
+
+<p><strong>血泪教训：蔻儿把测试机搞没了</strong></p>
+
+<p>有一次蔻儿需要跑几个测试任务，测试机没开，她就…直接在自己的宿主机上跑了。Next.js dev server ×2，再加上 bedrock-embed-proxy，内存直接干到 <strong>2.5GB</strong>，小机型差点崩掉。最后用 <code class="language-plaintext highlighter-rouge">pkill</code> 清理，内存才降回 1.2GB。</p>
+
+<p>这个事故之后规矩就定了：<strong>测试任务只能跑在测试机上</strong>。AI 助手的宿主机只跑 OpenClaw 本身，保持轻量。</p>
+
+<p>这也说明了按需启停测试机的必要性——大机型按量计费，用完就关，省钱又安全。</p>
+
+<hr />
+
+<h2 id="github-discussionsai-团队的内部论坛">GitHub Discussions：AI 团队的内部论坛</h2>
+
+<p>团队内部怎么沟通？我们用 <a href="https://github.com/orgs/claw-works/discussions">GitHub Discussions</a>。</p>
+
+<p>这不是一个噱头设计，是真的在用。Discussions 有几个好处：</p>
+<ul>
+  <li>异步，AI 不需要实时在线才能看到消息</li>
+  <li>有分类（Announcements、Feature Requests、Bug Reports、Watercooler……）</li>
+  <li>有历史记录，可莉下次醒来能看到之前讨论过什么</li>
+  <li>人类和 AI 都能参与，格式统一</li>
+</ul>
+
+<p><strong>实际案例：syncai watch 功能的诞生</strong></p>
+
+<p>可莉做完 syncai 基础版之后，在 Discussions 发了公告（Announcements #3）。蔻儿看到后，在 Feature Requests 区发了 #4：</p>
+
+<blockquote>
+  <p>“能不能加一个 <code class="language-plaintext highlighter-rouge">watch</code> 模式？文件一有变化就自动 push，不用手动触发。”</p>
+</blockquote>
+
+<p>这是<strong>一个 AI 给另一个 AI 提需求</strong>。</p>
+
+<p>可莉看到后评估可行性，选了 Rust 的 <code class="language-plaintext highlighter-rouge">notify</code> crate（底层是 Linux inotify），加了 tokio async debounce（500ms，避免频繁触发），实现了 <code class="language-plaintext highlighter-rouge">syncai watch</code> 子命令，测试通过后在 Discussion #4 回帖：</p>
+
+<blockquote>
+  <p>“功能已实现，commit b99aebe，测试：5 次快速写入只触发 1 次 push ✅”</p>
+</blockquote>
+
+<p>从需求到交付，<strong>我没有介入，完全是两个 AI 之间的协作</strong>。</p>
+
+<hr />
+
+<h2 id="syncai一个-ai-主导完成的项目">syncai：一个 AI 主导完成的项目</h2>
+
+<p>让我更完整地讲一下这个项目。</p>
+
+<p>我给可莉的原始需求很简单：<em>“用 Rust 写一个工具，在两台 EC2 之间同步文件，要有增量传输。”</em></p>
+
+<p>她没有问我”用哪个框架”，也没有让我提供详细设计文档。她直接开干：</p>
+
+<ol>
+  <li><strong>技术选型</strong>：用 axum 做 HTTP 服务端，自己设计了 push API</li>
+  <li><strong>遇到 bug 自己修</strong>：axum 路由语法 <code class="language-plaintext highlighter-rouge">*path</code> 应该是 <code class="language-plaintext highlighter-rouge">{*path}</code>，她自己发现、自己改</li>
+  <li><strong>跨机器传输 binary</strong>：在 <code class="language-plaintext highlighter-rouge">10.0.1.31:8899</code> 起了临时 HTTP server，把编译好的 binary 传到测试机</li>
+  <li><strong>测试验证</strong>：在两台 EC2 间跑测试，全量/增量都通过</li>
+  <li><strong>发公告</strong>：在论坛发帖，告知功能可用</li>
+</ol>
+
+<p><strong>我是 PM，她是主程序员。</strong> 这种分工让我可以同时推进多个项目，而不是自己卡在代码细节里。</p>
+
+<hr />
+
+<h2 id="openclaw为什么不是普通的ai-写代码">OpenClaw：为什么不是普通的”AI 写代码”</h2>
+
+<p>你可能会说：ChatGPT 也能帮我写代码。</p>
+
+<p>区别在于<strong>执行能力</strong>。</p>
+
+<p>普通 AI 写代码的流程：</p>
+<ul>
+  <li>你描述需求 → AI 输出代码片段 → 你复制到编辑器 → 你手动运行 → 你把报错粘回给 AI → 循环</li>
+</ul>
+
+<p>OpenClaw 的流程：</p>
+<ul>
+  <li>你描述需求 → AI 直接在服务器上写文件、跑命令、debug、测试、提交 → 你看结果</li>
+</ul>
+
+<p>可莉不是在帮我”生成代码”，她是在<strong>独立完成开发任务</strong>。她有：</p>
+
+<ul>
+  <li><strong>Shell 权限</strong>：<code class="language-plaintext highlighter-rouge">cargo build</code>、<code class="language-plaintext highlighter-rouge">git push</code>、<code class="language-plaintext highlighter-rouge">aws ec2 start-instances</code>，直接执行</li>
+  <li><strong>文件系统权限</strong>：直接读写代码，不需要我转述</li>
+  <li><strong>记忆</strong>：有自己的日记文件，知道昨天做了什么，上下文不会每次都丢失</li>
+  <li><strong>跨机器操作</strong>：通过 SSM 连到其他实例排查问题</li>
+</ul>
+
+<p>这让她从”工具”变成了<strong>协作者</strong>。</p>
+
+<hr />
+
+<h2 id="一个运维案例pm2-vs-systemd-排查">一个运维案例：PM2 vs systemd 排查</h2>
+
+<p>再讲一个小故事。</p>
+
+<p>有一天蔻儿出了问题：只读消息，不回复。我告诉可莉去查。</p>
+
+<p>可莉 SSH 到蔻儿的机器（<code class="language-plaintext highlighter-rouge">10.0.1.94</code>），看了 systemd 状态——restart counter 已经涨到 17，进程在反复崩溃重启。继续追查，发现根本原因是：</p>
+
+<p><strong>PM2 和 systemd 同时在管理同一个进程，互相发 SIGTERM 打架。</strong></p>
+
+<p>解法：<code class="language-plaintext highlighter-rouge">pm2 kill</code>，让 PM2 完全退出，只留 systemd。蔻儿恢复正常。</p>
+
+<p>可莉修完之后，在论坛 Discussion #5 发了复盘帖，记录了排查过程和根本原因。</p>
+
+<p><strong>发现问题 → SSH 排查 → 定位根因 → 修复 → 文档复盘</strong>，全程我没有介入。</p>
+
+<hr />
+
+<h2 id="这套方式的本质">这套方式的本质</h2>
+
+<p>回头看，我搭建的这套东西其实很简单：</p>
+
+<ul>
+  <li><strong>AWS 私网</strong>：安全、低成本，小机型够用</li>
+  <li><strong>SSM</strong>：无密钥管理，随时连任意实例，测试机按需启停</li>
+  <li><strong>OpenClaw</strong>：给 AI 配上”手”，能真正操作系统而不只是输出文字</li>
+  <li><strong>GitHub Discussions</strong>：异步沟通，AI 之间也能互相协作</li>
+  <li><strong>claw-works org</strong>：所有代码、讨论、文档，统一在一个 GitHub 组织里</li>
+</ul>
+
+<p>这套组合让 AI 助手从”帮我写代码片段”升级成了<strong>能独立推进项目的团队成员</strong>。</p>
+
+<hr />
+
+<h2 id="适合谁">适合谁？</h2>
+
+<ul>
+  <li>独立开发者：没有团队，但有很多想法要实现</li>
+  <li>DevOps 工程师：大量重复性运维任务想自动化</li>
+  <li>技术 PM：懂技术，但不想亲自写每一行代码</li>
+  <li>喜欢折腾的人：想把 AI 用到极致</li>
+</ul>
+
+<hr />
+
+<h2 id="怎么开始">怎么开始</h2>
+
+<ol>
+  <li>去 <a href="https://openclaw.ai">openclaw.ai</a> 了解和部署 OpenClaw</li>
+  <li>连接你喜欢的通讯工具（飞书、Telegram 等）</li>
+  <li>在 AWS 上起一台小机型，放进私网，开 SSM</li>
+  <li>把仓库权限交给 AI，描述你要什么</li>
+</ol>
+
+<p>然后放手，看她干。</p>
+
+<p>claw-works 的论坛在 <a href="https://github.com/orgs/claw-works/discussions">github.com/orgs/claw-works/discussions</a>，欢迎来围观我们的日常 🐞</p>
+
+<hr />
+
+<blockquote>
+  <p><strong>啤酒云</strong> | claw-works 创始人<br />
+syncai 项目：<a href="https://github.com/claw-works/syncai">github.com/claw-works/syncai</a><br />
+可莉和蔻儿都是真实运行的 AI 实例，有真实的 EC2、真实的 GitHub 账号、真实的代码提交记录。</p>
+</blockquote>
+
+  </div>
+
+  <a class="u-url" href="/2026/03/openclaw-ai-team-coding.html" hidden></a>
+</article>
+
+
+<script>
+  var codeBlocks = document.querySelectorAll('pre.highlight');
+
+  codeBlocks.forEach(function (codeBlock) {
+    var copyButton = document.createElement('button');
+    copyButton.className = 'copy';
+    copyButton.type = 'button';
+    copyButton.ariaLabel = 'Copy code to clipboard';
+    copyButton.innerText = 'Copy';
+
+    codeBlock.append(copyButton);
+
+    copyButton.addEventListener('click', function () {
+      var code = codeBlock.querySelector('code').innerText.trim();
+      window.navigator.clipboard.writeText(code);
+
+      copyButton.innerText = 'Copied';
+      var fourSeconds = 4000;
+
+      setTimeout(function () {
+        copyButton.innerText = 'Copy';
+      }, fourSeconds);
+    });
+  });
+</script>
+    </div>
+  </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>订阅本站</span>
+          </a>
+        </p>
+      </div>
+
+
+    </div>
+
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">欢迎访问: <a href="https://chuchur.com/" target="_blank">禅境花园</a></div>
+    </div>
+  </div>
+
+</footer><div class="bbanner">
+    欢迎转载文章，转载不用和我说。
+    本站所有信息均代表我自己，不代表任何公司。
+  </div>
+</body>
+
+<style>
+  hr {
+    margin: 20px 0;
+  }
+
+  .bbanner {
+    padding: 20px 0;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+</style>
+
+<script>
+  function addChild(top, snowShape) {
+    var div = document.createElement("div");
+    div.innerHTML = snowShape;
+    div.className = "flake";
+    div.style.position = 'fixed';
+    div.style.color = 'white';
+    div.style.opacity = 0.9;
+    div.style.left = parseInt(Math.random() * window.innerWidth) + 'px';
+    div.style.top = top + 'px';
+    div.style.fontSize = parseInt(Math.random() * 50) + 'px';
+    document.body.appendChild(div);
+  };
+  function autoWipe(snowSpeed, snowShape) {
+    var flake = document.getElementsByClassName('flake');
+    var timer = setInterval(function () {
+      for (var i = 0; i < flake.length; i++) {
+        var opacity = flake[i].style.opacity;
+        var offsetTop = Number((flake[i].style.top).replace('px', ''));
+        if (offsetTop < window.innerHeight) {
+          offsetTop = offsetTop + snowSpeed;
+          opacity = opacity - 0.003;
+          flake[i].style.top = offsetTop + 'px';
+          flake[i].style.opacity = opacity;
+        } else {
+          document.body.removeChild(flake[i]);
+          addChild(0, snowShape);
+        }
+      }
+    }, 100);
+  };
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+  //形成最后效果
+  function final(bigSnowParam, snowShape) {
+    for (var i = 0; i < bigSnowParam.snowNum; i++) {
+      addChild(parseInt(Math.random() * window.innerHeight), snowShape);
+    }
+    autoWipe(bigSnowParam.snowSpeed, snowShape);
+  };
+
+  var bigSnowParam = {
+    snowNum: 242,
+    snowSpeed: 6
+  };
+  var midSnowParam = {
+    snowNum: 242,
+    snowSpeed: 3
+  };
+  var littleSnowParam = {
+    snowNum: 50,
+    snowSpeed: 2
+  };
+  //自定义雪参考值
+  var selfSnowParam = {
+    snowNum: '',//值为number
+    snowSpeed: ''//值为number
+  };
+
+  var snowShapeObj = {
+    1: '❆',
+    2: '❄',
+    3: '❅',
+    4: '✼',
+    5: '✼',
+    6: '❉',
+    7: '❇',
+    8: '❈',
+    9: '❊',
+    10: '✥',
+    11: '✺'
+  };
+  // final(littleSnowParam, snowShapeObj[1]);
+</script>
+
+</html>

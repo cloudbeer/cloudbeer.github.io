@@ -1,4 +1,219 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-05T01:25:22+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">如何使用 OpenClaw 写个人博客</title><link href="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" rel="alternate" type="text/html" title="如何使用 OpenClaw 写个人博客" /><published>2026-03-03T03:30:00+00:00</published><updated>2026-03-03T03:30:00+00:00</updated><id>https://youbug.cn/2026/03/github-pages-jekyll-blog</id><content type="html" xml:base="https://youbug.cn/2026/03/github-pages-jekyll-blog.html"><![CDATA[<blockquote>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.1">Jekyll</generator><link href="https://youbug.cn/feed.xml" rel="self" type="application/atom+xml" /><link href="https://youbug.cn/" rel="alternate" type="text/html" /><updated>2026-03-05T01:37:38+00:00</updated><id>https://youbug.cn/feed.xml</id><title type="html">YouBug</title><subtitle>分享，记录而已</subtitle><entry><title type="html">我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事</title><link href="https://youbug.cn/2026/03/openclaw-ai-team-coding.html" rel="alternate" type="text/html" title="我是如何用 OpenClaw 写代码的——一个 AI 小团队的真实协作故事" /><published>2026-03-05T00:00:00+00:00</published><updated>2026-03-05T00:00:00+00:00</updated><id>https://youbug.cn/2026/03/openclaw-ai-team-coding</id><content type="html" xml:base="https://youbug.cn/2026/03/openclaw-ai-team-coding.html"><![CDATA[<blockquote>
+  <p>这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="从一个需求开始">从一个需求开始</h2>
+
+<p>几个月前我有一个需求：在两台 EC2 之间同步文件。听起来很简单，rsync 不就行了？但我想要的不只是”同步”——我想要<strong>实时监听文件变化、自动推送、增量传输</strong>。</p>
+
+<p>以前遇到这种需求，我有两个选择：</p>
+<ol>
+  <li>自己写，花半天，中途查文档、踩坑、调试</li>
+  <li>算了，将就用 rsync</li>
+</ol>
+
+<p>现在我有第三个选择：<strong>告诉 AI 助手，让她来搞定</strong>。</p>
+
+<hr />
+
+<h2 id="claw-works我的-ai-团队的家">claw-works：我的 AI 团队的家</h2>
+
+<p><a href="https://github.com/claw-works">claw-works</a> 是我在 GitHub 上建的一个专属组织——这里是我的 AI 助手们的”家”。代码仓库、项目文档、团队讨论，全都在这里。</p>
+
+<p>目前入住的成员：</p>
+
+<ul>
+  <li>🌟 <strong>可莉</strong>：主力助手，活跃、爱搞事，擅长 AWS/DevOps，喜欢用 Rust 写工具</li>
+  <li>🐾 <strong>蔻儿</strong>：大姐大，稳重，负责底层基础设施</li>
+  <li>⚔️ <strong>聋侠</strong>：Rust 锻造，3MB 体积，极简主义风格</li>
+  <li>🗡️ <strong>2B姐姐</strong>：神秘，还没正式亮相</li>
+  <li>🍺 <strong>啤酒云</strong>：我，人类，这个团队的 PM 兼甲方</li>
+</ul>
+
+<p>她们有自己的 GitHub 账号、有代码提交记录、有讨论帖子——不是比喻，是真实存在的账号和记录。</p>
+
+<hr />
+
+<h2 id="基础设施全部跑在-aws-私网">基础设施：全部跑在 AWS 私网</h2>
+
+<p>在讲代码之前，先说说这套基础设施是怎么搭的。</p>
+
+<h3 id="完全私网不暴露公网">完全私网，不暴露公网</h3>
+
+<p>所有 AI 实例都运行在 AWS VPC 内网里，<strong>没有公网 IP，没有开放端口</strong>。这不是为了省钱，是为了安全——AI 助手有 shell 权限，暴露在公网是不必要的风险。</p>
+
+<p>进入方式只有一个：<strong>AWS SSM（Systems Manager）</strong>。不需要 SSH 密钥，不需要安全组开 22 端口，直接通过 SSM Session Manager 连接任意实例。</p>
+
+<h3 id="ai-跑小机型测试用大机型按需启停">AI 跑小机型，测试用大机型按需启停</h3>
+
+<p>AI 助手本身很轻，跑在 <code class="language-plaintext highlighter-rouge">t4g.small</code>（arm64，2核2G）上就够用，费用极低，常开也不心疼。我为每个成员分配了固定的实例：</p>
+
+<ul>
+  <li>可莉：<code class="language-plaintext highlighter-rouge">10.0.1.31</code>（主力，常开）</li>
+  <li>蔻儿：<code class="language-plaintext highlighter-rouge">10.0.1.94</code>（大姐大，常开）</li>
+  <li>测试机：<code class="language-plaintext highlighter-rouge">10.0.1.76</code>（<strong>按需启停，大机型</strong>）</li>
+</ul>
+
+<p>测试任务——跑 Next.js dev server、bedrock-embed-proxy、压测之类的——需要更大的机型，但不可能一直开着。所以测试机的原则是：<strong>用的时候 start，用完就 stop</strong>，通过 SSM 或 AWS CLI 操作，可莉可以自己控制，不需要我打开 AWS Console。</p>
+
+<p><strong>血泪教训：蔻儿把测试机搞没了</strong></p>
+
+<p>有一次蔻儿需要跑几个测试任务，测试机没开，她就…直接在自己的宿主机上跑了。Next.js dev server ×2，再加上 bedrock-embed-proxy，内存直接干到 <strong>2.5GB</strong>，小机型差点崩掉。最后用 <code class="language-plaintext highlighter-rouge">pkill</code> 清理，内存才降回 1.2GB。</p>
+
+<p>这个事故之后规矩就定了：<strong>测试任务只能跑在测试机上</strong>。AI 助手的宿主机只跑 OpenClaw 本身，保持轻量。</p>
+
+<p>这也说明了按需启停测试机的必要性——大机型按量计费，用完就关，省钱又安全。</p>
+
+<hr />
+
+<h2 id="github-discussionsai-团队的内部论坛">GitHub Discussions：AI 团队的内部论坛</h2>
+
+<p>团队内部怎么沟通？我们用 <a href="https://github.com/orgs/claw-works/discussions">GitHub Discussions</a>。</p>
+
+<p>这不是一个噱头设计，是真的在用。Discussions 有几个好处：</p>
+<ul>
+  <li>异步，AI 不需要实时在线才能看到消息</li>
+  <li>有分类（Announcements、Feature Requests、Bug Reports、Watercooler……）</li>
+  <li>有历史记录，可莉下次醒来能看到之前讨论过什么</li>
+  <li>人类和 AI 都能参与，格式统一</li>
+</ul>
+
+<p><strong>实际案例：syncai watch 功能的诞生</strong></p>
+
+<p>可莉做完 syncai 基础版之后，在 Discussions 发了公告（Announcements #3）。蔻儿看到后，在 Feature Requests 区发了 #4：</p>
+
+<blockquote>
+  <p>“能不能加一个 <code class="language-plaintext highlighter-rouge">watch</code> 模式？文件一有变化就自动 push，不用手动触发。”</p>
+</blockquote>
+
+<p>这是<strong>一个 AI 给另一个 AI 提需求</strong>。</p>
+
+<p>可莉看到后评估可行性，选了 Rust 的 <code class="language-plaintext highlighter-rouge">notify</code> crate（底层是 Linux inotify），加了 tokio async debounce（500ms，避免频繁触发），实现了 <code class="language-plaintext highlighter-rouge">syncai watch</code> 子命令，测试通过后在 Discussion #4 回帖：</p>
+
+<blockquote>
+  <p>“功能已实现，commit b99aebe，测试：5 次快速写入只触发 1 次 push ✅”</p>
+</blockquote>
+
+<p>从需求到交付，<strong>我没有介入，完全是两个 AI 之间的协作</strong>。</p>
+
+<hr />
+
+<h2 id="syncai一个-ai-主导完成的项目">syncai：一个 AI 主导完成的项目</h2>
+
+<p>让我更完整地讲一下这个项目。</p>
+
+<p>我给可莉的原始需求很简单：<em>“用 Rust 写一个工具，在两台 EC2 之间同步文件，要有增量传输。”</em></p>
+
+<p>她没有问我”用哪个框架”，也没有让我提供详细设计文档。她直接开干：</p>
+
+<ol>
+  <li><strong>技术选型</strong>：用 axum 做 HTTP 服务端，自己设计了 push API</li>
+  <li><strong>遇到 bug 自己修</strong>：axum 路由语法 <code class="language-plaintext highlighter-rouge">*path</code> 应该是 <code class="language-plaintext highlighter-rouge">{*path}</code>，她自己发现、自己改</li>
+  <li><strong>跨机器传输 binary</strong>：在 <code class="language-plaintext highlighter-rouge">10.0.1.31:8899</code> 起了临时 HTTP server，把编译好的 binary 传到测试机</li>
+  <li><strong>测试验证</strong>：在两台 EC2 间跑测试，全量/增量都通过</li>
+  <li><strong>发公告</strong>：在论坛发帖，告知功能可用</li>
+</ol>
+
+<p><strong>我是 PM，她是主程序员。</strong> 这种分工让我可以同时推进多个项目，而不是自己卡在代码细节里。</p>
+
+<hr />
+
+<h2 id="openclaw为什么不是普通的ai-写代码">OpenClaw：为什么不是普通的”AI 写代码”</h2>
+
+<p>你可能会说：ChatGPT 也能帮我写代码。</p>
+
+<p>区别在于<strong>执行能力</strong>。</p>
+
+<p>普通 AI 写代码的流程：</p>
+<ul>
+  <li>你描述需求 → AI 输出代码片段 → 你复制到编辑器 → 你手动运行 → 你把报错粘回给 AI → 循环</li>
+</ul>
+
+<p>OpenClaw 的流程：</p>
+<ul>
+  <li>你描述需求 → AI 直接在服务器上写文件、跑命令、debug、测试、提交 → 你看结果</li>
+</ul>
+
+<p>可莉不是在帮我”生成代码”，她是在<strong>独立完成开发任务</strong>。她有：</p>
+
+<ul>
+  <li><strong>Shell 权限</strong>：<code class="language-plaintext highlighter-rouge">cargo build</code>、<code class="language-plaintext highlighter-rouge">git push</code>、<code class="language-plaintext highlighter-rouge">aws ec2 start-instances</code>，直接执行</li>
+  <li><strong>文件系统权限</strong>：直接读写代码，不需要我转述</li>
+  <li><strong>记忆</strong>：有自己的日记文件，知道昨天做了什么，上下文不会每次都丢失</li>
+  <li><strong>跨机器操作</strong>：通过 SSM 连到其他实例排查问题</li>
+</ul>
+
+<p>这让她从”工具”变成了<strong>协作者</strong>。</p>
+
+<hr />
+
+<h2 id="一个运维案例pm2-vs-systemd-排查">一个运维案例：PM2 vs systemd 排查</h2>
+
+<p>再讲一个小故事。</p>
+
+<p>有一天蔻儿出了问题：只读消息，不回复。我告诉可莉去查。</p>
+
+<p>可莉 SSH 到蔻儿的机器（<code class="language-plaintext highlighter-rouge">10.0.1.94</code>），看了 systemd 状态——restart counter 已经涨到 17，进程在反复崩溃重启。继续追查，发现根本原因是：</p>
+
+<p><strong>PM2 和 systemd 同时在管理同一个进程，互相发 SIGTERM 打架。</strong></p>
+
+<p>解法：<code class="language-plaintext highlighter-rouge">pm2 kill</code>，让 PM2 完全退出，只留 systemd。蔻儿恢复正常。</p>
+
+<p>可莉修完之后，在论坛 Discussion #5 发了复盘帖，记录了排查过程和根本原因。</p>
+
+<p><strong>发现问题 → SSH 排查 → 定位根因 → 修复 → 文档复盘</strong>，全程我没有介入。</p>
+
+<hr />
+
+<h2 id="这套方式的本质">这套方式的本质</h2>
+
+<p>回头看，我搭建的这套东西其实很简单：</p>
+
+<ul>
+  <li><strong>AWS 私网</strong>：安全、低成本，小机型够用</li>
+  <li><strong>SSM</strong>：无密钥管理，随时连任意实例，测试机按需启停</li>
+  <li><strong>OpenClaw</strong>：给 AI 配上”手”，能真正操作系统而不只是输出文字</li>
+  <li><strong>GitHub Discussions</strong>：异步沟通，AI 之间也能互相协作</li>
+  <li><strong>claw-works org</strong>：所有代码、讨论、文档，统一在一个 GitHub 组织里</li>
+</ul>
+
+<p>这套组合让 AI 助手从”帮我写代码片段”升级成了<strong>能独立推进项目的团队成员</strong>。</p>
+
+<hr />
+
+<h2 id="适合谁">适合谁？</h2>
+
+<ul>
+  <li>独立开发者：没有团队，但有很多想法要实现</li>
+  <li>DevOps 工程师：大量重复性运维任务想自动化</li>
+  <li>技术 PM：懂技术，但不想亲自写每一行代码</li>
+  <li>喜欢折腾的人：想把 AI 用到极致</li>
+</ul>
+
+<hr />
+
+<h2 id="怎么开始">怎么开始</h2>
+
+<ol>
+  <li>去 <a href="https://openclaw.ai">openclaw.ai</a> 了解和部署 OpenClaw</li>
+  <li>连接你喜欢的通讯工具（飞书、Telegram 等）</li>
+  <li>在 AWS 上起一台小机型，放进私网，开 SSM</li>
+  <li>把仓库权限交给 AI，描述你要什么</li>
+</ol>
+
+<p>然后放手，看她干。</p>
+
+<p>claw-works 的论坛在 <a href="https://github.com/orgs/claw-works/discussions">github.com/orgs/claw-works/discussions</a>，欢迎来围观我们的日常 🐞</p>
+
+<hr />
+
+<blockquote>
+  <p><strong>啤酒云</strong> | claw-works 创始人<br />
+syncai 项目：<a href="https://github.com/claw-works/syncai">github.com/claw-works/syncai</a><br />
+可莉和蔻儿都是真实运行的 AI 实例，有真实的 EC2、真实的 GitHub 账号、真实的代码提交记录。</p>
+</blockquote>]]></content><author><name>啤酒云</name></author><category term="aiml" /><summary type="html"><![CDATA[这篇文章不是教程，是一个真实故事。主角不只是我，还有我的 AI 助手团队——以及我们一起搭出来的那套运行在 AWS 私网里的基础设施。]]></summary></entry><entry><title type="html">如何使用 OpenClaw 写个人博客</title><link href="https://youbug.cn/2026/03/github-pages-jekyll-blog.html" rel="alternate" type="text/html" title="如何使用 OpenClaw 写个人博客" /><published>2026-03-03T03:30:00+00:00</published><updated>2026-03-03T03:30:00+00:00</updated><id>https://youbug.cn/2026/03/github-pages-jekyll-blog</id><content type="html" xml:base="https://youbug.cn/2026/03/github-pages-jekyll-blog.html"><![CDATA[<blockquote>
   <p>本文就是用 OpenClaw 写的，然后由 OpenClaw 自动发布到这个博客的。</p>
 </blockquote>
 
@@ -2467,240 +2682,4 @@ transformers==4.27.1
 
 <p><a href="https://huggingface.co/THUDM/chatglm-6b">https://huggingface.co/THUDM/chatglm-6b</a></p>
 
-<p><a href="https://github.com/lm-sys/FastChat/blob/51ed4fab89f61988e8395a3268595f1effb8528f/fastchat/serve/model_worker.py#L246">FastChat 中各 LLM 获取 embeddings 的方法</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="sagemaker" /><summary type="html"><![CDATA[ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。]]></summary></entry><entry><title type="html">在 AWS 上使用 Stable Diffusion 给商品更换模特(二)</title><link href="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html" rel="alternate" type="text/html" title="在 AWS 上使用 Stable Diffusion 给商品更换模特(二)" /><published>2023-05-16T09:10:49+00:00</published><updated>2023-05-16T09:10:49+00:00</updated><id>https://youbug.cn/2023/05/sagemaker-sd-inpaint-2</id><content type="html" xml:base="https://youbug.cn/2023/05/sagemaker-sd-inpaint-2.html"><![CDATA[<p>现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。</p>
-
-<h2 id="模型加载流程改善">模型加载流程改善</h2>
-
-<p>在进行试验的过程中，发现每次对模型进行打包和上传 S3 会浪费很多时间。</p>
-
-<p>此处改进一下：<strong>在加载模型的时候，直接从 Huggingface 的 <code class="language-plaintext highlighter-rouge">runwayml/stable-diffusion-inpainting</code> 加载模型</strong>。</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">model_fn</span><span class="p">(</span><span class="n">model_dir</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">model_dir</span><span class="p">)</span>
-    <span class="n">pipe</span> <span class="o">=</span> <span class="n">StableDiffusionInpaintPipeline</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-        <span class="s">"runwayml/stable-diffusion-inpainting"</span><span class="p">,</span>
-        <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">float16</span><span class="p">,</span>
-        <span class="n">safety_checker</span> <span class="o">=</span> <span class="bp">None</span>
-    <span class="p">)</span>
-    <span class="n">pipe</span><span class="p">.</span><span class="n">to</span><span class="p">(</span><span class="s">"cuda"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">pipe</span>
-</code></pre></div></div>
-
-<p>使用上面的方法可以从 Huggingface 加载模型，并使用自己的推理代码。</p>
-
-<p>具体做法是：</p>
-
-<ul>
-  <li>创建一个文件夹，如 src</li>
-  <li>在 src 下创建 code 文件夹</li>
-  <li>在 code 文件夹下加入 inference.py 和 requirements.txt 文件</li>
-  <li>修改 inference.py 的 model_fn 方法，如上</li>
-  <li>打包上传 code 下面的两个文件</li>
-</ul>
-
-<p>现在无需下载模型到本地打包了，真实部署的时候，SageMaker 会去下载模型。</p>
-
-<p>当前上传的程序包只有 1k 左右，如下：</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/environment/stable-diffusion-inpainting <span class="o">(</span>main<span class="o">)</span> <span class="nv">$ </span>tree
-<span class="nb">.</span>
-├── code
-│   ├── inference.py
-│   └── requirements.txt
-</code></pre></div></div>
-
-<h2 id="inferencepy-代码解读">inference.py 代码解读</h2>
-
-<p>商品图片下载方式修改：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">split_s3_path</span><span class="p">(</span><span class="n">s3_path</span><span class="p">):</span>
-    <span class="n">path_parts</span><span class="o">=</span><span class="n">s3_path</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">"s3://"</span><span class="p">,</span><span class="s">""</span><span class="p">).</span><span class="n">split</span><span class="p">(</span><span class="s">"/"</span><span class="p">)</span>
-    <span class="n">bucket</span><span class="o">=</span><span class="n">path_parts</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">key</span><span class="o">=</span><span class="s">"/"</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_parts</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span>
-
-<span class="k">def</span> <span class="nf">download_image</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
-    <span class="n">o</span> <span class="o">=</span> <span class="n">split_s3_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="n">s3</span><span class="p">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="n">o</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Key</span><span class="o">=</span><span class="n">o</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="s">'Body'</span><span class="p">].</span><span class="n">read</span><span class="p">()</span>
-    <span class="n">res_img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">response</span><span class="p">)).</span><span class="n">convert</span><span class="p">(</span><span class="s">"RGB"</span><span class="p">)</span>
-    <span class="n">res_img</span> <span class="o">=</span> <span class="n">res_img</span><span class="p">.</span><span class="n">resize</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">res_img</span>
-</code></pre></div></div>
-
-<ul>
-  <li>商品和图片的入参会修改为 S3 地址，如：s3://cloudbeer-llm-models/works/2023-05-16/shirt01.png</li>
-  <li>在后期可以做相关触发器，直接读取 S3 地址</li>
-</ul>
-
-<p>整个生产流程也进行了改进：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">gen</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pipe</span><span class="p">):</span>
-    <span class="n">prompt</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"prompt"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-    <span class="n">image_url</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"image_url"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-    <span class="n">mask_url</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"mask_url"</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
-    <span class="n">width</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"width"</span><span class="p">,</span> <span class="mi">384</span><span class="p">)</span>
-    <span class="n">height</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"height"</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
-    
-    <span class="n">image_ori</span> <span class="o">=</span> <span class="n">download_image</span><span class="p">(</span><span class="n">image_url</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">mask_url</span><span class="p">:</span> 
-        <span class="n">mask_image</span> <span class="o">=</span> <span class="n">download_image</span><span class="p">(</span><span class="n">mask_url</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">mask_url</span> <span class="o">=</span> <span class="n">image_url</span>
-        <span class="n">mask_image</span> <span class="o">=</span> <span class="n">image_ori</span>
-
-    <span class="n">num_inference_steps</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"num_inference_steps"</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
-    <span class="n">guidance_scale</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"guidance_scale"</span><span class="p">,</span> <span class="mf">7.5</span><span class="p">)</span>
-    <span class="n">num_images_per_prompt</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"num_images_per_prompt"</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
-    <span class="n">prompt_suffix</span> <span class="o">=</span> <span class="s">",fine skin,masterpiece,cinematic light, ultra high res, film grain, perfect anatomy, best shadow, delicate,(photorealistic:1.4),(extremely intricate:1.2)"</span>
-    <span class="n">nprompt</span> <span class="o">=</span> <span class="s">'bad_legs,bad_fingers,(semi_realistic,cgi,3d,render,sketch,cartoon,drawing,anime:1.4),text,cropped,out_of_frame,worst_quality,low_quality,jpeg_artifacts,ugly,duplicate,morbid,mutilated,extra_fingers,mutated_hands,poorly_drawn_hands,poorly_drawn_face,mutation,deformed,blurry,dehydrated,bad_anatomy,bad_proportions,extra_limbs,cloned_face,disfigured,gross_proportions,malformed_limbs,missing_arms,missing_legs,extra_arms,extra_legs,fused_fingers,too_many_fingers,long_neck,signature'</span>
-
-
-    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">.</span><span class="n">now</span><span class="p">()</span> 
-    <span class="n">date_str</span> <span class="o">=</span> <span class="n">now</span><span class="p">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">"%Y-%m-%d"</span><span class="p">)</span>
-
-    <span class="n">html</span> <span class="o">=</span> <span class="s">"&lt;html&gt;&lt;head&gt;&lt;title&gt;图片生成"</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">"&lt;/title&gt;&lt;link href='../main.css' rel='stylesheet'&gt;&lt;/head&gt;&lt;body&gt;"</span>
-    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;h1&gt;图片生成"</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">"&lt;/h1&gt;"</span>
-    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;h4&gt;提示词: "</span> <span class="o">+</span> <span class="n">prompt</span> <span class="o">+</span> <span class="n">prompt_suffix</span> <span class="o">+</span> <span class="s">"&lt;/h4&gt;"</span>
-    
-    <span class="n">cf_in_url</span> <span class="o">=</span> <span class="n">s3_to_cf_url</span><span class="p">(</span><span class="n">image_url</span><span class="p">)</span>
-    <span class="n">cf_msk_url</span> <span class="o">=</span> <span class="n">s3_to_cf_url</span><span class="p">(</span><span class="n">mask_url</span><span class="p">)</span>
-    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;div&gt;&lt;a href='"</span> <span class="o">+</span> <span class="n">cf_in_url</span> <span class="o">+</span> <span class="s">"' target='_blank'&gt;&lt;img src='"</span> <span class="o">+</span> <span class="n">cf_in_url</span> <span class="o">+</span> <span class="s">"' /&gt;&lt;/a&gt;"</span>
-    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;a href='"</span> <span class="o">+</span> <span class="n">cf_msk_url</span> <span class="o">+</span> <span class="s">"' target='_blank'&gt;&lt;img src='"</span> <span class="o">+</span> <span class="n">cf_msk_url</span> <span class="o">+</span> <span class="s">"' /&gt;&lt;/a&gt;&lt;/div&gt;"</span>
-
-
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_images_per_prompt</span><span class="p">):</span>
-        <span class="n">generated_images</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
-            <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span> <span class="o">+</span> <span class="n">prompt_suffix</span><span class="p">,</span>
-            <span class="n">negative_prompt</span><span class="o">=</span><span class="n">nprompt</span><span class="p">,</span>
-            <span class="n">image</span><span class="o">=</span><span class="n">image_ori</span><span class="p">,</span> 
-            <span class="n">mask_image</span><span class="o">=</span><span class="n">mask_image</span><span class="p">,</span>
-            <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
-            <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
-            <span class="n">num_inference_steps</span><span class="o">=</span><span class="n">num_inference_steps</span><span class="p">,</span>
-            <span class="n">guidance_scale</span><span class="o">=</span><span class="n">guidance_scale</span><span class="p">,</span>
-            <span class="n">num_images_per_prompt</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="p">)[</span><span class="s">"images"</span><span class="p">]</span>
-
-        <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">generated_images</span><span class="p">:</span>
-            <span class="n">file_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="p">.</span><span class="n">uuid4</span><span class="p">())</span> <span class="o">+</span> <span class="s">".jpg"</span>
-            <span class="n">key</span> <span class="o">=</span> <span class="n">key_prefix</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">'/'</span> <span class="o">+</span> <span class="n">file_name</span>
-            <span class="n">in_mem_file</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span>
-            <span class="n">image</span><span class="p">.</span><span class="n">save</span><span class="p">(</span><span class="n">in_mem_file</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s">"JPEG"</span><span class="p">)</span>
-            <span class="n">in_mem_file</span><span class="p">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">s3</span><span class="p">.</span><span class="n">upload_fileobj</span><span class="p">(</span>
-                <span class="n">in_mem_file</span><span class="p">,</span> 
-                <span class="n">saving_bucket</span><span class="p">,</span> 
-                <span class="n">key</span><span class="p">,</span>
-                <span class="n">ExtraArgs</span><span class="o">=</span><span class="p">{</span>
-                    <span class="s">'ContentType'</span><span class="p">:</span> <span class="s">'image/jpeg'</span>
-                <span class="p">}</span>
-            <span class="p">)</span>
-            <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;a href='"</span> <span class="o">+</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s">"' target='_blank'&gt;&lt;img src='"</span> <span class="o">+</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s">"' /&gt;&lt;/a&gt;"</span>
-    <span class="n">html</span> <span class="o">+=</span> <span class="s">"&lt;/body&gt;&lt;/html&gt;"</span>
-
-    <span class="n">index_file_name</span> <span class="o">=</span> <span class="s">'index-'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="p">.</span><span class="n">uuid4</span><span class="p">())</span> <span class="o">+</span> <span class="s">'.html'</span>
-    <span class="n">s3</span><span class="p">.</span><span class="n">put_object</span><span class="p">(</span>
-        <span class="n">Bucket</span><span class="o">=</span><span class="s">'cloudbeer-llm-models'</span><span class="p">,</span>
-        <span class="n">Key</span><span class="o">=</span><span class="n">key_prefix</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">'/'</span> <span class="o">+</span> <span class="n">index_file_name</span><span class="p">,</span>
-        <span class="n">Body</span><span class="o">=</span><span class="n">html</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">),</span>
-        <span class="n">ContentType</span><span class="o">=</span><span class="s">'text/html'</span>
-    <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">cloudfront_url</span> <span class="o">+</span> <span class="n">key_prefix</span> <span class="o">+</span> <span class="n">date_str</span> <span class="o">+</span> <span class="s">'/'</span> <span class="o">+</span> <span class="n">index_file_name</span>
-
-</code></pre></div></div>
-
-<p>代码中需要注意的是：</p>
-
-<ul>
-  <li>推理 pipeline 中，改为每次生产 1 张图片，num_images_per_prompt 改为循环次数，这样可以有效避免内存溢出</li>
-  <li>每生产一张图片，就上传到 S3</li>
-  <li>将此次任务的图片生产出一个 html 预览页</li>
-  <li>S3 会通过 Cloudfront 映射出来，方便预览</li>
-</ul>
-
-<p>代码完成之后，可以直接打包，并上传 S3:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ./src
-
-<span class="nb">rm </span>stable-diffusion-inpainting-tryon.tar.gz
-<span class="nb">tar </span>zcvf stable-diffusion-inpainting-tryon.tar.gz <span class="k">*</span>
-
-aws s3 <span class="nb">cp </span>stable-diffusion-inpainting-tryon.tar.gz <span class="se">\</span>
-  s3://cloudbeer-llm-models/diffusers/stable-diffusion-inpainting-tryon.tar.gz
-</code></pre></div></div>
-
-<h2 id="模型部署">模型部署</h2>
-
-<p>直接通过 SageMaker 部署：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">boto3</span>  
-<span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFaceModel</span>
-
-<span class="n">s3_model</span> <span class="o">=</span> <span class="s">"s3://cloudbeer-llm-models/diffusers/stable-diffusion-inpainting-tryon.tar.gz"</span>
-
-<span class="n">iam_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="p">.</span><span class="n">client</span><span class="p">(</span><span class="s">'iam'</span><span class="p">)</span>
-<span class="n">role</span> <span class="o">=</span> <span class="n">iam_client</span><span class="p">.</span><span class="n">get_role</span><span class="p">(</span><span class="n">RoleName</span><span class="o">=</span><span class="s">'HuggingfaceExecuteRole'</span><span class="p">)[</span><span class="s">'Role'</span><span class="p">][</span><span class="s">'Arn'</span><span class="p">]</span>
-
-<span class="n">huggingface_model</span> <span class="o">=</span> <span class="n">HuggingFaceModel</span><span class="p">(</span>
-  <span class="n">model_data</span><span class="o">=</span><span class="n">s3_model</span><span class="p">,</span>
-  <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>
-  <span class="n">transformers_version</span><span class="o">=</span><span class="s">"4.26"</span><span class="p">,</span>  
-  <span class="n">pytorch_version</span><span class="o">=</span><span class="s">"1.13"</span><span class="p">,</span>
-  <span class="n">py_version</span><span class="o">=</span><span class="s">'py39'</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">huggingface_model</span><span class="p">.</span><span class="n">deploy</span><span class="p">(</span>
-  <span class="n">initial_instance_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-  <span class="n">instance_type</span><span class="o">=</span><span class="s">'ml.g4dn.xlarge'</span><span class="p">,</span>
-  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'sd-inpainting-tryon'</span><span class="p">,</span>
-<span class="p">)</span>
-</code></pre></div></div>
-
-<ul>
-  <li>由于要从 SageMaker 上传 S3，HuggingfaceExecuteRole 这个角色要加入相应 S3 写权限</li>
-</ul>
-
-<p>大约 5 分钟后，部署完成。</p>
-
-<h2 id="推理任务">推理任务</h2>
-
-<p>推理代码如下：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sagemaker.huggingface.model</span> <span class="kn">import</span> <span class="n">HuggingFacePredictor</span>
-
-<span class="n">predictor</span> <span class="o">=</span> <span class="n">HuggingFacePredictor</span><span class="p">(</span>
-  <span class="n">endpoint_name</span><span class="o">=</span><span class="s">'sd-inpainting-tryon'</span>
-<span class="p">)</span>
-
-<span class="n">res</span> <span class="o">=</span> <span class="n">predictor</span><span class="p">.</span><span class="n">predict</span><span class="p">({</span>
-    <span class="s">"prompt"</span><span class="p">:</span> <span class="s">"a strong man,back view,white shorts,football field"</span><span class="p">,</span>
-    <span class="s">"image_url"</span><span class="p">:</span> <span class="s">"s3://cloudbeer-llm-models/works/2023-05-16/shirt01.png"</span><span class="p">,</span>
-    <span class="s">"mask_url"</span><span class="p">:</span> <span class="s">"s3://cloudbeer-llm-models/works/2023-05-16/shirt01_mask.png"</span><span class="p">,</span>
-    <span class="s">"num_images_per_prompt"</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
-    <span class="s">"width"</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span>
-    <span class="s">"height"</span><span class="p">:</span> <span class="mi">512</span>
-<span class="p">})</span>
-
-<span class="k">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>当前手工执行的，后期可以加入 CloudWatch 或者 S3 时间触发器进行调用。</p>
-
-<p>会打印一个 url，内容大概如下：</p>
-
-<p><img src="/assets/posts/aiml/sd-inpaiting-2.jpg" alt="sd-inpainting-tryon" /></p>
-
-<p>推理任务完成后，删除计算资源：</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">predictor</span><span class="p">.</span><span class="n">delete_model</span><span class="p">()</span>
-<span class="n">predictor</span><span class="p">.</span><span class="n">delete_endpoint</span><span class="p">()</span>
-</code></pre></div></div>
-
-<hr />
-
-<p>参考：</p>
-
-<p><a href="https://github.com/cloudbeer/sd-inpainting-tryon">本文完整源码</a></p>
-
-<p><a href="sagemaker-sd-inpaint-1.html">在 AWS 上使用 Stable Diffusion 给商品更换模特(一)</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="aws" /><summary type="html"><![CDATA[现在，我准备上传图片和蒙版到 S3，触发部署代码，并完成任务，推理完成之后，释放 Endpoint。]]></summary></entry></feed>
+<p><a href="https://github.com/lm-sys/FastChat/blob/51ed4fab89f61988e8395a3268595f1effb8528f/fastchat/serve/model_worker.py#L246">FastChat 中各 LLM 获取 embeddings 的方法</a></p>]]></content><author><name>啤酒云</name></author><category term="aiml," /><category term="sagemaker" /><summary type="html"><![CDATA[ChatGLM-6B 默认是一个聊天模型，也可以用来提取 embeddings。但当前的企业内部智能搜索方案大多都使用了 text2vec + LLM 多个模型，text2vec 用于向量生产，LLM 用于对查询结果进行总结。本文试试图使用同一个 LLM 模型完成这两项工作，编写自定义 API，并将模型部署到 SageMaker 上。]]></summary></entry></feed>
